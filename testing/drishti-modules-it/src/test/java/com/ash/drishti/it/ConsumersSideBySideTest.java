@@ -150,25 +150,29 @@ class ConsumersSideBySideTest {
                 }
             }
             // the computed kind var-result (VRES: FORM results, blotters): the bank, every desk and entity, every system basket, the positions
-            List<String> vres = new ArrayList<>();
-            if (Boolean.getBoolean("sbs.vres")) {                       // -Dsbs.vres=true: not green yet (R2 lane B: 45 differences, open)
-                vres.add("BANK");
+            List<String> vres = new ArrayList<>(List.of("BANK"));
             ids("desk").forEach(d -> vres.add("DESK:" + d));
             ids("legal-entity").forEach(e -> vres.add("LE:" + e));
             seeded("system-basket").forEach(b -> vres.add("PORT:" + b));
             seeded("position").forEach(x -> vres.add("POS:" + x));
-            }
             for (String id : vres) {
                 JsonNode v;
                 try {
                     v = server.get("/api/v1/entities/var-result/" + java.net.URLEncoder.encode(id, java.nio.charset.StandardCharsets.UTF_8)
                             .replace("%3A", ":") + "/raw?asOf=2026-09-30");
                     strip(v, work.toString());
-                    dropKeys(v, java.util.Set.of("PROVENANCE", "provenance", "meta", "generation", "computedAt", "stamp"));
+                    dropKeys(v, RUN_KEYS);
                 } catch (IllegalStateException e) {
                     v = PackagedServer.JSON.readTree("{\"refused\":" + PackagedServer.JSON.writeValueAsString(e.getMessage()) + "}");
                 }
                 out.put("var-result " + id, v);
+            }
+            if (Boolean.getBoolean("sbs.dump")) {                     // -Dsbs.dump=true: every answer of this server, one file each
+                Path d = Files.createDirectories(FOLDER.resolve("dump-" + path));
+                for (var e : out.entrySet()) {
+                    Files.writeString(d.resolve(e.getKey().replaceAll("[^A-Za-z0-9._-]", "_") + ".json"),
+                            PackagedServer.JSON.writerWithDefaultPrettyPrinter().writeValueAsString(e.getValue()));
+                }
             }
             if (path.equals("engine")) {                              // the runs were the engine's (the switch reached the reports)
                 assertThat(Files.readString(work.resolve("server.log"))).contains("figures from the market-risk engine");
@@ -230,7 +234,17 @@ class ConsumersSideBySideTest {
         return c;
     }
 
-    /** Removes the named keys at any depth (a computed record's provenance and stamps: its clocks and the cache's words). */
+    /**
+     * A computed record's keys that belong to its request and its clocks, not to its figures or words: the request's id, when it was
+     * computed ({@code computedAt}, the provenance's {@code COMPUTED_AT}, {@code COMPUTE_MS}, {@code LOADED_MS}), whether the host's
+     * own cache held the scope ({@code CACHE}: the engine server has not asked it in-tree before), the cached result's
+     * {@code generation}, and the stamp's {@code resultHash}, a digest of the record's rows that include those provenance clocks (two
+     * in-tree servers differ there too). Every other field, the provenance's words included, is compared.
+     */
+    static final java.util.Set<String> RUN_KEYS = java.util.Set.of("requestId", "computedAt", "generation", "resultHash", "COMPUTED_AT",
+            "COMPUTE_MS", "LOADED_MS", "CACHE");
+
+    /** Removes the named keys at any depth. */
     private static void dropKeys(JsonNode n, java.util.Set<String> keys) {
         if (n instanceof ObjectNode o) {
             keys.forEach(o::remove);

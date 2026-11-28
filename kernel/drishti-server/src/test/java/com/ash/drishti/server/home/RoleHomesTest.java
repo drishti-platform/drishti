@@ -147,6 +147,7 @@ class RoleHomesTest {
     /** A fake engine: desk VaR with a limit, and a KPI. */
     static class FakeVar implements MeasureSource {
         boolean on = true;
+        Double yesterday;                                   // the KPI's figure of 2026-11-19, none when null
 
         public String engine() {
             return "var";
@@ -161,7 +162,10 @@ class RoleHomesTest {
         }
 
         public OptionalDouble kpi(Principal p, String m, Map<String, Object> a, LocalDate d) {
-            return m.equals("VAR") ? OptionalDouble.of(5_000_000) : OptionalDouble.empty();
+            if (!m.equals("VAR")) {
+                return OptionalDouble.empty();
+            }
+            return d.equals(LocalDate.parse("2026-11-20")) ? OptionalDouble.of(5_000_000) : yesterday == null ? OptionalDouble.empty() : OptionalDouble.of(yesterday);
         }
 
         public List<HomeData.MeasureValue> values(Principal p, String m, String kind, LocalDate d) {
@@ -199,7 +203,7 @@ class RoleHomesTest {
         assertEquals("Firm VaR", kpis.get(0).get("LABEL"));
         assertEquals("no earlier figure", kpis.get(0).get("CAPTION"));
 
-        store.putKpis(LocalDate.parse("2026-11-19"), List.of(new HomeData.KpiPoint("Firm VaR", LocalDate.parse("2026-11-19"), 4_000_000)));
+        var.yesterday = 4_000_000.0;
         assertEquals(1_000_000.0, (Double) t.rows("home_kpis", p, d).orElseThrow().get(0).get("DELTA"));
 
         assertEquals("DESK-A", t.rows("home_desk_limits", p, d).orElseThrow().get(0).get("DESK"), "the nearest to its limit first");
@@ -272,6 +276,87 @@ class RoleHomesTest {
         assertFalse(store.hasSnapshot(day), "days beyond keep-days are removed");
     }
 
+    /**
+     * A fake engine that answers as the person: the firm (every row) and a restricted trader (their own desk) get different figures on every
+     * day, as an engine applying row rules does. Firm: VaR 5M today, 4M before; desk VaR by desk A 3M (2M before) and B 2M. Restricted: only
+     * desk A's own books, 1M today, 0.9M before.
+     */
+    static final class ScopedVar implements MeasureSource {
+        static final LocalDate TODAY = LocalDate.parse("2026-11-20");
+
+        public String engine() {
+            return "var";
+        }
+
+        public boolean on() {
+            return true;
+        }
+
+        public List<LimitTable> limitTables() {
+            return List.of(new LimitTable("home_desk_limits", "VAR", "desk", "DESK"));
+        }
+
+        static boolean full(Principal p) {
+            return p.roles().contains("admin");
+        }
+
+        public OptionalDouble kpi(Principal p, String m, Map<String, Object> a, LocalDate d) {
+            if (!m.equals("VAR") && !m.equals("PNL_DAY")) {
+                return OptionalDouble.empty();
+            }
+            return OptionalDouble.of(full(p) ? (d.equals(TODAY) ? 5_000_000 : 4_000_000) : (d.equals(TODAY) ? 1_000_000 : 900_000));
+        }
+
+        public List<HomeData.MeasureValue> values(Principal p, String m, String kind, LocalDate d) {
+            if (!full(p)) {
+                return List.of(new HomeData.MeasureValue("desk", "DESK-A", m, d.equals(TODAY) ? 1_000_000 : 900_000));
+            }
+            return List.of(new HomeData.MeasureValue("desk", "DESK-A", m, d.equals(TODAY) ? 3_000_000 : 2_000_000), new HomeData.MeasureValue("desk", "DESK-B", m, 2_000_000));
+        }
+
+        public List<HomeData.LimitRow> limits(Principal p, String m, String kind, LocalDate d) {
+            return values(p, m, kind, d).stream().map(v -> new HomeData.LimitRow(v.subject(), v.value(), 10_000_000.0)).toList();
+        }
+    }
+
+    /**
+     * Session isolation (pre-gate B1): a restricted trader and a full-access person open Homes with the same KPIs; the firm snapshot has been
+     * taken. Each gets their own figures, deltas and history, and the restricted person never a firm figure (no 4M or 5M, no desk B).
+     */
+    @Test
+    void eachPersonGetsTheirOwnEarlierFiguresNeverTheFirms() {
+        HomeStore store = new HomeStore(data, 30);
+        ScopedVar var = new ScopedVar();
+        BusinessDates dates = new BusinessDates(new BusinessDateProperties(null, "UTC", null, "2026-11-20"), Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC));
+        HomeClock clock = new HomeClock(dates, Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC));
+        HomeCatalogue cat = catalogue();
+        new MeasureSnapshotJob(cat, store, clock, List.of(var)).run(LocalDate.parse("2026-11-19"), java.time.LocalTime.parse("17:00"));
+        assertTrue(store.hasSnapshot(LocalDate.parse("2026-11-19")), "the firm snapshot exists, so serving it would show here");
+        HomeTables t = new HomeTables(new HomeProperties(true, null, data.toString(), null, null, null), store, clock, List.of(var), List.of(),
+                ChangeEngineHost.NOT_HOSTED, List::of);
+        HomeDefinition trader = cat.find("trader").orElseThrow(), manager = cat.find("risk-manager").orElseThrow();
+        Principal restricted = new Principal("trader-a", List.of("trader")), full = new Principal("chief", List.of("admin"));
+
+        for (HomeDefinition h : List.of(trader, manager)) {
+            for (Map<String, Object> k : t.rows("home_kpis", restricted, h).orElseThrow()) {
+                assertEquals(1_000_000.0, k.get("VALUE"), h.name() + " " + k);
+                assertEquals(100_000.0, (Double) k.get("DELTA"), 1e-6, "the restricted person's own move, not value minus the firm's: " + k);
+            }
+            for (Map<String, Object> k : t.rows("home_kpis", full, h).orElseThrow()) {
+                assertEquals(1_000_000.0, (Double) k.get("DELTA"), 1e-6, "the full person's own move: " + k);
+            }
+            List<Map<String, Object>> hist = t.rows("home_kpi_history", restricted, h).orElseThrow();
+            assertFalse(hist.isEmpty(), h.name());
+            assertTrue(hist.stream().allMatch(r -> r.get("VALUE").equals(900_000.0)), "every point as the restricted person sees it: " + hist);
+            assertTrue(t.rows("home_kpi_history", full, h).orElseThrow().stream().allMatch(r -> r.get("VALUE").equals(4_000_000.0)));
+        }
+
+        List<Map<String, Object>> mine = t.rows("home_desk_limits", restricted, manager).orElseThrow();
+        assertEquals(1, mine.size(), "only the restricted person's desk");
+        assertEquals(100_000.0, (Double) mine.get(0).get("CHANGE"), 1e-6, "their own change, not against the firm's desk figure");
+        assertEquals(1_000_000.0, (Double) t.rows("home_desk_limits", full, manager).orElseThrow().get(0).get("CHANGE"), 1e-6);
+    }
+
     /** A fake engine whose desk VaR moved: DESK-A now 150 (was 100), DESK-B unchanged. */
     static final class MovingVar implements MeasureSource {
         public String engine() {
@@ -287,7 +372,8 @@ class RoleHomesTest {
         }
 
         public List<HomeData.MeasureValue> values(Principal p, String m, String kind, LocalDate d) {
-            return List.of(new HomeData.MeasureValue("desk", "DESK-A", "VAR", 150), new HomeData.MeasureValue("desk", "DESK-B", "VAR", 80));
+            return List.of(new HomeData.MeasureValue("desk", "DESK-A", "VAR", d.equals(LocalDate.parse("2026-11-20")) ? 150 : 100),
+                    new HomeData.MeasureValue("desk", "DESK-B", "VAR", 80));
         }
 
         public List<HomeData.LimitRow> limits(Principal p, String m, String kind, LocalDate d) {
@@ -312,8 +398,6 @@ class RoleHomesTest {
         Files.writeString(dir.resolve("two.home.yaml"), "home: two\ntitle: Two\nsutra: two.sutra.yaml\n");
         HomeCatalogue c = new HomeCatalogue(new HomeProperties(true, data.resolve("homes").toString(), data.toString(), Map.of("r", List.of("one", "two")), null, null));
         HomeStore store = new HomeStore(data, 30);
-        store.putSnapshot(LocalDate.parse("2026-11-19"), Instant.parse("2026-11-19T22:00:00Z"),
-                List.of(new HomeData.MeasureValue("desk", "DESK-A", "VAR", 100), new HomeData.MeasureValue("desk", "DESK-B", "VAR", 80)));
         store.addEvent(LocalDate.parse("2026-11-19"), new HomeData.Event("feed", "p/old", "load", Instant.parse("2026-11-19T20:00:00Z"), "p/old loaded"));
         store.addEvent(LocalDate.parse("2026-11-19"), new HomeData.Event("feed", "p/new", "load", Instant.parse("2026-11-19T23:00:00Z"), "p/new loaded"));
         store.addEvent(LocalDate.parse("2026-11-20"), new HomeData.Event("feed", "p/today", "load", Instant.parse("2026-11-20T09:00:00Z"), "p/today loaded"));

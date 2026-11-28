@@ -54,8 +54,8 @@ results of the engines and the change detection (4). Contract names are `home/<n
 | Table | Columns | From |
 |---|---|---|
 | `home_meta` | BUSINESS_DATE, SINCE | the business date; the reference cut-off in words ("yesterday 17:00") |
-| `home_kpis` | LABEL, VALUE, DELTA, CAPTION | the Home's `kpis:` (measures file), each answered by its engine now, DELTA against the cut-off snapshot |
-| `home_kpi_history` | LABEL, DATE, VALUE | the daily snapshots of the same figures, the last N days |
+| `home_kpis` | LABEL, VALUE, DELTA, CAPTION | the Home's `kpis:` (measures file), each answered by its engine as the person now, DELTA against the same figure of the previous business day, also as the person |
+| `home_kpi_history` | LABEL, DATE, VALUE | the same figures for each of the last N days, each asked of the engine as the person (never a stored firm figure) |
 | `home_exceptions` | SEVERITY, MESSAGE, SUBJECT, COMMAND | the `exceptions:` rules over the figures, load results and feed status |
 | `home_changes` | SUBJECT, MEASURE, KIND, THEN, NOW, CHANGE, WHY, COMMAND | the `changes` engine (4.3) |
 | `home_desk_limits`, `home_exposure` | name, value, LIMIT, CHANGE | the VaR and exposure engines against the limits store |
@@ -104,8 +104,9 @@ Thresholds are per measure, in the Home's measures file (Admin may edit it like 
 Three things are stored, all subject-keyed so the row rules apply when they are read, and none is a figure computed twice:
 
 1. **`measure_snapshot`**: at each cut-off, a **snapshot job** (a scheduled service with a side effect: it is not an engine) asks the followed
-   engines for each followed measure and writes SUBJECT_KIND, SUBJECT, MEASURE, VALUE, CUTOFF, BUSINESS_DATE to the lake. It also writes the KPI figures,
-   which is where `home_kpi_history` comes from. Kept N days (config).
+   engines for each followed measure and writes SUBJECT_KIND, SUBJECT, MEASURE, VALUE, CUTOFF, BUSINESS_DATE to the lake. It is the reference of the drivers run (4.4)
+   only: every earlier figure a person sees (KPI delta and history, limit change, `home_changes` THEN, the digest) is asked of the engine
+   as that person for that day, so a restricted person never gets a firm figure. Kept N days (config).
 2. **`change_event`**: the load, trade-amendment and limit-state events as they happen (existing audit and load logs), one row per event.
 3. **`change_driver`**: the attribution rows (4.4), written after each load or recompute.
 

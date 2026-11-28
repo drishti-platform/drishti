@@ -33,13 +33,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * The home tables (ROLE_HOME_SUTRAS.md 2): each Home's rows for one person, from the stored snapshots and the engines' own answers. Nothing
- * is computed here beyond a difference against the cut-off snapshot (a figure minus its earlier figure); the engines own every number and
- * {@code changes} owns the comparison. Every call reads as the person, so row rules and masks apply; a missing engine or day gives no rows.
+ * The home tables (ROLE_HOME_SUTRAS.md 2): each Home's rows for one person, from the engines' own answers and the stored events and drivers.
+ * Nothing is computed here beyond a difference against an earlier day (a figure minus its earlier figure); the engines own every number and
+ * {@code changes} owns the comparison. Every call reads as the person, earlier days included (never the firm snapshot), so row rules and
+ * masks apply; a missing engine or day gives no rows.
  */
 public final class HomeTables {
 
@@ -124,7 +126,6 @@ public final class HomeTables {
     }
 
     private List<Map<String, Object>> kpis(HomeTable.Context c) {
-        Map<String, Double> was = byLabel(store.kpis(c.previous()));
         List<Map<String, Object>> out = new ArrayList<>();
         for (HomeDefinition.Kpi k : c.home().measures().kpis()) {
             MeasureSource s = HomeSources.find(sources, k.engine());
@@ -132,7 +133,8 @@ public final class HomeTables {
                 continue;                                       // an engine that is off drops its figures (engine switch)
             }
             s.kpi(c.person(), k.measure(), k.args(), c.today()).ifPresent(v -> {
-                Double w = was.get(k.label());
+                OptionalDouble earlier = s.kpi(c.person(), k.measure(), k.args(), c.previous());     // as the person too: never a firm figure
+                Double w = earlier.isPresent() ? earlier.getAsDouble() : null;
                 out.add(row("LABEL", k.label(), "VALUE", v, "DELTA", w == null ? null : v - w, "CAPTION", w == null ? "no earlier figure" : "since " + c.previous(),
                         "OPEN", k.open()));
             });
@@ -140,17 +142,21 @@ public final class HomeTables {
         return out;
     }
 
+    /**
+     * Each KPI's earlier figures, asked of its engine as the person for every day of its {@code history} (the person's row rules and masks apply
+     * to every point): a figure stored for the firm would show a restricted person the firm's series (session isolation).
+     */
     private List<Map<String, Object>> history(HomeTable.Context c) {
-        Set<String> mine = new HashSet<>();
-        c.home().measures().kpis().forEach(k -> mine.add(k.label()));
         int most = c.home().measures().kpis().stream().mapToInt(HomeDefinition.Kpi::history).max().orElse(0);
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = most; i >= 1; i--) {
             LocalDate d = c.today().minusDays(i);
-            for (HomeData.KpiPoint k : store.kpis(d)) {
-                if (mine.contains(k.label())) {
-                    out.add(row("LABEL", k.label(), "DATE", d.toString(), "VALUE", k.value()));
+            for (HomeDefinition.Kpi k : c.home().measures().kpis()) {
+                MeasureSource s = HomeSources.find(sources, k.engine());
+                if (i > k.history() || s == null || !s.on()) {
+                    continue;
                 }
+                s.kpi(c.person(), k.measure(), k.args(), d).ifPresent(v -> out.add(row("LABEL", k.label(), "DATE", d.toString(), "VALUE", v)));
             }
         }
         return out;
@@ -172,8 +178,8 @@ public final class HomeTables {
         if (s == null || !s.on()) {
             return List.of();
         }
-        Map<String, Double> was = new LinkedHashMap<>();
-        store.snapshot(c.previous()).stream().filter(v -> v.measure().equals(measure) && v.subjectKind().equals(kind)).forEach(v -> was.put(v.subject(), v.value()));
+        Map<String, Double> was = new LinkedHashMap<>();                 // the earlier day as the person sees it, never the firm's figure
+        s.values(c.person(), measure, kind, c.previous()).forEach(v -> was.put(v.subject(), v.value()));
         List<Map<String, Object>> out = new ArrayList<>();
         for (HomeData.LimitRow r : s.limits(c.person(), measure, kind, c.today())) {
             Double w = was.get(r.name());
@@ -265,16 +271,18 @@ public final class HomeTables {
         }
         Set<String> visible = new HashSet<>();
         List<HomeData.MeasureValue> now = new ArrayList<>();
+        List<HomeData.MeasureValue> then = new ArrayList<>();          // the earlier day as the person sees it, never the firm's figures
         for (HomeDefinition.Follow f : c.home().measures().follow()) {
             MeasureSource s = HomeSources.find(sources, f.engine());
             if (s != null && s.on()) {
                 List<HomeData.MeasureValue> v = s.values(c.person(), f.measure(), f.subjects(), c.today());
                 now.addAll(v);
                 v.forEach(x -> visible.add(x.subjectKind() + "|" + x.subject()));
-                s.values(c.person(), f.measure(), f.subjects(), c.previous()).forEach(x -> visible.add(x.subjectKind() + "|" + x.subject()));
+                List<HomeData.MeasureValue> w = s.values(c.person(), f.measure(), f.subjects(), c.previous());
+                then.addAll(w);
+                w.forEach(x -> visible.add(x.subjectKind() + "|" + x.subject()));
             }
         }
-        List<HomeData.MeasureValue> then = store.snapshot(c.previous()).stream().filter(v -> visible.contains(v.subjectKind() + "|" + v.subject())).toList();
         java.time.Instant since = clock.cutoff(c.previous(), cutoff(c.home()));
         List<HomeData.Event> events = new ArrayList<>();
         for (LocalDate d : List.of(c.previous(), c.today())) {
@@ -304,14 +312,17 @@ public final class HomeTables {
         if (first.isBefore(c.today().minusDays(30))) {
             first = c.today().minusDays(30);
         }
+        LocalDate ref = first.isAfter(c.previous()) ? c.previous() : first;          // the day the window starts from
         Set<String> visible = new HashSet<>();
         List<HomeData.MeasureValue> now = new ArrayList<>();
+        Map<String, Double> then = new LinkedHashMap<>();              // that day as the person sees it, never the firm's figures
         for (HomeDefinition.Follow f : c.home().measures().follow()) {
             MeasureSource s = HomeSources.find(sources, f.engine());
             if (s != null && s.on()) {
                 List<HomeData.MeasureValue> v = s.values(c.person(), f.measure(), f.subjects(), c.today());
                 now.addAll(v);
                 v.forEach(x -> visible.add(x.subjectKind() + "|" + x.subject()));
+                s.values(c.person(), f.measure(), f.subjects(), ref).forEach(x -> then.put(x.subjectKind() + "|" + x.subject() + "|" + x.measure(), x.value()));
             }
         }
         List<Map<String, Object>> out = new ArrayList<>();
@@ -322,12 +333,6 @@ public final class HomeTables {
                 }
             }
         }
-        LocalDate ref = first.isAfter(c.previous()) ? c.previous() : first;          // the snapshot the window starts from: the day's, else the nearest earlier
-        while (!store.hasSnapshot(ref) && ref.isAfter(c.today().minusDays(30))) {
-            ref = ref.minusDays(1);
-        }
-        Map<String, Double> then = new LinkedHashMap<>();
-        store.snapshot(ref).forEach(v -> then.put(v.subjectKind() + "|" + v.subject() + "|" + v.measure(), v.value()));
         for (HomeData.MeasureValue v : now) {
             Double was = then.get(v.subjectKind() + "|" + v.subject() + "|" + v.measure());
             HomeDefinition.Follow f = c.home().measures().follow().stream().filter(x -> x.measure().equals(v.measure())).findFirst().orElse(null);
@@ -353,9 +358,4 @@ public final class HomeTables {
         return out;
     }
 
-    private static Map<String, Double> byLabel(List<HomeData.KpiPoint> points) {
-        Map<String, Double> m = new LinkedHashMap<>();
-        points.forEach(p -> m.put(p.label(), p.value()));
-        return m;
-    }
 }

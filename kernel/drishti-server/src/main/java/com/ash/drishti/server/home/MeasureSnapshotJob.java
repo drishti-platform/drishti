@@ -26,15 +26,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalDouble;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The 17:00 snapshot (ROLE_HOME_SUTRAS.md 4.2): at each Home's cut-off it asks the followed engines for every followed measure and every
- * KPI, once for the firm (the firm principal sees everything; the person's rules apply when the rows are read, never here), and stores
- * them. A scheduled service with a side effect, not an engine. It fires at most once per cut-off and day, survives an engine that is
+ * The 17:00 snapshot (ROLE_HOME_SUTRAS.md 4.2): at each Home's cut-off it asks the followed engines for every followed measure, once for
+ * the firm (the firm principal sees everything), and stores them as the reference of the drivers run ({@link AttributionRunner}) only. A
+ * stored firm figure never reaches a person: the home tables ask every earlier figure (KPI delta and history, limit change, changes, digest)
+ * of the engine as the person, so their row rules and masks apply (session isolation). A scheduled service with a side effect, not an engine. It fires at most once per cut-off and day, survives an engine that is
  * off or has no data (that measure is left out and said), and can be run at once ({@link #run}) after a late load.
  */
 public final class MeasureSnapshotJob implements AutoCloseable {
@@ -96,7 +96,6 @@ public final class MeasureSnapshotJob implements AutoCloseable {
     public synchronized int run(LocalDate day, LocalTime at) {
         List<HomeData.MeasureValue> values = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
-        List<HomeData.KpiPoint> kpis = new ArrayList<>();
         for (HomeDefinition d : catalogue.all()) {
             for (HomeDefinition.Follow f : d.measures().follow()) {
                 MeasureSource s = HomeSources.find(sources, f.engine());
@@ -108,16 +107,8 @@ public final class MeasureSnapshotJob implements AutoCloseable {
                     values.addAll(s.values(FIRM, f.measure(), f.subjects(), day));
                 }
             }
-            for (HomeDefinition.Kpi k : d.measures().kpis()) {
-                MeasureSource s = HomeSources.find(sources, k.engine());
-                if (s != null && s.on() && seen.add("kpi|" + k.label())) {
-                    OptionalDouble v = s.kpi(FIRM, k.measure(), k.args(), day);
-                    v.ifPresent(x -> kpis.add(new HomeData.KpiPoint(k.label(), day, x)));
-                }
-            }
         }
         store.putSnapshot(day, clock.cutoff(day, at), values);
-        store.putKpis(day, kpis);
         lastDay = day;
         lastCutoff = at.toString();
         return values.size();

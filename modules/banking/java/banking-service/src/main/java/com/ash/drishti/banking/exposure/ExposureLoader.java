@@ -188,6 +188,26 @@ final class ExposureLoader {
      */
     ExposureReference reference(LocalDate date) {
         AsOf asOf = AsOf.of(date);
+        StringBuilder key = new StringBuilder(date.toString());
+        for (String kind : props.kinds().all()) {                       // every kind the reference reads (and the paths': the date's version)
+            key.append('|').append(router.dataVersion(kind, asOf).orElse(""));
+        }
+        return references.get(key.toString(), k -> readReference(date));
+    }
+
+    /**
+     * The references {@link #reference(LocalDate)} keeps, once per date and data version of every kind it reads (a new load of any of them is a
+     * new key, never a stale reference): a few dates, least recently used out; listed and purged with {@code exposure.views} (Admin, Caches).
+     */
+    private final com.github.benmanes.caffeine.cache.Cache<String, ExposureReference> references =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder().maximumSize(16).recordStats().build();
+
+    com.github.benmanes.caffeine.cache.Cache<String, ExposureReference> referenceCache() {
+        return references;
+    }
+
+    private ExposureReference readReference(LocalDate date) {
+        AsOf asOf = AsOf.of(date);
         DataNode run = run(date, documents(props.kinds().run(), asOf));
         Reference ref = reference(date, asOf, run);
         ExposureDate d = new ExposureDate(date, null, ref.known, ref.names, ref.groups, ref.limits, version(date), java.time.Instant.now(), 0, Map.of(),

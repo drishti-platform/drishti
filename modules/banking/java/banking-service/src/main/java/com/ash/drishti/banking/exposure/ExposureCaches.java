@@ -34,6 +34,7 @@ public final class ExposureCaches implements com.ash.drishti.server.caches.Cache
     static final String DATES = "exposure.dates";
     static final String HOT = "exposure.hot-files";
     static final String VIEWS = "exposure.views";
+    static final String REFERENCE = "exposure.reference";
 
     private final ExposureService svc;
 
@@ -73,6 +74,9 @@ public final class ExposureCaches implements com.ash.drishti.server.caches.Cache
                 (long) svc.props().diskDates(), null, null, null, null, "data-version (inputs digest)", true, Map.of("open", t.get("open"))));
         out.add(CacheReport.of(VIEWS, "exposure", "Viewers' views per date, version and role set", "heap", svc.access().cache(),
                 (long) svc.props().viewCacheMb() << 20, null, 3600L, "data-version", true));
+        out.add(CacheReport.of(REFERENCE, "exposure", "A date's reference without its paths (the engine path's tree and pages): netting sets, CSA terms, "
+                + "flags, names, groups, limits, per date and data version of every kind read", "heap", svc.loader().referenceCache(), null, 16L, null,
+                "data-version (every kind the reference reads)", true));
         return out;
     }
 
@@ -87,6 +91,16 @@ public final class ExposureCaches implements com.ash.drishti.server.caches.Cache
                 svc.reload(date);                                       // the date, its answers, paths and views
             }
             done.add(all ? "exposure" : name);
+        }
+        if (all || VIEWS.equals(name) || REFERENCE.equals(name)) {
+            if (date == null) {
+                svc.loader().referenceCache().invalidateAll();
+            } else {
+                svc.loader().referenceCache().asMap().keySet().removeIf(k -> k.startsWith(date + "|"));
+            }
+            if (REFERENCE.equals(name)) {
+                done.add(name);
+            }
         }
         if (HOT.equals(name)) {                                         // only by name: "all" keeps the files (a rebuild reads the lake)
             ExposureTier tier = svc.loader().tier();

@@ -368,6 +368,45 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
    on the capture). `GET /compare?b=now&path=engine` reads now from the engine. A lens other than the offered one and a scope whose
    parts are positions or terms are refused in words on the engine path (captured in-tree).
 
+### Status, speed lane S3: the `ccr` engine and the exposure and SIMM paths (2026-11-28 10:2x, branch `r2/speed-ccr`; drishti-risk `r2/speed-ccr`)
+
+R2_ENGINE_SPEED_DESIGN applied to the other Drishti Risk engine. The general capabilities (EngineAnswer and the one cache, kept images,
+prepared dates, row sets, host fixed cost) are lanes S1 and S2's; this lane moves the ccr paths onto them as they land and removed the
+ccr-specific waste first. Every switch default unchanged (`in-tree`); nothing removed from in-tree; no tolerance loosened.
+
+**(A) The market-risk causes, found again in ccr by reading (no run).** Engine (drishti-risk `risk-engine-ccr`):
+
+| Cause (design 1.x) | Where in ccr | State |
+|---|---|---|
+| descriptor re-parse (1.3) | `CcrEngine.descriptor()` was `Descriptors.of`: the YAML read and parsed for every table of every request, and once more for each `CcrSimm`, `CcrPreDeal`, `CcrWhatIf`, `CcrOfficial`, `CcrCollateral` made per output (a SIMM page: about 16 parses for two asks) | fixed: read once per engine object |
+| open copying every row (1.4) | `CcrDay.read`: each path row into a `HashMap` (numbers boxed), a second `HashMap` of every vector under a `trade\0grid` text with `Arrays.copyOf`, then `PathRow` records sorted; the run's grid parsed from text on every use | fixed: one pass each, columns by batch into one array a column, each vector one copy shared by its rows; the grid once |
+| per-part planners, whole-table pass per ask (1.3) | `CcrSession.paths(ids)`: a pass over every path row (trades x grid points) and a grid parse for each cut netting set, each trade or asset contribution, each what-if or pre-deal candidate, and each of the 76 netting sets of `exposure-trade-ee` (one official capture: 76 passes) | fixed: a trade index built once (O(the trades asked)) |
+| inputs read whether needed (2.2) | `CcrExtras.read` at every session open: credit limits and buckets, every sensitivity element, the risk factors, every SIMM parameter file and the FX mids, for an exposure-only session too | fixed: two groups (limits; SIMM's inputs) read at the first output that needs them |
+| re-derived per ask what the session could keep (2.5) | SIMM: the version's parameter file parsed on every ask (two a page: collect and post) and every file on every `simm-versions`; the factor map rebuilt from every risk-factor row per ask; a host-resolved scope matched by a loop of every element row times every member scope | fixed: session state (parsed parameters per version, factors by name, elements by sensitivity id); overrides still parsed per ask (a what-if) |
+| `memoryBytes` (1.5) | walked every path row on each call | fixed: constant cost |
+| one book per viewer signature (1.4, 2.2) | `CcrSession.book` keyed by the visibility signature: per-viewer isolation opens a book per viewer | general: shared isolation, visibility as a selection (S2 step 6) |
+| engine-built image on the heap (2.3) | the exposure book's set matrices built from the paths at every session open; in-tree keeps them in `ExposureHotFile` (float32, mapped) | general: kept image with the hot file's sections (S2 steps 7, 8) |
+| no prepared date (2.6) | the first exposure ask of a date opens the session | general: `prepare` asks in `config/engines/ccr.yaml` (S2 step 9) |
+
+Module (drishti `ExposureEnginePath`, `SimmEnginePath`, `ExposureLoader`):
+
+| Cause (design 1.x) | Where | State |
+|---|---|---|
+| bean lookup per ask (1.1, 1.2) | `engines.getIfAvailable()` on every `call`/`running`, `svc.getObject()`/`getIfAvailable()` and `views.getObject()` per request (exposure); `engines` per ask (SIMM) | fixed: resolved once at first use |
+| reference re-read per request (1.2, `VarLoader.names`) | `ExposureLoader.reference(date)` read the run, netting sets, CSAs, balances, valuations, counterparties, groups and limits documents on every engine-path tree and every netting-set or counterparty page | fixed: kept once per date and data version of every kind it reads (`exposure.reference`, Admin, Caches; purged with `exposure.views`) |
+| a loop per tree row (1.1) | the tree's `home(counterparty)`: a pass over every netting set per counterparty node | fixed: counted once a tree |
+| cached answers re-boxed per use (1.2) | every ask boxed whole (`AnswerShapes.plain`), then `ExposureEnginePath.rows` builds a map a row, called again on the same answer (the audit line 4 times; SIMM's `simm` table twice and its post rows searched per row) | EngineAnswer (S1 step 3) |
+| row lists as parameters (1.2, 2.4) | SIMM `simm-members` (a map a record; the bank's analytic scope: every record) and the official capture's `scope-members` (a map a trade), boxed, hashed into the stamp and written into the audit line | row sets (step 10), audit by digest (step 4) |
+| an extra ask per page | `SimmEnginePath.defaultVersion` asks `simm-versions` on each page when no default version is configured (a host cache hit, re-boxed) | a shaped value of the version answer with EngineAnswer |
+
+**(B) The harness**: `ExposureSpeedCheckTest` (drishti-modules-it, `-Dspeed.exposure=true`): one packaged server, in-tree and engine in the
+same run: the cold open (the bank's scope; in-tree's official captures at start off), the exposure tree (first ask and p50 of two warm
+rounds), every netting set with paths (p50, p99), the SIMM total of every netting set (first ask apart, p50, p99), engine asks and cache
+misses per ask of each phase, the ccr engine's card, resident memory, the figures compared. The exposure inputs are not in the shared
+100,000-position VaR lake (`~/drishti-bench-scratch/lake-100k`: P&L vectors, scenario set, FX, limits, reference) and a local run holds
+at most 10,000 trades: the check reads the counterparty-risk sample day the SIMM side by side builds (523 trades, 7,540 path rows of 200
+paths, 76 netting sets), or `-Dspeed.ccr-lake`.
+
 ### Status, R2 lane A2: SIMM and VaR leftovers (2026-11-28 09:2x, paused by the owner; branch `r2/exposure-routes`; drishti-risk `r2/exposure-routes` 3c508fe + the steps fix)
 
 Every switch default unchanged (`in-tree`); nothing removed; no tolerance loosened. A fresh lane continues from here.

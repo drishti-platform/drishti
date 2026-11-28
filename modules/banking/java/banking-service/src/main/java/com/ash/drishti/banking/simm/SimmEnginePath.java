@@ -56,11 +56,12 @@ public class SimmEnginePath {
     static final List<String> RISK_CLASSES = List.of("InterestRate", "CreditQ", "CreditNonQ", "Equity", "Commodity", "FX");
     static final List<String> OUTPUTS = List.of("simm", "simm-total", "simm-product", "simm-version");
 
-    private final ObjectProvider<Engines> engines;
+    /** The engines, resolved once at first use (a bean lookup per ask cost more than a cached answer); none made yet: looked up again. */
+    private final org.springframework.util.function.SingletonSupplier<Engines> engines;
     private final Environment env;
 
     SimmEnginePath(ObjectProvider<Engines> engines, Environment env) {
-        this.engines = engines;
+        this.engines = org.springframework.util.function.SingletonSupplier.of(engines::getIfAvailable);
         this.env = env;
     }
 
@@ -548,7 +549,7 @@ public class SimmEnginePath {
     }
 
     private Map<String, Object> call(Principal p, Map<String, Object> params, LocalDate date, List<String> outputs) {
-        Engines e = engines.getIfAvailable();
+        Engines e = engines.get();
         if (e == null || !e.running(ENGINE)) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " is not running here (drishti-risk-ccr in lib/engines and "
                     + "config/engines/ccr.yaml); SIMM answers nothing on the engine path without it");

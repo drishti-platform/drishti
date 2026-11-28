@@ -84,6 +84,7 @@ def test_a_module_builds_from_the_sdk_folder_alone(tmp_path, way):
     work = tmp_path / "work"
     shutil.copytree(sdk / "drishti-module-parent", work / "drishti-sdk" / "drishti-module-parent")
     shutil.copytree(GENOMICS, work / "modules" / "genomics", ignore=_no_build_output)
+    shutil.copytree(ROOT / "data" / "testdata" / "genomics", work / "data" / "testdata" / "genomics")     # the demo lake's rows, which the module's tests read as the lake
     project = work / "modules" / "genomics" / "java" / "genomics"
     version = (ROOT / ".mvn" / "maven.config").read_text(encoding="utf-8").split("-Drevision=")[1].split()[0]
     local, tail = tmp_path / "m2", _repository_tail()          # nothing of the kernel reaches the tail: reads fall back to it

@@ -501,6 +501,16 @@ public class VarEnginePath {
      * the matured-items switch, a basket's own tree ({@code within}) and the parametric cells are answered in-tree for now.
      */
     public Map<String, Object> tree(Principal p, String hierarchy, LocalDate date, String ccy) {
+        return tree(p, hierarchy, date, ccy, null);
+    }
+
+    /**
+     * The same through a lens ({@code horizon} 10d by the square root of 10 or overlapping sums, {@code set=stressed}, an offered
+     * confidence): each node's VaR and ES from the engine's {@code node-var-horizon} on that lens (the headline's source, R2 proven), its
+     * level, parent and limit from {@code node-var}; limit use only where the node's limit is set for that lens, as in-tree. A null lens
+     * or the offered one is the tree above.
+     */
+    public Map<String, Object> tree(Principal p, String hierarchy, LocalDate date, String ccy, com.ash.drishti.banking.compute.var.VarLens lens) {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
@@ -518,12 +528,22 @@ public class VarEnginePath {
             throw new DrishtiException(ErrorCode.VAR_HIERARCHY_UNKNOWN, "no hierarchy " + h + " on " + date + " (it has "
                     + (present.isEmpty() ? "none: configure hierarchies: in the pack or drishti.var.hierarchies" : String.join(", ", present)) + ")");
         }
+        com.ash.drishti.banking.compute.var.VarLens dl = svc.props().defaultLens();
+        com.ash.drishti.banking.compute.var.VarLens l = lens == null ? dl : lens;
         EngineAnswer a = ask(p, List.of("node-var"), params(dateWindow(), currency), Map.of("date", date.toString()));
         EngineTable nv = a.table("node-var");
+        EngineTable lv = null;                                          // the lens's figures: node-var-horizon, every node
+        if (!l.equals(dl)) {
+            Map<String, Object> params = params(dateWindow(), currency);
+            params.put("stressed", l.stressed());
+            params.put("horizon", l.tenDay() ? "10d" : "1d");
+            params.put("ten-day-method", l.method() == com.ash.drishti.banking.compute.var.VarLens.Method.SUM ? "sum" : "sqrt10");
+            lensConfidences(params, l);
+            lv = ask(p, List.of("node-var-horizon"), params, Map.of("date", date.toString())).table("node-var-horizon");
+        }
         com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(date, svc.hierarchies());
         Hierarchies hs = svc.hierarchies();                             // read once for the tree, never per row
         com.ash.drishti.banking.RiskLimits rl = limits.get();
-        com.ash.drishti.banking.compute.var.VarLens lens = svc.props().defaultLens();
         List<Map<String, Object>> out = new ArrayList<>();
         java.util.ArrayDeque<Object[]> stack = new java.util.ArrayDeque<>();
         stack.push(new Object[] {root, 0});
@@ -532,7 +552,8 @@ public class VarEnginePath {
             String id = (String) top[0];
             int depth = (Integer) top[1];
             int r = nv == null ? -1 : nv.find("NODE_ID", id);
-            if (r < 0) {
+            int lr = lv == null ? r : lv.find("NODE_ID", id);
+            if (r < 0 || lr < 0) {
                 continue;                                                // a node the person does not see: not a row, nor its subtree
             }
             OrdinalSet members = book.members(id);
@@ -544,15 +565,15 @@ public class VarEnginePath {
             m.put("level", nv.value("LEVEL", r));
             m.put("parent", nv.value("PARENT", r));
             m.put("depth", depth);
-            double var = nv.number("VAR", r);
-            double es = nv.number("ES", r);
+            double var = lv == null ? nv.number("VAR", r) : lv.number("VAR", lr);   // the lens's figures over the node's own row
+            double es = lv == null ? nv.number("ES", r) : lv.number("ES", lr);
             m.put("var", VarViews.round(var));
             m.put("es", VarViews.round(es));
             m.put("varExact", var);
             m.put("esExact", es);
             double limit = nv.isNull("LIMIT", r) ? Double.NaN : nv.number("LIMIT", r);
             boolean noLimit = Double.isNaN(limit);
-            boolean comparable = svc.loader().limitBasis(date, id).matches(lens);
+            boolean comparable = svc.loader().limitBasis(date, id).matches(l);
             m.put("limit", noLimit ? null : VarViews.round(limit));
             m.put("limitUse", noLimit || limit == 0 || !comparable ? null : var / limit);
             m.put("limitStatus", rl == null ? null : rl.status((Double) m.get("limitUse")));
@@ -581,6 +602,14 @@ public class VarEnginePath {
         t.put("title", hs.title(h));
         t.put("businessDate", date.toString());
         t.put("nodes", out);
+        Map<String, Object> ln = new LinkedHashMap<>();                 // the lens block, as the in-tree tree writes it
+        ln.put("horizon", l.horizon());
+        ln.put("method", l.methodName());
+        ln.put("label", l.label());
+        ln.put("confidence", l.confidence());
+        ln.put("esConfidence", l.esConfidence());
+        ln.put("set", l.set());
+        t.put("lens", ln);
         List<Map<String, Object>> ports = new ArrayList<>();
         svc.saved().system().portfolios(date, book.basketLimits).values().forEach(pf -> {
             Map<String, Object> x = new LinkedHashMap<>();
@@ -635,6 +664,7 @@ public class VarEnginePath {
         java.util.Set<String> kept = largestPositions(p, res, date, currency, total);
         if (kept != null) {                                             // the rows are the largest max-parts; the sums are over all (as in-tree)
             rows.removeIf(r -> !kept.contains(String.valueOf(r.get("key"))));
+            comp = parts.var();                                         // in-tree: the scope's own component (the parts partition it), its VaR
         }
         rows.sort(java.util.Comparator.comparingDouble(r -> -((Number) r.get("componentVar")).doubleValue()));
         out.put("sumStandalone", VarViews.round(standalone));
@@ -1108,12 +1138,11 @@ public class VarEnginePath {
             boolean cut) {
         if (res.node() == null && (res.trade() >= 0 || res.position() >= 0)) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the parts of a node or of an ad-hoc scope of positions for "
-                    + "now; the parts of " + res.canonical() + " are trades: ask it in-tree (path=in-tree)");
+                    + "now: ask it in-tree (path=in-tree); the parts of " + res.canonical() + " are trades");
         }
         VarService.Scoped s = svc.scoped(p, partScope(res), date, currency);
         if (res.node() == null && new VarSelection(svc).byTerms(p, s)) {   // an expression of two or more terms: its parts are the terms
-            throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the parts of a node or of an ad-hoc scope of positions for "
-                    + "now; the parts of " + res.canonical() + " are its terms: ask it in-tree (path=in-tree)");
+            return termParts(p, svc, book, res, s, date, currency);
         }
         com.ash.drishti.banking.compute.var.VarBook b = s.date().book();
         if (!s.view().seesPositions(s.set())) {
@@ -1145,6 +1174,52 @@ public class VarEnginePath {
             pt.attrs().forEach((k, v) -> attrs.put(k, v != null && svc.access().masked(p, k) ? com.ash.drishti.api.DataNode.MASK : v));
             parts.add(new VarViews.Part(pt.key(), pt.scope(), pt.label(), pt.kind(), null, pt.size(), attrs));
             rows.add(own);
+        }
+        return new HostPositions(parts, rows);
+    }
+
+    /**
+     * The parts of an expression of two or more terms to add (R2 lane A2), as the in-tree route lists them ({@code VarSelection.parts}):
+     * each positive term's rows inside the scope, the rows not in an earlier term its part (the components add up), its words the host's
+     * (the term, its word, its trades and those allocated to it, its label); the term alone ({@code alone}, {@code aloneEs}) is the engine's
+     * {@code scope-var} over the term's rows in the scope, the part's figures the engine's {@code scope-contributions} over the allocated rows.
+     */
+    private HostPositions termParts(Principal p, VarService svc, EngineScopeBook book, ScopeResolver.Resolution res, VarService.Scoped s, LocalDate date,
+            String currency) {
+        VarSelection sel = new VarSelection(svc);
+        OrdinalSet taken = OrdinalSet.empty();
+        List<VarViews.Part> parts = new ArrayList<>();
+        List<List<Integer>> rows = new ArrayList<>();
+        for (VarSelection.Term t : sel.terms(p, s.res().canonical())) {
+            if (!t.op().equals("+")) {
+                continue;
+            }
+            String text = t.expr().toString();
+            OrdinalSet full;
+            try {
+                full = resolve(p, book, text, date).set().and(res.set());
+            } catch (DrishtiException | IllegalArgumentException e) {
+                full = OrdinalSet.empty();
+            }
+            OrdinalSet mine = full.andNot(taken);
+            taken = taken.or(full);
+            Map<String, Object> params = params(dateWindow(), currency);
+            params.put("rows", ordinals(full));
+            params.put("node", "");
+            List<Map<String, Object>> sv = rows(ask(p, List.of("scope-var"), params, Map.of("date", date.toString())), "scope-var");
+            if (sv.isEmpty()) {
+                throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " answered no VaR for the term " + text + " of "
+                        + res.canonical() + " on " + date);
+            }
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("term", text);
+            a.put("word", t.expr() instanceof com.ash.drishti.banking.compute.var.ScopeExpr.Ref r ? r.word() : "SCOPE");
+            a.put("trades", full.size());
+            a.put("allocated", mine.size());
+            a.put("alone", VarViews.round(num(sv.get(0).get("VAR"))));
+            a.put("aloneEs", VarViews.round(num(sv.get(0).get("ES"))));
+            parts.add(new VarViews.Part(text, text, sel.label(p, s.date(), t.expr()), "part", null, Double.NaN, a));
+            rows.add(ordinals(mine));
         }
         return new HostPositions(parts, rows);
     }

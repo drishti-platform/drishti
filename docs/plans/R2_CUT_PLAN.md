@@ -174,7 +174,9 @@ view types. The first route switched end to end is the VaR headline (`GET /api/v
 | Captures and compare (`POST /captures`, `GET /compare?b=now`; decision 6.6 (6) as for VaR) | `ccr` `exposure-summary` and `exposure-profile` (at the asked confidence, 95% and 99%), `exposure-flags`, `exposure-by-netting-set` (new), `scope-resolution`; the capture's own fields (kind, label, run, provenance, members, grid times) Drishti's | `ExposureSideBySideTest.theCapturesAndTheCompareAreTheSameOnBothPaths`: 148 captures (the bank, legal entities, groups, counterparties also uncollateralised at 99%, netting sets) and 148 compares with now, 97,376 values, every field equal but the capture's id, time and run facts; `figuresFrom: engine` on each engine capture, both tiers | path available (`path=engine`); default `in-tree` |
 | Kit cases of every `ccr` output of exposure parts 2 and 3 | `tck/cases/ccr/exposure-outputs-by-hand.yaml` (two paths, two netting sets, a group; worked by hand) | `CcrKitIT`: the 8 new cases green (tree, tree EE, run, netting-set and counterparty summaries, a group's resolution, summary, profile and flags, distribution, histogram, fan, contributions, both what-ifs, official figures and profiles, trade EE, by netting set); explain and workbook laws green for every ccr case | the gate's delivery, scan and SIMM/CSA coverage findings remain (Status, exposure part 3) |
 | `GET /api/v1/risk/simm` (a netting set: both directions, by product and risk class, the version and its SHA-256, regimes, trades, missing trades, switches; an analytic scope) | `ccr` `simm`, `simm-total`, `simm-product` (new), `simm-version` (new), param `simm-members` (new: the host's records of the scope, SCOPE, SENSITIVITY_ID); every input a lake table bound in `config/engines/ccr.yaml`: `sensitivity-element` (the items of `position-sensitivity`'s SENSITIVITIES), `risk-factor`, `fx-spot`, `simm-parameters` (new kind of the counterparty-risk pack, lake table `collateral.simm-parameters`, one row a version, TEXT the file; test data the TOY file, `make_sensitivity_data.py`). The scope's records, the visibility and the CSA's terms stay Drishti's (`SimmData`); the answer is shaped as `SimmAnswer.result` (`SimmEnginePath`) | `SimmSideBySideTest` (one server, `simm.route` path per request): **76 netting sets x (default, concentration off, concentration and HVR off) + BANK and DESK:DESK-RATES analytic = 230 answers, every field equal (every double to the bit), both tiers**; `BY_RISK_CLASS` compared row by row (the in-tree run lists the classes in its elements' first order, the engine path in SIMM's order). Refused in words on the engine path: the hand-built examples, overrides, add-on terms or lines; `/netting-sets`, `/explain`, `/against`, `/versions`, the playground stay in-tree | path available (`simm.route`, `path=engine`); default `in-tree` |
-| `GET /scope` override (a confidence outside the offered lists, `es-confidence`, `window`; VAR_GUIDE 18.5) | `market-risk` `node-var-horizon` with `window`, `lens-confidence`, `lens-es-confidence`; `scope-scenarios` for the window's dates (`VarEnginePath.override`) | `RiskSideBySideTest.theOverridesAreTheSameOnBothPaths`: **1,572 node answers (0.98; ES 0.99; 0.97/0.985 on 100 days; EUR 0.96 on 250 days), every field and the override block equal, 3,144 VaR/ES raw bits** (mapped tier). Refused in words: a scope that is not a node, with a horizon or the stress set; the parametric block of an override answer | path available; default `in-tree` |
+| `GET /scope` override (a confidence outside the offered lists, `es-confidence`, `window`; VAR_GUIDE 18.5) | `market-risk` `node-var-horizon` with `window`, `lens-confidence`, `lens-es-confidence`; `scope-scenarios` for the window's dates (`VarEnginePath.override`) | `RiskSideBySideTest.theOverridesAreTheSameOnBothPaths`: **1,572 node answers (0.98; ES 0.99; 0.97/0.985 on 100 days; EUR 0.96 on 250 days), every field and the override block equal, 3,144 VaR/ES raw bits, both tiers**. Refused in words: a scope that is not a node, with a horizon or the stress set; the parametric block of an override answer | path available; default `in-tree` |
+| `GET /scope/contributions` of a leaf node over `max-parts` | `market-risk` `scope-contributions` over every position (row sets); the largest `max-parts` by the host's gross size (`VarViews.largest` over `VarViews.Sizer`), the sums over all, a cut table's `sumComponent` the scope's VaR as in-tree | `RiskMaxPartsSideBySideTest` (one server at `max-parts` 3): **786 answers, 540 cut, every field equal, both tiers** | path available; default `in-tree` |
+| `GET /scope/contributions` of an ad-hoc scope or basket whose parts are positions (not a node) | `market-risk` `scope-contributions` with the scope's positions as row sets; labels, sizes, order and masking the host's (`VarEnginePath.hostPositions` over any resolution) | `RiskSideBySideTest.theContributionsOfEveryScopeKindAreTheSameOnBothPaths`: **132 answers (3 dates x USD/EUR, the scope kinds and ad-hoc lists), every field equal, both tiers**; 18 refused in words (expressions of two or more terms: parts are terms; a single trade) | path available; default `in-tree` |
 | Figures on the system-basket and position pages (`VarFigures`, `VAR_ENGINE`: the headline of the row set; a basket's positions and a position's trades with standalone, component and incremental VaR and their share, the splits by product, currency and direction; a position's book VaR and its component in its book; the P&L series) | `market-risk` `scope-var` (headline of the row set), `scope-contributions` over the host's parts (new host class `VarEngineParts`: the in-tree parts, `max-parts` cut, attributes and masking, no vector read; each part a row set of the engine's index), `scope-path` (series) | `ConsumersSideBySideTest` (two servers, `var.consumers.route` the only difference): **28 system-basket and 15 position pages equal as the view answers them** (with the 10 desk and 4 legal-entity pages and the 2 report runs: 59 answers, 22,868 page items, 0 differences), mapped tier | path proven; behind `var.consumers.route`, default `in-tree` |
 | Zero copy (3a): the host's float32 rows handed to the engine | host `VectorViews` (kernel API) asked by `LakeInputs` through `KindData.vectorView`; banking `VarVectorViews` serves the open date's hot-file matrices (`float32-rows`: positions, trades, ids, scenario dates, pieces) read through the mapping's reader count; engine `HostRows` swaps them in at `VarBook.withFloat32Rows(Vectors, Vectors, ids, ids)` when ids, width and dates are the book's own (else it builds them, as before) | drishti-risk `VarHotFileTest.theHostsOwnRowsSwappedInAreTheBuiltRowsToTheBit`; `ConsumersSideBySideTest -Dsbs.zero-copy=on`; `RiskSpeedCheckTest -Dspeed.zero-copy=on` (figures of every node, the tree and 200 leaves equal between the paths at 100,000 positions) | behind `var.zero-copy` (engine option `zero-copy`), default `off` |
 | the rest of 6.3 | | | |
@@ -483,6 +485,133 @@ desk-limited second viewer's first ask under 0.5 s):
    code (RSK-3120 to RSK-3144). By hand, with sources, as the existing cases.
 
 **Not in this lane**: `VarEnginePath.positionParts` (`TRD:MX-20000081`, RiskSideBySideTest's one red) is S1b's.
+### Status, speed lane S3: the `ccr` engine and the exposure and SIMM paths (2026-11-28 10:2x, branch `r2/speed-ccr`; drishti-risk `r2/speed-ccr`)
+
+R2_ENGINE_SPEED_DESIGN applied to the other Drishti Risk engine. The general capabilities (EngineAnswer and the one cache, kept images,
+prepared dates, row sets, host fixed cost) are lanes S1 and S2's; this lane moves the ccr paths onto them as they land and removed the
+ccr-specific waste first. Every switch default unchanged (`in-tree`); nothing removed from in-tree; no tolerance loosened.
+
+**(A) The market-risk causes, found again in ccr by reading (no run).** Engine (drishti-risk `risk-engine-ccr`):
+
+| Cause (design 1.x) | Where in ccr | State |
+|---|---|---|
+| descriptor re-parse (1.3) | `CcrEngine.descriptor()` was `Descriptors.of`: the YAML read and parsed for every table of every request, and once more for each `CcrSimm`, `CcrPreDeal`, `CcrWhatIf`, `CcrOfficial`, `CcrCollateral` made per output (a SIMM page: about 16 parses for two asks) | fixed: read once per engine object |
+| open copying every row (1.4) | `CcrDay.read`: each path row into a `HashMap` (numbers boxed), a second `HashMap` of every vector under a `trade\0grid` text with `Arrays.copyOf`, then `PathRow` records sorted; the run's grid parsed from text on every use | fixed: one pass each, columns by batch into one array a column, each vector one copy shared by its rows; the grid once |
+| per-part planners, whole-table pass per ask (1.3) | `CcrSession.paths(ids)`: a pass over every path row (trades x grid points) and a grid parse for each cut netting set, each trade or asset contribution, each what-if or pre-deal candidate, and each of the 76 netting sets of `exposure-trade-ee` (one official capture: 76 passes) | fixed: a trade index built once (O(the trades asked)) |
+| inputs read whether needed (2.2) | `CcrExtras.read` at every session open: credit limits and buckets, every sensitivity element, the risk factors, every SIMM parameter file and the FX mids, for an exposure-only session too | fixed: two groups (limits; SIMM's inputs) read at the first output that needs them |
+| re-derived per ask what the session could keep (2.5) | SIMM: the version's parameter file parsed on every ask (two a page: collect and post) and every file on every `simm-versions`; the factor map rebuilt from every risk-factor row per ask; a host-resolved scope matched by a loop of every element row times every member scope | fixed: session state (parsed parameters per version, factors by name, elements by sensitivity id); overrides still parsed per ask (a what-if) |
+| `memoryBytes` (1.5) | walked every path row on each call | fixed: constant cost |
+| one book per viewer signature (1.4, 2.2) | `CcrSession.book` keyed by the visibility signature: per-viewer isolation opens a book per viewer | general: shared isolation, visibility as a selection (S2 step 6) |
+| engine-built image on the heap (2.3) | the exposure book's set matrices built from the paths at every session open; in-tree keeps them in `ExposureHotFile` (float32, mapped) | general: kept image with the hot file's sections (S2 steps 7, 8) |
+| no prepared date (2.6) | the first exposure ask of a date opens the session | general: `prepare` asks in `config/engines/ccr.yaml` (S2 step 9) |
+
+Module (drishti `ExposureEnginePath`, `SimmEnginePath`, `ExposureLoader`):
+
+| Cause (design 1.x) | Where | State |
+|---|---|---|
+| bean lookup per ask (1.1, 1.2) | `engines.getIfAvailable()` on every `call`/`running`, `svc.getObject()`/`getIfAvailable()` and `views.getObject()` per request (exposure); `engines` per ask (SIMM) | fixed: resolved once at first use |
+| reference re-read per request (1.2, `VarLoader.names`) | `ExposureLoader.reference(date)` read the run, netting sets, CSAs, balances, valuations, counterparties, groups and limits documents on every engine-path tree and every netting-set or counterparty page | fixed: kept once per date and data version of every kind it reads (`exposure.reference`, Admin, Caches; purged with `exposure.views`) |
+| a loop per tree row (1.1) | the tree's `home(counterparty)`: a pass over every netting set per counterparty node | fixed: counted once a tree |
+| cached answers re-boxed per use (1.2) | every ask boxed whole (`AnswerShapes.plain`), then `ExposureEnginePath.rows` builds a map a row, called again on the same answer (the audit line 4 times; SIMM's `simm` table twice and its post rows searched per row) | EngineAnswer (S1 step 3) |
+| row lists as parameters (1.2, 2.4) | SIMM `simm-members` (a map a record; the bank's analytic scope: every record) and the official capture's `scope-members` (a map a trade), boxed, hashed into the stamp and written into the audit line | row sets (step 10), audit by digest (step 4) |
+| an extra ask per page | `SimmEnginePath.defaultVersion` asks `simm-versions` on each page when no default version is configured (a host cache hit, re-boxed) | a shaped value of the version answer with EngineAnswer |
+
+**(B) The harness**: `ExposureSpeedCheckTest` (drishti-modules-it, `-Dspeed.exposure=true`): one packaged server, in-tree and engine in the
+same run: the cold open (the bank's scope; in-tree's official captures at start off), the exposure tree (first ask and p50 of two warm
+rounds), every netting set with paths (p50, p99), the SIMM total of every netting set (first ask apart, p50, p99), engine asks and cache
+misses per ask of each phase, the ccr engine's card, resident memory, the figures compared. The exposure inputs are not in the shared
+100,000-position VaR lake (`~/drishti-bench-scratch/lake-100k`: P&L vectors, scenario set, FX, limits, reference) and a local run holds
+at most 10,000 trades: the check reads the counterparty-risk sample day the SIMM side by side builds (523 trades, 7,540 path rows of 200
+paths, 76 netting sets), or `-Dspeed.ccr-lake`.
+
+**RUN A (2026-11-28 10:46 to 11:22, mapped tier, `r2/speed-ccr` 600c75835, drishti-risk f03837e)**: `CcrRecordedIT` green (the recorder's
+bits); `SimmSideBySideTest` 230 + 156 + the routes, 0 differences; `ExposureSideBySideTest` 12 cases (scope 204, distribution 408, tree,
+captures 296, what-if 163, pre-deal 46 + 69, groups 230, contributions 762), 0 differences; `ExposureHomesSideBySideTest` 8,377 tables and
+pages and 8,274 official scopes and trades, 0 differences. `ExposureSpeedCheckTest` twice on one build, the engine JAR before (lane A2's)
+and after this lane's engine fixes, p50/p99 in ms, figures equal in both:
+
+| Ask | In-tree | Engine before | Engine after |
+|---|---:|---:|---:|
+| Cold open (the bank's scope) | 81 to 94 | **55,611** | **5,027** |
+| First SIMM ask (SIMM's inputs read) | 172 to 274 | 399 | 4,971 (read at first need, no longer at open) |
+| Open and first SIMM together | | 56,010 | 9,998 |
+| Tree (123 nodes), first / warm p50 | 87 to 111 / 60 to 70 | 388 / 22 | 327 / 27 |
+| Netting set p50 / p99 | 9 to 13 / 28 to 33 | 27 / 110 | 24 / 69 |
+| SIMM total p50 / p99 | 9 to 12 / 47 to 59 | 52 / 148 | 26 / 88 |
+| Engine asks per tree / netting set / SIMM page | | 1 / 1 / 3 | 1 / 1 / 3 |
+
+Still open (general capabilities): the cold open's 5 s and the first SIMM read's 5 s (the session reads every path row and every
+sensitivity element through the host; kept image and prepared date), `isolation: per-viewer` (a book per viewer), the warm asks' host cost
+(EngineAnswer: merged on `r2/speed-ccr` after RUN A, proved by RUN B), SIMM's 3 asks a page (the default version's ask).
+
+### Status, R2 lane A2: SIMM and VaR leftovers (2026-11-28 09:2x, paused by the owner; branch `r2/exposure-routes`; drishti-risk `r2/exposure-routes` 3c508fe + the steps fix)
+
+Every switch default unchanged (`in-tree`); nothing removed; no tolerance loosened. A fresh lane continues from here.
+
+- **Regression, mapped tier, lane heads after a full reactor install (exec JAR and .dmod 08:00, after the last code change)**:
+  `PackagedVarGoldenTest` 2/2 (BANK VaR 167,372,692, ES 210,131,972), `RiskSideBySideTest` 14/14 cases unchanged (headline 1,572 answers,
+  3,918 raw bits; tree 786 rows; contributions 1,572; path 786; horizons 1,441; other confidences 1,572; parametric 2,023,570 numbers
+  within 1e-12; history 864; statistics 2,144; backtesting 402; captures 786 pairs; what-ifs 393 + 39; scope kinds 300, 678 raw bits),
+  `HomesSideBySideTest` (12 tables, 1,054 rows), `ExposureSideBySideTest` and `ExposureHomesSideBySideTest` (all cases 0 differences),
+  `RiskMaxPartsSideBySideTest` (786, 540 cut, 0 differences), drishti-risk `CcrRecordedIT` and `MarketRecordedIT` green.
+  `ConsumersSideBySideTest`: 2 differences on the report runs (`annual-report-var`: the engine server answers no report record), lane B's
+  VRES/consumers work, not this lane's code; to recheck on lane B's branch. **Heap tier not run** (paused before it).
+  drishti-risk kit ITs (`MarketKitIT`, `CcrKitIT`): delivery/scan findings (bytedeco links, hostcompat static state), failing already on
+  2026-11-27, not from this lane.
+- **SIMM, done and proved (mapped tier)**: `GET /simm` 230 answers equal (as before); **parameter overrides and the hand-built examples**
+  (engine params `simm-overrides`, `simm-scope: EXAMPLE`): 156 asks (76 netting sets x 2 override sets, the examples 3 ways, an analytic
+  scope) every field equal, 2 refused overrides refused on both paths in the same words; **`/netting-sets`** (3 lists) and **`/against`**
+  (76 netting sets) every field equal; **`/versions`** (engine output `simm-versions`) version, installed, effective date, SHA-256, problem
+  and the default equal (where the file lives differs by design: the lake table against the parameter folder).
+- **SIMM, built, not yet proved**: `/explain` (engine outputs `simm-charge`, `simm-bucket`, `simm-factor`, `simm-group`, `simm-addon`): the
+  run refused it (the bucket's member list was given as int[] to a list column; fixed after the pause, unproved); the CSA's **add-ons**
+  (params `simm-addon-fixed`, `-multipliers`, `-factors`, `-lines`): on the engine path, **no proof possible on the sample** (no CSA carries
+  IM add-on terms and no `simm-addon` line is served); a proof needs a test CSA with IM_FIXED_ADDON / IM_PRODUCT_MULTIPLIERS /
+  IM_ADDON_FACTORS and simm-addon lines.
+- **SIMM stays in the module**: the playground (workbook, recipes, compare) reads `Simm.Result` internals; it moves only with the
+  playground family (owner's list), so `compute/simm` stays until it does.
+- **VaR leftovers, done and proved (mapped tier)**: the **tree through a lens** (`node-var-horizon` for every node; 10-day both methods,
+  USD and EUR, the stress set at 1 and 10 days, offered confidences): 51 trees, 2,227 node rows, 0 differences, 306 engine VaR and ES
+  equal to the in-tree headline's raw bits.
+- **VaR leftovers, built, 3 differences**: the **parts of an expression of terms** (`VarEnginePath.termParts`: each positive term's
+  allocated rows by `scope-contributions`, the term alone by `scope-var`): 144 answers (12 more than before), 3 differ by one unit in
+  EUR `diversification` (in-tree 9,482,775, engine 9,482,776): the in-tree sums the parts' standalone in another order; to align
+  before it counts as proved.
+- **VaR leftovers, remaining (each needs engine work, said in words on the engine path)**: matured items (the engine's index holds no
+  matured rows); `within` trees (each node's part of a basket: one `scope-var` per node, labels from the host's book); the P&L path,
+  contributions, history and captures through a lens (`scope-path`, `scope-contributions`, `scope-backtest` take no lens params);
+  the P&L path of an expression of terms.
+- **For the gate brief's removal list** (lane B's section): add `banking-service/simm`: `SimmService.run`, `assemble`, `input`,
+  `params`, `resolve`, `version`, the parameter-folder install (`versions`), `SimmAnswer.result`/`explain`/`against(Run)` in-tree halves,
+  `SimmRecipes` replay (with the playground), and `compute/simm` once the playground moves; kept host-side: `SimmData`, `SimmEnginePath`,
+  `SimmAnswer` shaping (`against(Side)`), the controller's switch parse. VaR: the in-tree tree walk through a lens (`VarViews.tree`
+  with a lens) and `VarSelection.parts` (vectors) go; `VarSelection.terms`/`label` stay host-side (words).
+
+### Status, R2 SIMM and VaR leftovers (2026-11-28 05:4x, branch `r2/exposure-routes`; drishti-risk `r2/exposure-routes` c341cc3)
+
+R2 split by the owner (2026-11-28): this lane owns SIMM on the engine and the VaR leftovers; the remaining consumers, the zero-copy
+handover, the speed check and the R2 gate brief are lane B's (`r2/consumers-speed`).
+
+- **SIMM on the engine path** (`drishti.module.banking.simm.route`, `DRISHTI_SIMM_ROUTE`, default `in-tree`; Appendix A row): every SIMM
+  input is a lake table known by its kind and bound in `config/engines/ccr.yaml` (`sensitivity-element` = the items of
+  `position-sensitivity`'s SENSITIVITIES, `risk-factor`, `fx-spot`, `simm-parameters`). The licensed parameter files are the new kind
+  `simm-parameters` of the counterparty-risk pack (command SIMMP, contract checked, lake table `collateral.simm-parameters` declared in
+  `config/lakes/demo.yaml` and the pack's lake block in today's form: the table catalogue of `i8/catalogue` (TableCatalogue, lake-file uri
+  entries) is not in this branch yet, so the symbolic name resolves by today's lake files). Test data: the TOY file as one dated row
+  (`data/testdata/counterparty-risk/simm-parameters/simm-parameters.2026-09-30.jsonl.gz`, written by `make_sensitivity_data.py`, listed in
+  `testdata.yaml`). The in-tree path still reads its host folder (`parameters-dir`) until the default flips. drishti-risk: param
+  `simm-members` (the host's records of a scope) and outputs `simm-product`, `simm-version`; `CcrRecordedIT` green (tolerance unchanged);
+  `CcrKitIT`'s coverage finding now also names the two new outputs (the SIMM outputs had no kit case before either).
+- **Proof**: `SimmSideBySideTest`: 76 netting sets x 3 switch sets + 2 analytic scopes = **230 answers, every field equal, both tiers**.
+- **VaR leftovers done**: the override (`confidence` outside the offered lists, `es-confidence`, `window`): 1,572 answers, 3,144 raw bits
+  (both tiers); a leaf over `max-parts` (the largest by the host's gross size, sums over all: `RiskMaxPartsSideBySideTest`, 786 answers,
+  540 cut, every field equal, both tiers); contributions of an ad-hoc scope of positions (`theContributionsOfEveryScopeKindAreTheSameOnBothPaths`: 132
+  answers equal, 18 refused in words, both tiers). **Not done**: matured items, `within` trees, captures through a lens, the parts of an expression of terms.
+- **Regression at this stop**: targeted only (the new side-by-side cases above); the full `RiskSideBySideTest` (14 cases), the goldens,
+  Homes, Consumers and the exposure side-by-sides were not rerun after these changes (they touch the engine path only: the override is a
+  new branch, a leaf's contributions now measure every position and cut only above `max-parts` 5000, which no golden node reaches). Lane
+  repository from 06:1x: `~/drishti-bench-scratch/i8-m2-r2a` (the shared `i8-m2` had another lane's kernel SNAPSHOTs).
+- Defaults unchanged; nothing removed from in-tree; no tolerance loosened.
 
 ### Status, R2 lane B (2026-11-28 07:1x, branch `r2/consumers-speed`; drishti-risk `r2/consumers-speed`)
 

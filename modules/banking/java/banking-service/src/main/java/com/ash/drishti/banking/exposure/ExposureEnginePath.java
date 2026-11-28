@@ -47,16 +47,34 @@ public class ExposureEnginePath {
     public static final String ENGINE = "ccr";
     static final String SETTING = "drishti.module.banking.exposure.route";   // engines/exposure.yaml
 
-    private final ObjectProvider<Engines> engines;
+    // the collaborators, each resolved once at first use (a bean lookup per ask cost more than a cached answer); one not made (yet) is
+    // looked up again on the next use
+    private final org.springframework.util.function.SingletonSupplier<Engines> engines;
     private final Environment env;
-    private final ObjectProvider<ExposureService> svc;
-    private final ObjectProvider<ExposureViews> views;
+    private final org.springframework.util.function.SingletonSupplier<ExposureService> svc;
+    private final org.springframework.util.function.SingletonSupplier<ExposureViews> views;
+    private final ObjectProvider<ExposureService> svcProvider;
+    private final ObjectProvider<ExposureViews> viewsProvider;
 
     ExposureEnginePath(ObjectProvider<Engines> engines, Environment env, ObjectProvider<ExposureService> svc, ObjectProvider<ExposureViews> views) {
-        this.engines = engines;
+        this.engines = org.springframework.util.function.SingletonSupplier.of(engines::getIfAvailable);
         this.env = env;
-        this.svc = svc;
-        this.views = views;
+        this.svc = org.springframework.util.function.SingletonSupplier.of(svc::getIfAvailable);
+        this.views = org.springframework.util.function.SingletonSupplier.of(views::getIfAvailable);
+        this.svcProvider = svc;
+        this.viewsProvider = views;
+    }
+
+    /** The exposure service (resolved once); none here is the bean factory's own refusal. */
+    private ExposureService service() {
+        ExposureService s = svc.get();
+        return s != null ? s : svcProvider.getObject();
+    }
+
+    /** The exposure views (resolved once); none here is the bean factory's own refusal. */
+    private ExposureViews views() {
+        ExposureViews v = views.get();
+        return v != null ? v : viewsProvider.getObject();
     }
 
     /** True when this request is answered by the engine: its own {@code path}, else the family's switch. */
@@ -71,7 +89,7 @@ public class ExposureEnginePath {
 
     /** True when the engine {@code ccr} runs here (its JAR in lib/engines and config/engines/ccr.yaml on). */
     public boolean running() {
-        Engines e = engines.getIfAvailable();
+        Engines e = engines.get();
         return e != null && e.running(ENGINE);
     }
 
@@ -264,7 +282,7 @@ public class ExposureEnginePath {
         out.put("limit", lim);
         Map<String, Object> exp = new LinkedHashMap<>();
         // EAD = alpha x EEPE, the EEPE in whole units as the in-tree what-if gives it (the engine's EAD over alpha is that EEPE)
-        ExposureService es = svc.getIfAvailable();
+        ExposureService es = svc.get();
         double alpha = es == null ? 1.4 : es.props().alpha();
         exp.put("base", Map.of("ead", Math.round(alpha * Math.round(((Number) r.get("EAD_BEFORE")).doubleValue() / alpha))));
         exp.put("with", Map.of("ead", Math.round(alpha * Math.round(((Number) r.get("EAD_AFTER")).doubleValue() / alpha))));
@@ -287,7 +305,7 @@ public class ExposureEnginePath {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "the engine path answers contributions without alone and profile for now; "
                     + "they are answered in-tree (path=in-tree)");
         }
-        ExposureService es = svc.getIfAvailable();
+        ExposureService es = svc.get();
         if (es != null && p != null && !es.access().levels(p).isEmpty()) {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "your role's exposure access levels are applied in-tree; contributions are "
                     + "answered there (path=in-tree)");
@@ -384,7 +402,7 @@ public class ExposureEnginePath {
      * in words, answered in-tree: a viewer whose role has exposure access levels.
      */
     Map<String, Object> tree(Principal p, LocalDate asked, String q) {
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         LocalDate latest = es.loader().latest();
         LocalDate date = asked == null || latest != null && asked.isAfter(latest) ? latest : asked;   // as the in-tree route reads the date
         if (date == null) {
@@ -400,17 +418,14 @@ public class ExposureEnginePath {
         prm.put("confidence", ask.q());
         prm.put("collateral", ask.collateral());
         EngineAnswer a = call(p, List.of("exposure-tree", "exposure-tree-ee", "exposure-run"), prm, date);
-        List<Map<String, Object>> nodes = rows(a, "exposure-tree");
-        List<Map<String, Object>> ees = rows(a, "exposure-tree-ee");
         List<Map<String, Object>> run = rows(a, "exposure-run");
-        if (nodes == null || ees == null || run == null || run.isEmpty()) {
+        if (a.table("exposure-tree") == null || a.table("exposure-tree-ee") == null || run == null || run.isEmpty()) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no exposure tree on " + date + missing(a));
         }
-        Map<String, Map<String, Object>> byScope = new LinkedHashMap<>();
-        nodes.forEach(r -> byScope.put(String.valueOf(r.get("SCOPE")), r));
-        Map<String, List<Long>> ee = new LinkedHashMap<>();
-        ees.sort(java.util.Comparator.comparingLong(r -> ((Number) r.get("POINT")).longValue()));
-        ees.forEach(r -> ee.computeIfAbsent(String.valueOf(r.get("SCOPE")), x -> new ArrayList<>()).add(Math.round(((Number) r.get("EE")).doubleValue())));
+        TreeRows tr = a.shaped("exposure.tree", TreeRows::of);         // shaped once per answer, kept with it in the host's cache
+        List<Map<String, Object>> nodes = tr.nodes();
+        Map<String, Map<String, Object>> byScope = tr.byScope();
+        Map<String, List<Long>> ee = tr.ee();
         // the limit's use is the peak PFE at the limit's confidence when the figures hold it (the configured confidences and the tree's own), else the tree's
         double lq = es.props().limitConfidence();
         boolean other = Math.abs(lq - ask.q()) >= 1e-12 && java.util.Arrays.stream(es.props().confidences()).anyMatch(c -> Math.abs(c - lq) < 1e-12);
@@ -424,7 +439,7 @@ public class ExposureEnginePath {
             }
         }
         String runId = String.valueOf(run.get(0).get("RUN_ID"));
-        ExposureViews views = this.views.getObject();
+        ExposureViews views = views();
         // the tree's shape from the reference alone (no paths read): the netting sets with paths and their order are the engine's rows
         ExposureLoader.ExposureReference ref = es.loader().reference(date);
         List<Map<String, Object>> sets = new ArrayList<>(nodes.stream().filter(r -> "netting-set".equals(r.get("KIND"))).toList());
@@ -440,6 +455,13 @@ public class ExposureEnginePath {
             ExposureDate.Known k = ref.date().known().get(id);
             refs.add(new SetRef(id, k == null ? null : k.counterparty(), k == null ? null : k.legalEntity(), ref.flags().getOrDefault(id, List.of()),
                     ((Number) r.get("TRADES")).intValue()));
+        }
+        // each counterparty's trades by legal entity, counted once for the tree (a counterparty's home is read once a node)
+        Map<String, Map<String, Integer>> tradesByEntity = new java.util.HashMap<>();
+        for (SetRef sr : refs) {
+            if (sr.counterparty() != null && sr.legalEntity() != null) {
+                tradesByEntity.computeIfAbsent(sr.counterparty(), x -> new java.util.HashMap<>()).merge(sr.legalEntity(), sr.trades(), Integer::sum);
+            }
         }
         ExposureViews.TreeShape shape = new ExposureViews.TreeShape() {
             @Override
@@ -474,13 +496,8 @@ public class ExposureEnginePath {
 
             @Override
             public String home(String counterparty) {                   // as ExposureExplorer.homeLegalEntity: the legal entity with most trades
-                Map<String, Integer> n = new java.util.HashMap<>();
-                for (SetRef sr : refs) {
-                    if (counterparty.equals(sr.counterparty()) && sr.legalEntity() != null) {
-                        n.merge(sr.legalEntity(), sr.trades(), Integer::sum);
-                    }
-                }
-                return n.entrySet().stream().max((x, y) -> x.getValue().equals(y.getValue()) ? y.getKey().compareTo(x.getKey())
+                Map<String, Integer> n = tradesByEntity.get(counterparty);
+                return n == null ? null : n.entrySet().stream().max((x, y) -> x.getValue().equals(y.getValue()) ? y.getKey().compareTo(x.getKey())
                         : Integer.compare(x.getValue(), y.getValue())).map(Map.Entry::getKey).orElse(null);
             }
 
@@ -509,7 +526,7 @@ public class ExposureEnginePath {
                 n.put("peakPfe", Math.round(((Number) r.get("PEAK_PFE")).doubleValue()));
                 n.put("peakPfeTenor", r.get("PEAK_PFE_TENOR"));
                 n.put("peakEe", Math.round(((Number) r.get("PEAK_EE")).doubleValue()));
-                n.put("ee", ee.getOrDefault(scope, List.of()));
+                n.put("ee", new ArrayList<>(ee.getOrDefault(scope, List.of())));
                 List<String> flags = flags(r.get("FLAGS"), refs, ref.date().groups(), scope);
                 if (!d.warnings().isEmpty() && !flags.contains("stale-run")) {    // the host's word on its own run, as in-tree
                     flags.add("stale-run");
@@ -537,6 +554,37 @@ public class ExposureEnginePath {
     record SetRef(String id, String counterparty, String legalEntity, List<String> flags, int trades) {}
 
     /**
+     * The tree answer's rows as the tree reads them, shaped once per answer (the same for every viewer of that answer: the key carries the
+     * visibility): every node's row, the rows by scope, each scope's EE line in whole units in point order. Read only.
+     */
+    record TreeRows(List<Map<String, Object>> nodes, Map<String, Map<String, Object>> byScope, Map<String, List<Long>> ee)
+            implements EngineAnswer.Sized {
+
+        static TreeRows of(EngineAnswer a) {
+            List<Map<String, Object>> nodes = java.util.Collections.unmodifiableList(rows(a, "exposure-tree"));
+            Map<String, Map<String, Object>> byScope = new LinkedHashMap<>();
+            nodes.forEach(r -> byScope.put(String.valueOf(r.get("SCOPE")), java.util.Collections.unmodifiableMap(r)));
+            EngineTable t = a.table("exposure-tree-ee");
+            Integer[] order = new Integer[t.rows()];
+            for (int i = 0; i < order.length; i++) {
+                order[i] = i;
+            }
+            java.util.Arrays.sort(order, java.util.Comparator.comparingLong(i -> t.integer("POINT", i)));   // stable: a scope's points in order
+            Map<String, List<Long>> ee = new LinkedHashMap<>();
+            for (int i : order) {
+                ee.computeIfAbsent(t.text("SCOPE", i), x -> new ArrayList<>()).add(Math.round(t.number("EE", i)));
+            }
+            ee.replaceAll((k, v) -> List.copyOf(v));
+            return new TreeRows(nodes, java.util.Collections.unmodifiableMap(byScope), java.util.Collections.unmodifiableMap(ee));
+        }
+
+        @Override
+        public long bytes() {
+            return 512L * nodes.size() + 48L * ee.values().stream().mapToLong(List::size).sum();
+        }
+    }
+
+    /**
      * A netting set's or counterparty's page figures through the engine ({@link ExposureFigures}), as the in-tree scope answer's keys they
      * read: {@code canonical}, {@code businessDate}, {@code runId}, {@code paths} ({@code exposure-run}), {@code confidence}, {@code ce},
      * {@code epe}, {@code eepe}, {@code peakEe}, {@code peakPfe}, {@code peakPfeDate}, {@code peakPfe99}, {@code profile} (tenor, date, ee,
@@ -544,7 +592,7 @@ public class ExposureEnginePath {
      * configured confidences hold it. A scope whose netting sets the run does not cover is said so in the in-tree route's words.
      */
     Map<String, Object> figures(Principal p, String scope, LocalDate date) {
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         LocalDate latest = es.loader().latest();
         LocalDate d = date == null || latest != null && date.isAfter(latest) ? latest : date;   // as the in-tree route reads the date
         if (d == null) {
@@ -711,7 +759,7 @@ public class ExposureEnginePath {
      * EE contribution. The record's structure, versions, store and published tables stay the host's; asked as the server (no viewer).
      */
     ExposureOfficial.Figures officialFigures(ExposureDate d, ExposureService.Ask ask, List<String> scopes) {
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         Map<String, Object> prm = new LinkedHashMap<>();
         prm.put("scopes", scopes);
         prm.put("confidence", ask.q());
@@ -751,7 +799,7 @@ public class ExposureEnginePath {
         EngineAnswer ta = call(server, List.of("exposure-trade-ee"), tp, d.date());
         List<Map<String, Object>> rows = rows(a, "exposure-official");
         List<Map<String, Object>> prof = rows(a, "exposure-official-profile");
-        List<Map<String, Object>> tee = rows(ta, "exposure-trade-ee");
+        EngineTable tee = ta.table("exposure-trade-ee");                 // read as columns: a row a trade and point, never boxed
         if (rows == null || prof == null || tee == null) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no official figures of " + d.date() + missing(a) + missing(ta));
         }
@@ -762,8 +810,11 @@ public class ExposureEnginePath {
         prof.forEach(r -> profiles.computeIfAbsent(String.valueOf(r.get("SCOPE")), x -> new ArrayList<>()).add(r));
         double alpha = es.props().alpha();
         // every trade's EE contribution, in the engine's order (the book's netting sets, each set's trades in the calculation's order)
-        tee.sort(java.util.Comparator.<Map<String, Object>>comparingLong(r -> ((Number) r.get("ORDER")).longValue())
-                .thenComparingLong(r -> ((Number) r.get("POINT")).longValue()));
+        Integer[] order = new Integer[tee.rows()];
+        for (int i = 0; i < order.length; i++) {
+            order[i] = i;
+        }
+        java.util.Arrays.sort(order, java.util.Comparator.<Integer>comparingLong(i -> tee.integer("ORDER", i)).thenComparingLong(i -> tee.integer("POINT", i)));
         Map<String, Object> trades = new LinkedHashMap<>();
         List<String> tenors = new ArrayList<>();
         com.ash.drishti.banking.compute.ccr.ExposureGrid g = d.book().grid();
@@ -776,10 +827,10 @@ public class ExposureEnginePath {
         Map<String, Object> byTrade = new LinkedHashMap<>();
         Map<String, List<Long>> ees = new LinkedHashMap<>();
         Map<String, String> setOf = new LinkedHashMap<>();
-        for (Map<String, Object> r : tee) {
-            String t = String.valueOf(r.get("TRADE_ID"));
-            ees.computeIfAbsent(t, x -> new ArrayList<>()).add(Math.round(((Number) r.get("EE")).doubleValue()));
-            setOf.put(t, String.valueOf(r.get("NETTING_SET")));
+        for (int r : order) {
+            String t = String.valueOf(tee.text("TRADE_ID", r));
+            ees.computeIfAbsent(t, x -> new ArrayList<>()).add(Math.round(tee.number("EE", r)));
+            setOf.put(t, String.valueOf(tee.text("NETTING_SET", r)));
         }
         ees.forEach((t, ee) -> byTrade.put(t, Map.of("nettingSet", setOf.get(t), "ee", ee)));
         trades.put("trades", byTrade);
@@ -843,7 +894,7 @@ public class ExposureEnginePath {
      */
     @SuppressWarnings("unchecked")
     Map<String, Object> overlay(Principal p, String scope, LocalDate date, ExposureService.Ask ask, Map<String, Object> head) {
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         if (p != null && !es.access().levels(p).isEmpty()) {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "your role's exposure access levels are applied in-tree; captures are made "
                     + "there (path=in-tree)");
@@ -978,7 +1029,7 @@ public class ExposureEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "the engine path needs the business date: give asOf");
         }
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         int i = -1;
         if (at != null && !at.isBlank()) {
             List<Map<String, Object>> pts = rows(ask(p, scope, date, m, List.of("exposure-profile")), "exposure-profile");
@@ -1170,7 +1221,7 @@ public class ExposureEnginePath {
         if (!scope.toUpperCase(Locale.ROOT).contains("GROUP:")) {
             return;
         }
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         List<Map<String, Object>> rows = new ArrayList<>();
         es.loader().groups(com.ash.drishti.api.AsOf.of(date)).forEach((g, ms) -> ms.forEach(c -> {
             Map<String, Object> r = new LinkedHashMap<>();
@@ -1200,7 +1251,7 @@ public class ExposureEnginePath {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "the engine path needs the business date: give asOf");
         }
         String method = String.valueOf(body.getOrDefault("method", "addon")).trim().toLowerCase(Locale.ROOT);
-        ExposureService es = svc.getObject();
+        ExposureService es = service();
         Object qq = body.get("q");
         Object cc = body.get("collateral");
         ExposureService.Ask ask = ExposureService.Ask.of(es.props(), qq == null ? null : String.valueOf(qq), cc == null ? null : String.valueOf(cc), null, null);
@@ -1417,7 +1468,7 @@ public class ExposureEnginePath {
     }
 
     private EngineAnswer call(Principal p, List<String> outputs, Map<String, Object> params, LocalDate date) {
-        Engines e = engines.getIfAvailable();
+        Engines e = engines.get();
         if (e == null || !e.running(ENGINE)) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " is not running here (drishti-risk-ccr in lib/engines and "
                     + "config/engines/ccr.yaml); the exposure routes answer nothing on the engine path without it");

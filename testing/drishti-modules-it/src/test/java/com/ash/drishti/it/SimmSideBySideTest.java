@@ -134,6 +134,174 @@ class SimmSideBySideTest {
         assertThat(sbs.differences).as("SIMM answers that differ between in-tree and engine").isEmpty();
     }
 
+    /** The netting sets of the date (the exposure tree lists them all), in the tree's order. */
+    private static List<String> nettingSets() throws IOException, InterruptedException {
+        List<String> sets = new ArrayList<>();
+        JsonNode t = server.get("/api/v1/risk/exposure/tree?asOf=" + DATE);
+        for (JsonNode g : t.path("groups")) {
+            for (JsonNode cp : g.path("children")) {
+                for (JsonNode ns : cp.path("children")) {
+                    String sc = ns.path("scope").asText("");
+                    if (sc.startsWith("NSET:") && !sets.contains(sc.substring(5))) {
+                        sets.add(sc.substring(5));
+                    }
+                }
+            }
+        }
+        return sets;
+    }
+
+    /** Overrides (parameter what-ifs) and the hand-built examples: every netting set with two override sets, the examples three ways. */
+    @Test
+    void theOverridesAndTheExamplesAreTheSameOnBothPaths() throws Exception {
+        SideBySide sbs = new SideBySide();
+        String one = "&override=" + enc("InterestRate.concentration-thresholds.delta.1=3000");
+        String two = one + "&override=" + enc("FX.vega-risk-weight=0.5") + "&concentration=off";
+        int withFigures = 0;
+        List<String> engineOnlyRefused = new ArrayList<>();
+        List<String> asks = new ArrayList<>();
+        for (String set : nettingSets()) {
+            asks.add("nettingSet=" + set + one);
+            asks.add("nettingSet=" + set + two);
+        }
+        asks.add("nettingSet=EXAMPLE");
+        asks.add("nettingSet=EXAMPLE&concentration=off&hvr=off");
+        asks.add("nettingSet=EXAMPLE" + two);
+        asks.add("scope=DESK:DESK-RATES" + one);
+        for (String a : asks) {
+            Outcome o = ask(sbs, a, "/api/v1/risk/simm?asOf=" + DATE + "&" + a);
+            if (o == Outcome.FIGURES) {
+                withFigures++;
+            } else if (o == Outcome.ENGINE_REFUSED) {
+                engineOnlyRefused.add(a);
+            }
+        }
+        // a refused override and a refused add-on of nothing: refused on both paths, in the same words
+        int refusedSame = 0;
+        for (String a : List.of("nettingSet=EXAMPLE&override=" + enc("InterestRate.no-such=1"), "nettingSet=" + nettingSets().get(0) + "&override="
+                + enc("InterestRate.concentration-thresholds.delta.1=abc"))) {
+            refusedSame += sameRefusal(sbs, a, "/api/v1/risk/simm?asOf=" + DATE + "&" + a) ? 1 : 0;
+        }
+        System.out.println("side by side, SIMM overrides and examples: " + asks.size() + " asked, " + withFigures + " with figures on both paths, "
+                + refusedSame + " refused on both in the same words, refused on the engine path only " + engineOnlyRefused.size() + " "
+                + engineOnlyRefused.stream().limit(10).toList() + "; first differences: " + sbs.differences.stream().limit(10).toList());
+        assertThat(withFigures).isGreaterThan(100);
+        assertThat(refusedSame).as("refusals in the same words").isEqualTo(2);
+        assertThat(engineOnlyRefused).as("answered in-tree, refused on the engine path").isEmpty();
+        assertThat(sbs.differences).as("SIMM answers that differ between in-tree and engine").isEmpty();
+    }
+
+    /** The netting-set list, the comparison with the counterparty's call, the explanation's steps and the installed versions. */
+    @Test
+    void theListTheCallsTheStepsAndTheVersionsAreTheSameOnBothPaths() throws Exception {
+        SideBySide sbs = new SideBySide();
+        List<String> sets = nettingSets();
+        int lists = 0;
+        for (String q : List.of("", "&concentration=off", "&counterparty=CP-ALDERSHOT")) {
+            whole(sbs, "netting-sets" + q, "/api/v1/risk/simm/netting-sets?asOf=" + DATE + q);
+            lists++;
+        }
+        int against = 0;
+        int explain = 0;
+        for (String set : sets) {
+            if (wholeOrSameRefusal(sbs, "against " + set, "/api/v1/risk/simm/against?asOf=" + DATE + "&nettingSet=" + set)) {
+                against++;
+            }
+            for (String q : List.of("", "&direction=post", "&class=InterestRate&concentration=off")) {
+                if (wholeOrSameRefusal(sbs, "explain " + set + q, "/api/v1/risk/simm/explain?asOf=" + DATE + "&nettingSet=" + set + q)) {
+                    explain++;
+                }
+            }
+        }
+        for (String q : List.of("nettingSet=EXAMPLE", "nettingSet=EXAMPLE&direction=post", "scope=DESK:DESK-RATES",
+                "nettingSet=EXAMPLE&override=" + enc("InterestRate.concentration-thresholds.delta.1=3000"))) {
+            if (wholeOrSameRefusal(sbs, "explain " + q, "/api/v1/risk/simm/explain?asOf=" + DATE + "&" + q)) {
+                explain++;
+            }
+        }
+        wholeOrSameRefusal(sbs, "against DESK:DESK-RATES", "/api/v1/risk/simm/against?asOf=" + DATE + "&nettingSet=DESK:DESK-RATES");
+        // the versions: the lake's simm-parameters (engine) against the parameter folder (in-tree); where each file lives differs by design
+        JsonNode[] v = sbs.both(server, "versions", "/api/v1/risk/simm/versions?asOf=" + DATE, "default");
+        java.util.function.Function<JsonNode, String> rows = n -> {
+            StringBuilder b = new StringBuilder();
+            n.path("versions").forEach(x -> b.append(x.path("version")).append('|').append(x.path("installed")).append('|').append(x.path("effectiveFrom"))
+                    .append('|').append(x.path("sha256")).append('|').append(x.path("problem")).append('\n'));
+            return b.toString();
+        };
+        if (!rows.apply(v[0]).equals(rows.apply(v[1]))) {
+            sbs.differences.add("versions: in-tree " + rows.apply(v[0]) + ", engine " + rows.apply(v[1]));
+        }
+        System.out.println("side by side, SIMM routes: " + lists + " netting-set lists, " + against + " comparisons with the call, " + explain
+                + " explanations with steps (" + sets.size() + " netting sets), versions " + v[1].path("versions").size() + "; differences "
+                + sbs.differences.size() + "; first: " + sbs.differences.stream().limit(10).toList());
+        assertThat(against).isGreaterThan(30);
+        assertThat(explain).isGreaterThan(100);
+        assertThat(v[1].path("versions").size()).isPositive();
+        assertThat(sbs.differences).as("SIMM routes that differ between in-tree and engine").isEmpty();
+    }
+
+    private static String enc(String s) {
+        return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** The whole answer on both paths (JSON equality of every field but {@code path}); false when refused on both in the same words. */
+    private static boolean wholeOrSameRefusal(SideBySide sbs, String what, String q) throws IOException, InterruptedException {
+        JsonNode a;
+        try {
+            a = server.get(q + "&path=in-tree");
+        } catch (IllegalStateException e) {
+            sameRefusal(sbs, what, q);
+            return false;
+        }
+        JsonNode b;
+        try {
+            b = server.get(q + "&path=engine");
+        } catch (IllegalStateException x) {
+            sbs.differences.add(what + ": answered in-tree, refused on the engine path: " + x.getMessage());
+            return false;
+        }
+        compareWhole(sbs, what, a, b);
+        return true;
+    }
+
+    private static void whole(SideBySide sbs, String what, String q) throws IOException, InterruptedException {
+        compareWhole(sbs, what, server.get(q + "&path=in-tree"), server.get(q + "&path=engine"));
+    }
+
+    private static void compareWhole(SideBySide sbs, String what, JsonNode a, JsonNode b) {
+        sbs.compared++;
+        com.fasterxml.jackson.databind.node.ObjectNode x = ((com.fasterxml.jackson.databind.node.ObjectNode) a).deepCopy();
+        com.fasterxml.jackson.databind.node.ObjectNode y = ((com.fasterxml.jackson.databind.node.ObjectNode) b).deepCopy();
+        x.remove("path");
+        y.remove("path");
+        if (!x.equals(y)) {                                             // JSON equality: every key (any order), every number as written
+            sbs.differences.add(what + ": " + SideBySide.first(x, y));
+        }
+    }
+
+    /** True when both paths refuse with the same status and the same words; a difference is kept otherwise. */
+    private static boolean sameRefusal(SideBySide sbs, String what, String q) throws IOException, InterruptedException {
+        String a = refusal(q + "&path=in-tree");
+        String b = refusal(q + "&path=engine");
+        if (a == null || b == null || !a.equals(b)) {
+            sbs.differences.add(what + ": refusals differ: in-tree " + a + ", engine " + b);
+            return false;
+        }
+        return true;
+    }
+
+    /** The status and the words of a refusal (the problem's body), null when answered. */
+    private static String refusal(String q) throws IOException, InterruptedException {
+        try {
+            server.get(q);
+            return null;
+        } catch (IllegalStateException e) {
+            String m = String.valueOf(e.getMessage());
+            int colon = m.indexOf(": ");
+            return m.substring(0, m.indexOf(' ')) + (colon < 0 ? "" : m.substring(colon + 2));
+        }
+    }
+
     static final String[] FIELDS_IN_ORDER = java.util.Arrays.stream(FIELDS).filter(f -> !f.equals("BY_RISK_CLASS")).toArray(String[]::new);
 
     /** The rows by product class and risk class, each row's JSON (numbers as written: every double to the bit). */

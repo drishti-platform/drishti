@@ -571,14 +571,22 @@ public class VarController {
             @RequestParam(required = false) String within, @RequestParam(name = "path", required = false) String route,
             @RequestParam(defaultValue = "false") boolean exact, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
         if (enginePath.engine(route)) {                                // R2: the market-risk engine's node-var (VarEnginePath.tree)
-            if (confidence != null || horizon != null || method != null || esq != null || set != null || matured
-                    || within != null && !within.isBlank()) {
-                throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the tree on the offered lens for now; a lens, "
+            if (matured || within != null && !within.isBlank()) {
+                throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the tree without matured items for now; "
                         + "matured items or a basket's own tree (within) are answered in-tree (path=in-tree)");
             }
-            Map<String, Object> answer = enginePath.tree(p, hierarchy, date(asOf), ccy);
+            com.ash.drishti.banking.compute.var.VarLens tl = lens(horizon, method, confidence, esq, set);   // a lens: node-var-horizon (R2 A2)
+            boolean lensed = tl != null && !tl.equals(svc.props().defaultLens());
+            if (lensed && !Boolean.FALSE.equals(parametric) && pOn() && !"lens".equals(views.parametric().props().horizonRule())) {
+                throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path fits the lens's own vector (horizon-rule lens); "
+                        + "drishti.var.parametric.horizon-rule is " + views.parametric().props().horizonRule() + " here: ask it in-tree "
+                        + "(path=in-tree) or with parametric=false");
+            }
+            Map<String, Object> answer = enginePath.tree(p, hierarchy, date(asOf), ccy, tl);
+            com.ash.drishti.banking.compute.var.VarLens cl = lensed ? tl : svc.props().defaultLens();
             if (!Boolean.FALSE.equals(parametric) && pOn() && answer.get("nodes") instanceof List<?> rows) {   // each node's cell from node-pvar
-                Map<String, VarEnginePath.Parametric> pv = enginePath.parametric(p, date(asOf), (String) answer.get("currency"),
+                Map<String, VarEnginePath.Parametric> pv = lensed ? enginePath.parametric(p, date(asOf), (String) answer.get("currency"), tl,
+                        views.parametric().props().settings()) : enginePath.parametric(p, date(asOf), (String) answer.get("currency"),
                         enginePath.window(null), svc.props().defaultLens().confidence(), svc.props().defaultLens().esConfidence(),
                         views.parametric().props().settings());
                 for (Object o : rows) {
@@ -586,7 +594,7 @@ public class VarController {
                     Map<String, Object> n = (Map<String, Object>) o;
                     VarEnginePath.Parametric x = pv.get(String.valueOf(n.get("id")));
                     if (x != null) {
-                        n.put("parametric", views.parametric().treeCell(x.figures(), svc.props().defaultLens(), String.valueOf(n.get("name")),
+                        n.put("parametric", views.parametric().treeCell(x.figures(), cl, String.valueOf(n.get("name")),
                                 (Double) n.get("varExact"), (Double) n.get("esExact")));
                     }
                 }

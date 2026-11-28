@@ -869,6 +869,70 @@ class RiskSideBySideTest {
     }
 
     /**
+     * The tree ({@code GET /tree}) through the other lenses (R2 lane A2: {@code node-var-horizon} for every node): each golden date, every
+     * hierarchy, 10-day by the square root of 10 (USD and EUR) and by overlapping sums, the stress set at 1 and 10 days, an offered
+     * confidence; the nodes in the same order with the same fields, the lens block, VaR and ES of every row equal to the in-tree raw bits.
+     */
+    @Test
+    void theTreeThroughEveryLensIsTheSameOnBothPaths() throws Exception {
+        SideBySide sbs = new SideBySide();
+        int nodes = 0;
+        java.util.Set<String> dates = new java.util.TreeSet<>();
+        golden.fieldNames().forEachRemaining(c -> dates.add(c.split("/")[0]));
+        List<String[]> lenses = List.of(new String[] {"USD", "horizon=10d"}, new String[] {"EUR", "horizon=10d"}, new String[] {"USD", "horizon=10d&method=sum"},
+                new String[] {"USD", "set=stressed"}, new String[] {"USD", "set=stressed&horizon=10d"}, new String[] {"USD", "confidence=0.975"},
+                new String[] {"EUR", "confidence=0.995&esConfidence=0.95"});
+        for (String date : dates) {
+            boolean stressed = stressSet(date);
+            JsonNode first = server.get("/api/v1/risk/var/tree?asOf=" + date + "&parametric=false&path=in-tree");
+            for (String[] l : lenses) {
+                if (l[1].startsWith("set=stressed") && !stressed) {
+                    continue;                                           // the date holds no stress scenario set: refused on both paths
+                }
+                for (JsonNode h : first.path("hierarchies")) {
+                    String what = date + "/" + l[0] + " " + l[1] + " " + h.asText();
+                    JsonNode[] both = sbs.both(server, what, "/api/v1/risk/var/tree?asOf=" + date + "&ccy=" + l[0] + "&hierarchy=" + h.asText() + "&" + l[1]
+                            + "&parametric=false&exact=true", "hierarchy", "currency", "hierarchies", "title", "businessDate", "portfolios", "lens");
+                    List<String> a = new ArrayList<>();
+                    List<String> b = new ArrayList<>();
+                    both[0].path("nodes").forEach(n -> a.add(n.path("id").asText()));
+                    both[1].path("nodes").forEach(n -> b.add(n.path("id").asText()));
+                    if (!a.equals(b)) {
+                        sbs.differences.add(what + " node order: in-tree " + a.size() + ", engine " + b.size() + ": " + SideBySide.first(
+                                both[0].path("nodes"), both[1].path("nodes")));
+                        continue;
+                    }
+                    for (int i = 0; i < a.size(); i++) {
+                        JsonNode x = both[0].path("nodes").get(i);
+                        JsonNode y = both[1].path("nodes").get(i);
+                        nodes++;
+                        for (String f : List.of("id", "scope", "name", "level", "parent", "depth", "var", "es", "limit", "limitUse", "limitStatus",
+                                "limitComparable", "trades", "hidden", "expandable", "blank", "blankNote")) {
+                            if (!java.util.Objects.equals(String.valueOf(x.get(f)), String.valueOf(y.get(f)))) {
+                                sbs.differences.add(what + " " + a.get(i) + " " + f + ": in-tree " + x.get(f) + ", engine " + y.get(f));
+                            }
+                        }
+                        // the in-tree tree rounds its figures; the engine's exact doubles against the in-tree headline's through the same lens
+                        if (i < 3) {
+                            JsonNode hd = server.get("/api/v1/risk/var/scope?scope=" + URLEncoder.encode("NODE:" + a.get(i), StandardCharsets.UTF_8) + "&asOf="
+                                    + date + "&ccy=" + l[0] + "&" + l[1] + "&parametric=false&exact=true&path=in-tree");
+                            sbs.bits(what + " " + a.get(i) + " VAR", hd.path("varExact").asDouble(), y.path("varExact").asDouble());
+                            sbs.bits(what + " " + a.get(i) + " ES", hd.path("esExact").asDouble(), y.path("esExact").asDouble());
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("side by side, tree through a lens: " + sbs.compared + " trees, " + nodes + " node rows on both paths; " + sbs.sameBits
+                + " engine VaR and ES figures equal to the in-tree headline's raw bits; differences " + sbs.differences.size() + "; first: "
+                + sbs.differences.stream().limit(8).map(x -> x.substring(0, Math.min(300, x.length()))).toList() + "; first raw-bit differences: "
+                + sbs.bitDifferences.stream().limit(8).toList());
+        assertThat(nodes).as("tree rows compared").isGreaterThan(1000);
+        assertThat(asserted(sbs.differences)).as("tree answers through a lens that differ").isEmpty();
+        assertThat(asserted(sbs.bitDifferences)).as("raw bits that differ").isEmpty();
+    }
+
+    /**
      * The contributions ({@code GET /scope/contributions}, the default parts) of every golden node with child nodes, each date and currency:
      * every row (standalone VaR and ES, component VaR and ES, share, incremental VaR) and the sums equal on both paths, and the headline's
      * parts block (children, their kind, the standalone sum, the diversification); VaR and ES equal to the golden's raw bits. A node whose

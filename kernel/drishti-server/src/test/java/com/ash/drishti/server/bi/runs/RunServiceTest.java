@@ -172,8 +172,21 @@ class RunServiceTest {
     @Test
     void aRunningTwinWithTheSameKeyIsJoinedNotRunTwice() throws Exception {
         AtomicInteger calls = new AtomicInteger();
-        RunService.Outcome one = runs.submit(question(VIEWER, "sig-v", "v1", calls, 500, "10"), inline(50));
-        RunService.Outcome two = runs.submit(question(VIEWER, "sig-v", "v1", calls, 500, "10"), inline(50));
+        CountDownLatch twinJoined = new CountDownLatch(1);                      // the first run holds until the twin has joined: no timing assumption
+        RunService.Question held = new RunService.Question(VIEWER, "mq", "trading", null, "Desk P&L", null, "trading", "{\"q\":1}", null, "sig-v", "v1", false,
+                null, () -> {
+                    calls.incrementAndGet();
+                    try {
+                        twinJoined.await(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new DrishtiException(ErrorCode.QUERY_BUSY, "interrupted");
+                    }
+                    return new RunService.Answer(Map.of("rowCount", 1, "rows", List.of(List.of("RATES-NY", "10"))), null, 1);
+                });
+        RunService.Outcome one = runs.submit(held, inline(50));
+        RunService.Outcome two = runs.submit(held, inline(50));
+        twinJoined.countDown();
         assertThat(two.run().reuseOf()).isEqualTo(one.run().id());
         waitFor(one.run().id(), RunState.DONE);
         waitFor(two.run().id(), RunState.REUSED);

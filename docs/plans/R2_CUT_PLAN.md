@@ -373,7 +373,7 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
   page items), **0 differences on the mapped tier and on the heap tier** (and on the mapped tier with `-Dsbs.zero-copy=on` before the bridge fix, so with the engine's own rows: the zero-copy page proof is still to run). `VarResultEngine` (VRES) figures from the engine are built behind the same switch (`fd54365b0`) and read by the test on both servers with `-Dsbs.vres=true`: **red, 45 differences** (and the run then also differed on the report runs, not yet understood: under study, off by default in the test, which is green without it as before). VRES is not proven. The parts'
   labels, sizes and the `max-parts` cut are the host's (read from the in-tree book of the date, as lane G's `hostPositions`: no vector
   is read for them, but the date is loaded: at removal they come from the engine's index, `EngineScopeBook.positionValue`).
-  **Not done (in-tree only, gate brief below)**: the pivot and MR cube readers, `VarFlightForm`, the explain readers; VRES awaits its proof run.
+  **Not done (in-tree only, gate brief below)**: the pivot and MR cube readers, `VarFlightForm`, the explain readers; VRES proven by lane V (below).
 - **(4) Zero copy, built behind `var.zero-copy` (off)**: Appendix A row. drishti-risk `VarHotFileTest` 8/8 (the new case: the hot file's
   own matrices swapped in equal the built rows to the bit; another book's ids refused). **Not yet seen end to end**: the first server
   runs never reached the banking module's `VarVectorViews` (a module bean is not a kernel bean: fixed by the module bridge, `528217414`,
@@ -395,6 +395,27 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
   `vectorView` answers only the new view name). They must run before the gate. No tolerance loosened.
 - **Infrastructure**: from 05:4x this lane builds into its own Maven repository (`~/drishti-bench-scratch/i8-m2-r2b`, the lead's
   instruction after this lane's kernel SNAPSHOTs replaced lane A's in the shared `i8-m2`).
+
+### Status, R2 lane V (2026-11-28 10:0x, branch `r2/vres`; drishti-risk `r2/vres`)
+
+- **VRES side by side: green on both tiers, now part of the default run** (the `-Dsbs.vres` gate dropped). Built fresh (full reactor
+  install: the exec jar and the `.dmod` newer than the last change; lane B's red run had read an older build). The 45 differences of
+  lane B's run were: 43 `var-result` records differing **only in run keys** (the request id, the stamp's `computedAt`, the cached
+  result's `generation`, the provenance's `COMPUTED_AT`, `COMPUTE_MS`, `LOADED_MS`, `CACHE` hit or miss, and the stamp's `resultHash`,
+  a digest of the record's rows, which carry those provenance clocks: two in-tree servers differ there too), and the 2 report runs
+  (below). Every figure, part (`CHILDREN`), P&amp;L vector (`PNL`, raw doubles), `WORST`, `K`, `ES_COUNT` and word was already equal: no
+  computation change was needed. `ConsumersSideBySideTest` now leaves out exactly those run keys (`RUN_KEYS`) and compares the rest,
+  the provenance's words included (before, the whole provenance and the result's meta were left out). Proof after merging
+  `r2/consumers-speed` (`22e9aea05`): 58 `var-result` records each tier (43 answered, 15 refused in-tree and on the engine alike),
+  **0 differences** on the mapped and on the heap tier; `PackagedVarGoldenTest` green (2/2, mapped).
+- **Still red in `ConsumersSideBySideTest`, not VRES** (open, every run since the fresh build, both tiers): (1) the two regulatory
+  report runs on the engine path: `annual-report-var` refused ("the engine market-risk answered no statistics of MGMT~DESK-RATES
+  (not found: risk/var-official@1 for date 2026-09-30)") and `var-backtesting-chart` with 0 days tested where in-tree has 2: the
+  engine's `var-history` input read no published record of 2026-09-30 (the published records' connector `var-results` is restarted
+  by the capture's publish 0.7 s before the runs; the session keeps what it read); the views reader serves the records. Lane B's
+  "0 differences" on the reports came from the older build. (2) The position page's trade links panel (`panels[6].data.links[].status`,
+  `pending` against `resolved`, either way round, 0 to 4 pages a run): the link resolver's timing under load, not a VaR figure.
+- Maven: `~/drishti-bench-scratch/i8-m2-r2vres` (removed at the stop).
 
 ### R2 gate brief (lane B, 2026-11-28; for the Fable R2 gate)
 
@@ -428,7 +449,7 @@ float32 position rows) and heap (`-Dsbs.tier=heap`, float64).
 
 | Reader | Why not yet | What the engine path needs |
 |---|---|---|
-| `VarResultEngine` (`var-result`, VRES: FORM results, blotters, AI tools); **figures from the engine built (lane B, `fd54365b0`), side by side red (45 differences), open** | the record carries the headline's words (kind, label, scenarios, horizon, method, set, provenance, backtest block) and the raw vector beside the figures; the engine headline answers the figures only | a host-only "words" function (no in-tree vector), the figures from `node-var`/`scope-var`, `scope-path` (k, ES count, worst, raw PNL), the children from `scope-contributions` (VarEngineParts for trades and positions), `scope-backtest`; a side by side over `/api/v1/entities/var-result/<id>` |
+| `VarResultEngine` (`var-result`, VRES: FORM results, blotters, AI tools); **figures from the engine built (lane B, `fd54365b0`); side by side green on both tiers (lane V: 43 records, 0 differences; in the default run)** | the record carries the headline's words (kind, label, scenarios, horizon, method, set, provenance, backtest block) and the raw vector beside the figures; the engine headline answers the figures only | a host-only "words" function (no in-tree vector), the figures from `node-var`/`scope-var`, `scope-path` (k, ES count, worst, raw PNL), the children from `scope-contributions` (VarEngineParts for trades and positions), `scope-backtest`; a side by side over `/api/v1/entities/var-result/<id>` |
 | `VarPivotProvider`, `VarPivotLens`, `VarPivotCodes`, `MrCubeExtras` (BI pivot, MR cube) | a VaR per pivot cell (any grouping of rows) at pivot scale: one `scope-var` per cell is one ask per cell | a batched row-set output (many row sets, one ask: `scope-var` over `parts` without the contributions), then the pivot side by side |
 | `VarFlightForm` (`var.scenarios`, `var.parts`; live stream) | the engine gives no vectors out except a scope's P&L in `scope-path`; parts' vectors are one ask each; the stream follows the in-tree intraday stamp | `var.scenarios` from `scope-path` (PNL, VaR, ES) is direct; `var.parts` needs a parts-vectors output (or the zero-copy views read out through Flight, 3a.2); a Java Flight client in `drishti-modules-it` for the side by side |
 | `VarNumberExplainer`, `VarWhyPanels`, `VarExplain` ("?" and the explain routes) | they read the scope's internals (k, the tail scenarios, the parts) from the in-tree scoped answer | the same outputs as VRES (`scope-path`, `scope-contributions`) and the explain book over them; side by side of the explain answers |

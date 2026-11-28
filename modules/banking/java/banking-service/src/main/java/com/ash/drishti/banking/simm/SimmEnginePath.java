@@ -223,8 +223,15 @@ public class SimmEnginePath {
         }
         m.put("BY_PRODUCT_CLASS", pcs);
         List<Map<String, Object>> postRows = rows(po, "simm");
+        List<Map<String, Object>> collectRows = rows(c, "simm");
+        Map<String, Double> postIm = new java.util.HashMap<>();        // the post direction's IM by product and risk class: the first row of each
+        for (Map<String, Object> y : postRows) {
+            if (s.equals(y.get("SCOPE"))) {
+                postIm.putIfAbsent(y.get("PRODUCT_CLASS") + "|" + y.get("RISK_CLASS"), num(y, "IM"));
+            }
+        }
         List<Map<String, Object>> rcs = new ArrayList<>();
-        for (Map<String, Object> r : rows(c, "simm")) {
+        for (Map<String, Object> r : collectRows) {
             if (!s.equals(r.get("SCOPE"))) {
                 continue;
             }
@@ -236,8 +243,7 @@ public class SimmEnginePath {
             x.put("CURVATURE", num(r, "CURVATURE"));
             x.put("BASE_CORR", num(r, "BASE_CORR"));
             x.put("TOTAL", num(r, "IM"));
-            x.put("POST_TOTAL", postRows.stream().filter(y -> s.equals(y.get("SCOPE")) && r.get("PRODUCT_CLASS").equals(y.get("PRODUCT_CLASS"))
-                    && r.get("RISK_CLASS").equals(y.get("RISK_CLASS"))).map(y -> num(y, "IM")).findFirst().orElse(null));
+            x.put("POST_TOTAL", postIm.get(r.get("PRODUCT_CLASS") + "|" + r.get("RISK_CLASS")));
             rcs.add(x);
         }
         // SIMM's order (product classes, then risk classes within each); the in-tree run lists them as its elements first name them
@@ -273,7 +279,7 @@ public class SimmEnginePath {
         pv.put("Engine", ENGINE + " (Drishti Risk), through the host");
         m.put("PROVENANCE", pv);
         m.put("path", "engine");
-        List<Map<String, Object>> cc = rows(c, "simm").stream().filter(r -> s.equals(r.get("SCOPE"))).toList();
+        List<Map<String, Object>> cc = collectRows.stream().filter(r -> s.equals(r.get("SCOPE"))).toList();
         List<Map<String, Object>> pc = postRows.stream().filter(r -> s.equals(r.get("SCOPE"))).toList();
         return new Answer(m, cc, pc, c, po);
     }

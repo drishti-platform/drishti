@@ -418,17 +418,14 @@ public class ExposureEnginePath {
         prm.put("confidence", ask.q());
         prm.put("collateral", ask.collateral());
         EngineAnswer a = call(p, List.of("exposure-tree", "exposure-tree-ee", "exposure-run"), prm, date);
-        List<Map<String, Object>> nodes = rows(a, "exposure-tree");
-        List<Map<String, Object>> ees = rows(a, "exposure-tree-ee");
         List<Map<String, Object>> run = rows(a, "exposure-run");
-        if (nodes == null || ees == null || run == null || run.isEmpty()) {
+        if (a.table("exposure-tree") == null || a.table("exposure-tree-ee") == null || run == null || run.isEmpty()) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no exposure tree on " + date + missing(a));
         }
-        Map<String, Map<String, Object>> byScope = new LinkedHashMap<>();
-        nodes.forEach(r -> byScope.put(String.valueOf(r.get("SCOPE")), r));
-        Map<String, List<Long>> ee = new LinkedHashMap<>();
-        ees.sort(java.util.Comparator.comparingLong(r -> ((Number) r.get("POINT")).longValue()));
-        ees.forEach(r -> ee.computeIfAbsent(String.valueOf(r.get("SCOPE")), x -> new ArrayList<>()).add(Math.round(((Number) r.get("EE")).doubleValue())));
+        TreeRows tr = a.shaped("exposure.tree", TreeRows::of);         // shaped once per answer, kept with it in the host's cache
+        List<Map<String, Object>> nodes = tr.nodes();
+        Map<String, Map<String, Object>> byScope = tr.byScope();
+        Map<String, List<Long>> ee = tr.ee();
         // the limit's use is the peak PFE at the limit's confidence when the figures hold it (the configured confidences and the tree's own), else the tree's
         double lq = es.props().limitConfidence();
         boolean other = Math.abs(lq - ask.q()) >= 1e-12 && java.util.Arrays.stream(es.props().confidences()).anyMatch(c -> Math.abs(c - lq) < 1e-12);
@@ -529,7 +526,7 @@ public class ExposureEnginePath {
                 n.put("peakPfe", Math.round(((Number) r.get("PEAK_PFE")).doubleValue()));
                 n.put("peakPfeTenor", r.get("PEAK_PFE_TENOR"));
                 n.put("peakEe", Math.round(((Number) r.get("PEAK_EE")).doubleValue()));
-                n.put("ee", ee.getOrDefault(scope, List.of()));
+                n.put("ee", new ArrayList<>(ee.getOrDefault(scope, List.of())));
                 List<String> flags = flags(r.get("FLAGS"), refs, ref.date().groups(), scope);
                 if (!d.warnings().isEmpty() && !flags.contains("stale-run")) {    // the host's word on its own run, as in-tree
                     flags.add("stale-run");
@@ -555,6 +552,37 @@ public class ExposureEnginePath {
 
     /** A netting set with paths as a scope's flags read it: its id, counterparty, legal entity, data-quality flags and trades with paths. */
     record SetRef(String id, String counterparty, String legalEntity, List<String> flags, int trades) {}
+
+    /**
+     * The tree answer's rows as the tree reads them, shaped once per answer (the same for every viewer of that answer: the key carries the
+     * visibility): every node's row, the rows by scope, each scope's EE line in whole units in point order. Read only.
+     */
+    record TreeRows(List<Map<String, Object>> nodes, Map<String, Map<String, Object>> byScope, Map<String, List<Long>> ee)
+            implements EngineAnswer.Sized {
+
+        static TreeRows of(EngineAnswer a) {
+            List<Map<String, Object>> nodes = java.util.Collections.unmodifiableList(rows(a, "exposure-tree"));
+            Map<String, Map<String, Object>> byScope = new LinkedHashMap<>();
+            nodes.forEach(r -> byScope.put(String.valueOf(r.get("SCOPE")), java.util.Collections.unmodifiableMap(r)));
+            EngineTable t = a.table("exposure-tree-ee");
+            Integer[] order = new Integer[t.rows()];
+            for (int i = 0; i < order.length; i++) {
+                order[i] = i;
+            }
+            java.util.Arrays.sort(order, java.util.Comparator.comparingLong(i -> t.integer("POINT", i)));   // stable: a scope's points in order
+            Map<String, List<Long>> ee = new LinkedHashMap<>();
+            for (int i : order) {
+                ee.computeIfAbsent(t.text("SCOPE", i), x -> new ArrayList<>()).add(Math.round(t.number("EE", i)));
+            }
+            ee.replaceAll((k, v) -> List.copyOf(v));
+            return new TreeRows(nodes, java.util.Collections.unmodifiableMap(byScope), java.util.Collections.unmodifiableMap(ee));
+        }
+
+        @Override
+        public long bytes() {
+            return 512L * nodes.size() + 48L * ee.values().stream().mapToLong(List::size).sum();
+        }
+    }
 
     /**
      * A netting set's or counterparty's page figures through the engine ({@link ExposureFigures}), as the in-tree scope answer's keys they
@@ -771,7 +799,7 @@ public class ExposureEnginePath {
         EngineAnswer ta = call(server, List.of("exposure-trade-ee"), tp, d.date());
         List<Map<String, Object>> rows = rows(a, "exposure-official");
         List<Map<String, Object>> prof = rows(a, "exposure-official-profile");
-        List<Map<String, Object>> tee = rows(ta, "exposure-trade-ee");
+        EngineTable tee = ta.table("exposure-trade-ee");                 // read as columns: a row a trade and point, never boxed
         if (rows == null || prof == null || tee == null) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no official figures of " + d.date() + missing(a) + missing(ta));
         }
@@ -782,8 +810,11 @@ public class ExposureEnginePath {
         prof.forEach(r -> profiles.computeIfAbsent(String.valueOf(r.get("SCOPE")), x -> new ArrayList<>()).add(r));
         double alpha = es.props().alpha();
         // every trade's EE contribution, in the engine's order (the book's netting sets, each set's trades in the calculation's order)
-        tee.sort(java.util.Comparator.<Map<String, Object>>comparingLong(r -> ((Number) r.get("ORDER")).longValue())
-                .thenComparingLong(r -> ((Number) r.get("POINT")).longValue()));
+        Integer[] order = new Integer[tee.rows()];
+        for (int i = 0; i < order.length; i++) {
+            order[i] = i;
+        }
+        java.util.Arrays.sort(order, java.util.Comparator.<Integer>comparingLong(i -> tee.integer("ORDER", i)).thenComparingLong(i -> tee.integer("POINT", i)));
         Map<String, Object> trades = new LinkedHashMap<>();
         List<String> tenors = new ArrayList<>();
         com.ash.drishti.banking.compute.ccr.ExposureGrid g = d.book().grid();
@@ -796,10 +827,10 @@ public class ExposureEnginePath {
         Map<String, Object> byTrade = new LinkedHashMap<>();
         Map<String, List<Long>> ees = new LinkedHashMap<>();
         Map<String, String> setOf = new LinkedHashMap<>();
-        for (Map<String, Object> r : tee) {
-            String t = String.valueOf(r.get("TRADE_ID"));
-            ees.computeIfAbsent(t, x -> new ArrayList<>()).add(Math.round(((Number) r.get("EE")).doubleValue()));
-            setOf.put(t, String.valueOf(r.get("NETTING_SET")));
+        for (int r : order) {
+            String t = String.valueOf(tee.text("TRADE_ID", r));
+            ees.computeIfAbsent(t, x -> new ArrayList<>()).add(Math.round(tee.number("EE", r)));
+            setOf.put(t, String.valueOf(tee.text("NETTING_SET", r)));
         }
         ees.forEach((t, ee) -> byTrade.put(t, Map.of("nettingSet", setOf.get(t), "ee", ee)));
         trades.put("trades", byTrade);

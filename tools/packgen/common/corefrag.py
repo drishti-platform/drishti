@@ -21,7 +21,7 @@ One place, used by every generator (it post-processes the text of a generated Su
 
 A panel is converted only when every key it carries is one the fragment takes (or a use-level key: area, source, waits); a panel
 with any other key (pivot, children, expand, highlight, moreLabel, emits, phone, controls' extras ...) stays inline and is
-reported. The panel's id is passed as the fragment's {@code id} (Rachana 1.1.1, panel-id) and also becomes the use's {@code as}, so ids, keys and references do not change. Idempotent: a use is left alone.
+reported. The panel's id is passed as the fragment's {@code id} (Rachana 1.1.1+, panel-id) and also becomes the use's {@code as}, so ids, keys and references do not change. Idempotent: a use is left alone.
 """
 from __future__ import annotations
 

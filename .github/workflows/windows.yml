@@ -63,6 +63,8 @@ jobs:
       - name: Build (no tests)
         run: ./mvnw.cmd -B -q install -DskipTests
       - name: Tests of the lake host, the Delta and Iceberg connectors and the server
+        env:
+          DRISHTI_TEST_SLOW_FACTOR: "3"      # the hosted Windows runner has 4 cores and slow loopback: the cluster tests' time budgets scale (MachineSpeed)
         run: ./mvnw.cmd -B -fae verify -pl :drishti-api,:drishti-lake-host,plugins/drishti-plugin-delta,plugins/drishti-plugin-iceberg,plugins/drishti-plugin-iceberg-external,:drishti-server
       # its own step (everything is installed above): a failure here never hides the server suite's result, nor the other way round
       - name: Tests of the identity stores (users, preferences, designs)

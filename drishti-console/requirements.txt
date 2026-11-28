@@ -16,5 +16,5 @@ pyarrow>=16
 # ../lib/wheels. Its dependencies (deltalake, pyarrow, pyyaml, jsonschema) come with it, at the versions it pins; a wheel is pure Python and installs
 # the same on Linux, macOS and Windows. The version below is held to the pin's by tools/lake/test_lakewheel.py.
 --find-links ../lib/wheels
-drishti-lake==0.9.1
+drishti-lake==0.9.2
 # optional, allow-listed when installed: scipy>=1.13, statsmodels>=0.14

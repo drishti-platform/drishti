@@ -79,6 +79,8 @@ class GenomicsDistributionServerTest {
             Files.copy(dmod, work.resolve("modules").resolve(dmod.getFileName()));     // dropped in, as an administrator would
             ModuleFixtures.write(work.resolve("placement.yaml"), "modules:\n  genomics:\n    parts:\n      api: { nodes: [local] }\n");
             loadDemoLake(work.resolve("data").resolve("delta").resolve("genomicslake"));
+            Files.createDirectories(work.resolve("lakes"));       // the site's lake file of the module's lake (a site has it from set-up, config/lakes/genomicslake.yaml)
+            Files.copy(Path.of(TestRoots.repo(), "config", "lakes", "genomicslake.yaml"), work.resolve("lakes").resolve("genomicslake.yaml"));
         }
         System.setProperty("drishti.modules.home", work.resolve("modules").toString());
         System.clearProperty("drishti.modules.sources");
@@ -117,6 +119,7 @@ class GenomicsDistributionServerTest {
     static synchronized void settings(DynamicPropertyRegistry r) {
         r.add("drishti.placement.file", () -> work.resolve("placement.yaml").toString());
         r.add("drishti.data.dir", () -> work.resolve("data").toString());
+        r.add("lake.lakes.dir", () -> work.resolve("lakes").toString());
         r.add("drishti.bindings.file", () -> work.resolve("bindings.yaml").toString());
     }
 

@@ -26,7 +26,7 @@ import org.springframework.test.context.DynamicPropertySource;
 /** H2 on the packs drawn from their committed samples (the demo connector): {@link H2PanelEquivalence}. */
 @SpringBootTest(properties = {"drishti.rachana.hot-reload=false", "drishti.sources.plugins.demo.settings.ticking=false",
         "drishti.security.enabled=true", "drishti.security.secret=test-secret-that-is-at-least-32-bytes-long",
-        "drishti.packs.enabled=core,central-banks,gdelt-events,national-statistics,oecd,official-news,world-development,genomics-showcase,protein-engineering,market-data,trading,genomics,retail-banking,finance,logistics",
+        "drishti.packs.enabled=core,central-banks,gdelt-events,national-statistics,oecd,official-news,world-development,genomics-showcase,protein-engineering,market-data,trading,genomics,retail-banking,logistics",
         "drishti.packs.extra-dirs=${drishti.h2.examples}",
         "drishti.security.redact=NAME,TITLE,COUNTRY_NAME,VALUE",
         "drishti.security.roles.masked.kinds[0]=*", "drishti.security.roles.masked.raw=false",

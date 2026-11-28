@@ -92,3 +92,41 @@ roles:                         # an example role of this system: who sees its tr
       trade: "SOURCE_SYSTEM = 'MUREX'"
     edit-systems:
     - MUREX
+
+# The table this pack's connector writes: its layout (the Delta connector's lake-tables names it; the loader reads it from here).
+lake:
+  tables:
+    trading.trade_murex:
+      kind: trade
+      partition-by:
+      - PRODUCT_GROUP
+      promote:
+      - TRADE_ID
+      - SOURCE_SYSTEM
+      - PRODUCT_TYPE
+      - PRODUCT_SUB_TYPE
+      - PRODUCT_GROUP
+      - TRADE_STATUS
+      - TRADE_VERSION
+      - BUY_SELL_CODE
+      - CURRENCY
+      - QUANTITY
+      - TRADE_DATE
+      - MATURITY_DATE
+      - COUNTERPARTY
+      - LEGAL_ENTITY
+      - PORTFOLIO
+      - TRADER_ID
+      - NOTIONAL
+      - INDEX_NAME
+      sort-by:
+      - id
+      file-rows: 250000
+      row-group-rows: 1000
+
+ingest:
+  trade:
+    key: TRADE_ID
+    flatten:
+      NOTIONAL: LEGS[0].NOTIONAL
+      INDEX_NAME: LEGS[0].INDEX.NAME

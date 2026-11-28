@@ -14,7 +14,12 @@
 
 # About this page: what the pack is.
 about: 1
-intro: |
-  Calypso is the capital markets trading and risk system. Its trades arrive in the common UPPER_SNAKE trade schema, so the mapping is the identity.
-  This pack is one source of the canonical `trade` kind: its rows carry `SOURCE_SYSTEM = CALYPSO`. It is a pack of the `trading-systems` module that
-  extends `trading`; switch it on or off in Admin -> Artifacts (the pack is the switch).
+intro:
+  sections:
+    What it is: 'Calypso is the capital markets trading and risk system. Its trades arrive in the common UPPER_SNAKE trade
+      schema, so the mapping is the identity.
+
+      This pack is one source of the canonical `trade` kind: its rows carry `SOURCE_SYSTEM = CALYPSO`. It is a pack of the
+      `trading-systems` module that
+
+      extends `trading`; switch it on or off in Admin -> Artifacts (the pack is the switch).'

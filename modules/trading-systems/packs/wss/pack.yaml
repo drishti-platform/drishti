@@ -93,3 +93,20 @@ roles:                         # an example role of this system: who sees its tr
       trade: "SOURCE_SYSTEM = 'WSS'"
     edit-systems:
     - WSS
+
+# The table this pack's connector writes: its layout (the Delta connector's lake-tables names it; the loader reads it from here).
+lake:
+  tables:
+    trading.trade_wss:
+      kind: trade
+      promote:
+      - SOURCE_SYSTEM
+      sort-by:
+      - id
+
+ingest:
+  trade:
+    key: TRADE_ID
+    flatten:
+      NOTIONAL: LEGS[0].NOTIONAL
+      INDEX_NAME: LEGS[0].INDEX.NAME

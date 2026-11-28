@@ -101,15 +101,16 @@ class DistributionsTest {
     @Test
     void theModulesManifestsDriveTheFilterAndARequiredModuleComesAlong() {
         java.util.Map<String, ModuleManifests.Entry> known = ModuleManifests.read(SOURCE);
-        assertThat(known).containsKeys("banking", "market-data", "capitalmarkets", "economy");
+        assertThat(known).containsKeys("banking", "market-data", "reference-data", "external-data", "news-and-events", "trading-systems");
         List<String> order = List.copyOf(known.keySet());
         assertThat(order.indexOf("market-data")).isLessThan(order.indexOf("banking"));
-        assertThat(known.get("banking").requires()).containsExactly("market-data");
+        assertThat(known.get("banking").requires()).containsExactlyInAnyOrder("market-data", "reference-data", "trading-systems");
         assertThat(known.get("banking").packs()).doesNotContain("market-data");
         assertThat(known.get("market-data").packs()).containsExactly("market-data");
-        assertThat(known.get("economy").packs()).contains("world-economy", "central-banks", "gdelt-events");
+        assertThat(known.get("external-data").packs()).contains("world-economy", "central-banks");
+        assertThat(known.get("news-and-events").packs()).contains("gdelt-events");
         assertThat(DIR.resolve("modules.yaml")).doesNotExist();                       // the hand mapping is gone: one source of truth
-        assertThat(ModuleManifests.withRequired(List.of("banking"), known)).containsExactly("banking", "market-data");
+        assertThat(ModuleManifests.withRequired(List.of("banking"), known)).containsExactlyInAnyOrder("banking", "market-data", "reference-data", "trading-systems");
         assertThat(read("risk").packs()).contains("market-data", "trading").doesNotContain("world-economy", "us-equities");
         assertThatThrownBy(() -> Distributions.read(Distributions.file(DIR, "risk"), DIR.resolve(Distributions.KERNEL),
                 com.ash.drishti.api.resolution.ModuleHomes.none(), Path.of(TestRoots.repo(), "config", "packs")))
@@ -218,7 +219,7 @@ class DistributionsTest {
     void genomicsBootsOnTheKernelAlone() {
         Distribution g = read("genomics");
         assertThat(g.packs()).as("none of the kernel's packs (no counterparty, book or desk): only the module's own showcase packs")
-                .containsExactlyInAnyOrder("genomics-showcase", "protein-engineering");
+                .containsExactlyInAnyOrder("genomics", "genomics-showcase", "protein-engineering");
         assertThat(g.wordsOff()).contains("VAR", "EXP");
         assertThat(g.modules()).containsExactly("genomics");                            // its manifest: modules/genomics (the SDK's layout)
         assertThat(g.domains()).containsEntry("genomics", "genomics");
@@ -226,6 +227,6 @@ class DistributionsTest {
         StandardEnvironment env = boot("drishti.distribution", "genomics");
         assertThat(Editions.of(env).commandShown("CRV")).isFalse();
         assertThat(Editions.of(env).commandShown("CPTY")).isFalse();
-        assertThat(env.getProperty("drishti.packs.enabled")).as("only the module's own packs").isEqualTo("genomics-showcase,protein-engineering");
+        assertThat(env.getProperty("drishti.packs.enabled")).as("only the module's own packs").isEqualTo("genomics,genomics-showcase,protein-engineering");
     }
 }

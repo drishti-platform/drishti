@@ -50,7 +50,9 @@ class AllShippedPacksTest {
     /** Shipped but not on by default: switched on with DRISHTI_PACKS (their READMEs say how). */
     static final List<String> OPT_IN = List.of("us-equities", "gleif", "funds", "compute-demo",
             // the public-sector module's packs, filled by their daily feeds (docs/guides/WORLD_DATA_GUIDE.md)
-            "world-development", "central-banks", "national-statistics", "oecd", "official-news", "gdelt-events");
+            "world-development", "central-banks", "national-statistics", "oecd", "official-news", "gdelt-events",
+            // the six source-system packs of trading-systems (off by default; the demo profile switches endur, calypso and murex on)
+            "endur", "calypso", "murex", "wss", "swapone", "ici");
 
     @Test
     void theShippedPacksAreTheDefaultOnesPlusTheOptInOnesAndLoadTogether() {
@@ -81,7 +83,7 @@ class AllShippedPacksTest {
     @Test
     void noTwoShippedPacksDeclareTheSameRoleDifferently() {
         Path dir = SHIPPED;
-        assertThat(Files.isDirectory(dir)).as("the shipped packs folder").isTrue();
+        assertThat(Files.isDirectory(Path.of(TestRoots.repo(), "modules"))).as("the shipped modules folder").isTrue();
         List<String> all = REPO.packs().names();
         assertThat(all).hasSizeGreaterThanOrEqualTo(DEFAULTS.size());
         List<String> clashes = new ArrayList<>();

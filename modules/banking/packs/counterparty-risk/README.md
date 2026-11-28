@@ -202,7 +202,7 @@ Nested structures:
 | `TRADES[]` | `TRADE_ID` (string): The member trade., `STATUS` (string), `PRODUCT` (string): The kind of instrument the trade is., `ASSET_CLASS` (string), `CURRENCY` (string), `BOOK` (string), `NOTIONAL` (number): The reference amount of the trade, in the trade's own currency. (trade currency), `MATURITY` (date): The date the trade ends., `MATURITY_BUCKET` (string), `MTM` (integer): The trade's current value, from the bank's side. (USD) |
 | `BY_ASSET[]` | `ASSET` (string), `MTM` (integer) |
 
-Links: `AGREEMENT` → `agreement`, `COLLATERAL_BALANCE` → `collateral-balance`, `CREDIT_LIMIT` → `credit-limit`, `CSA` → `csa`, `CVA_RESULT` → `cva`, `SACCR` → `sa-ccr`, `SIMM` → `simm`, `TRADE_ID` → `trade`.
+Links: `AGREEMENT` → `agreement`, `COLLATERAL_BALANCE` → `collateral-balance`, `CREDIT_LIMIT` → `credit-limit`, `CSA` → `csa`, `CVA_RESULT` → `cva`, `SACCR` → `sa-ccr`, `SIMM` → `simm`.
 
 ### `credit-limit`
 
@@ -436,7 +436,7 @@ Fields, from 1 sample document:
 | `PATH_ROW_ID` | string | `XR-2026-09-30-01~CLY-3000280~0` | <run>~<trade>~<grid index> |
 | `BUSINESS_DATE` | date | `2026-09-30` | — |
 | `RUN_ID` | string | `XR-2026-09-30-01` | link to `simulation-run` |
-| `TRADE_ID` | string | `CLY-3000280` | link to `trade` |
+| `TRADE_ID` | string | `CLY-3000280` | — |
 | `SOURCE_SYSTEM` | string | `CALYPSO` | — |
 | `NETTING_SET` | string | `NS-ALDERSHOT-FRA` | The trade's netting set (denormalised; the netting set's membership wins); link to `netting-set` |
 | `COUNTERPARTY` | string | `CP-ALDERSHOT` | — |
@@ -456,7 +456,7 @@ Fields, from 1 sample document:
 | `PRICER` | string | `testgen-factor-walk` | — |
 | `BATCH_ID` | string | `XB-2026-09-30-01` | — |
 
-Links: `NETTING_SET` → `netting-set`, `RUN_ID` → `simulation-run`, `TRADE_ID` → `trade`.
+Links: `NETTING_SET` → `netting-set`, `RUN_ID` → `simulation-run`.
 
 ### `exposure-result`
 

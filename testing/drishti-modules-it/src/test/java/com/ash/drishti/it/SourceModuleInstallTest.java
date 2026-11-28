@@ -99,6 +99,12 @@ class SourceModuleInstallTest {
         Path folder = tmp.resolve("source-swapone");
         Path pack = repo().resolve("modules/trading-systems/packs/swapone");
         copy(pack.resolve("connectors"), folder.resolve("connectors"));
+        // the pack carries its connectors inline (pack.yaml connectors:); a module's own template is one file per connector, the same entries
+        YAMLMapper packYaml = new YAMLMapper();
+        JsonNode inline = packYaml.readTree(Files.readString(pack.resolve("pack.yaml"))).path("connectors");
+        for (var e : inline.properties()) {
+            Files.writeString(folder.resolve("connectors").resolve(e.getKey() + ".yaml"), packYaml.writeValueAsString(e.getValue()));
+        }
         copy(pack.resolve("mappings"), folder.resolve("mappings"));
         Files.copy(pack.resolve("dataload.yaml"), folder.resolve("dataload.yaml"));
         Files.createDirectories(folder.resolve("data"));

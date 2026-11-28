@@ -156,7 +156,12 @@ class Packs:
                                   if n not in (m.get("connectors") or {})}
 
     def connector(self, pack: str, name: str) -> dict:
-        return self.specs[pack]["connectors"][name]
+        c = (self.specs[pack].get("connectors") or {}).get(name)
+        if c is None:                                 # a source system's connector (trade-endur) is its own pack's: the manifest names the kind's pack
+            c = next((s["connectors"][name] for s in self.specs.values() if name in (s.get("connectors") or {})), None)
+        if c is None:
+            raise KeyError(f"{pack}: no connector {name} in this pack or in any other")
+        return c
 
     def table(self, pack: str, connector: str, kind: str) -> tuple[str, str]:
         s = self.connector(pack, connector).get("settings") or {}

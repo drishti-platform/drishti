@@ -182,7 +182,7 @@ def write_pack(a, n: dict, m: dict, pack: pathlib.Path, say=print) -> dict:
     write_yaml(pack / "pack.yaml", manifest)
     (pack / "sutras").mkdir(parents=True, exist_ok=True)
     (pack / "sutras" / f"{n['low']}-native-fields.v1.section.yaml").write_text(section_file(n, m), encoding="utf-8")
-    write_yaml(pack / "config" / "about.yaml", {"about": 1, "intro": intro(a, n, m)})
+    write_yaml(pack / "config" / "about.yaml", {"about": 1, "intro": {"sections": {"What it is": intro(a, n, m)}}})
     host = n.get("host")
     if host is not None and pack.resolve().parent.parent == host.resolve():
         add_to_module(host, n["name"], say)

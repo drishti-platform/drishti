@@ -14,9 +14,17 @@
 
 # About this page: what the pack is.
 about: 1
-intro: |
-  WSS is a treasury, FX and money-markets dealing system (mocked here: a synthetic look-alike, UPPER_SNAKE names like Endur, one deal a document, buy and sell legs).
-  The data is **mocked**: a synthetic look-alike written by `tools/samplegen/src_wss.py` (never real data, banks or counterparties), a few hundred trades over sixty business days in the system's own native style, with no positions and no scenario P&L, so the VaR does not move.
+intro:
+  sections:
+    What it is: 'WSS is a treasury, FX and money-markets dealing system (mocked here: a synthetic look-alike, UPPER_SNAKE
+      names like Endur, one deal a document, buy and sell legs).
 
-  This pack is one source of the canonical `trade` kind: its rows carry `SOURCE_SYSTEM = WSS`. It is a pack of the `trading-systems` module that
-  extends `trading`; switch it on or off in Admin -> Artifacts (the pack is the switch).
+      The data is **mocked**: a synthetic look-alike written by `tools/samplegen/src_wss.py` (never real data, banks or counterparties),
+      a few hundred trades over sixty business days in the system''s own native style, with no positions and no scenario P&L,
+      so the VaR does not move.
+
+
+      This pack is one source of the canonical `trade` kind: its rows carry `SOURCE_SYSTEM = WSS`. It is a pack of the `trading-systems`
+      module that
+
+      extends `trading`; switch it on or off in Admin -> Artifacts (the pack is the switch).'

@@ -14,7 +14,12 @@
 
 # About this page: what the pack is.
 about: 1
-intro: |
-  Murex is the cross-asset trading and risk platform. Its trades arrive in the common UPPER_SNAKE trade schema, so the mapping is the identity.
-  This pack is one source of the canonical `trade` kind: its rows carry `SOURCE_SYSTEM = MUREX`. It is a pack of the `trading-systems` module that
-  extends `trading`; switch it on or off in Admin -> Artifacts (the pack is the switch).
+intro:
+  sections:
+    What it is: 'Murex is the cross-asset trading and risk platform. Its trades arrive in the common UPPER_SNAKE trade schema,
+      so the mapping is the identity.
+
+      This pack is one source of the canonical `trade` kind: its rows carry `SOURCE_SYSTEM = MUREX`. It is a pack of the `trading-systems`
+      module that
+
+      extends `trading`; switch it on or off in Admin -> Artifacts (the pack is the switch).'

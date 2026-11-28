@@ -234,7 +234,7 @@ Fields, from 765 sample documents:
 | Field | Type | Example | Description |
 |---|---|---|---|
 | `VALUATION_ID` | string | `TVAL-1000001` | The document's id |
-| `TRADE_ID` | string | `1000001` | The trade valued (trading pack); link to `trade` |
+| `TRADE_ID` | string | `1000001` | The trade valued (trading pack) |
 | `SOURCE_SYSTEM` | string | `ENDUR` | Source |
 | `PRODUCT_TYPE` | string | `ComSwap` | Product |
 | `PRODUCT_GROUP` | string | `Commodity` | Group |
@@ -254,8 +254,6 @@ Fields, from 765 sample documents:
 | `TRADE_DATE` | date | `2025-06-20` | The trade's trade date |
 | `MATURITY_DATE` | date | `2028-07-31` | Maturity |
 | `VALUATION_DATE` | date | `2026-09-30` | Valued |
-
-Links: `TRADE_ID` → `trade`.
 
 ### `position`
 
@@ -358,7 +356,7 @@ Fields, from 2 sample documents:
 |---|---|---|---|
 | `VALUE_TYPE` | string | `PNL` | — |
 | `GRAIN` | string | `TRADE` | — |
-| `TRADE_ID` | string | `MX-20000274` | link to `trade` (in 50%) |
+| `TRADE_ID` | string | `MX-20000274` | — (in 50%) |
 | `CURRENCY` | string | `USD` | — |
 | `SOURCE_SYSTEM` | string | `MUREX` | — |
 | `VECTOR_ID` | string | `PNL-MX-20000274-HS-509` | PNL-<trade or position>-HS-509 (PV- also read) |
@@ -396,7 +394,7 @@ Fields, from 2 sample documents:
 | `POSITION_ID` | string | `POS-BOOK-EQD-2~SEC-WARRANT-USD-01` | link to `position` (in 50%) |
 | `TRADE_IDS` | list of strings |  | link to `trade` (in 50%) |
 
-Links: `POSITION_ID` → `position`, `TRADE_ID` → `trade`, `TRADE_IDS` → `trade`.
+Links: `POSITION_ID` → `position`, `TRADE_IDS` → `trade`.
 
 ### `scenario-pv`
 
@@ -447,10 +445,10 @@ Fields, from 2 sample documents:
 | `RESTATEMENT` | integer | `0` | — |
 | `RUN_KIND` | string | `FULL` | — |
 | `TRADE_IDS` | list of strings |  | link to `trade` (in 50%) |
-| `TRADE_ID` | string | `MX-20000274` | link to `trade` (in 50%) |
+| `TRADE_ID` | string | `MX-20000274` | — (in 50%) |
 | `TRADE_VERSIONS` | string | `v4` | — (in 50%) |
 
-Links: `POSITION_ID` → `position`, `SCENARIO_PV_ID` → `scenario-pv`, `TRADE_ID` → `trade`, `TRADE_IDS` → `trade`.
+Links: `POSITION_ID` → `position`, `SCENARIO_PV_ID` → `scenario-pv`, `TRADE_IDS` → `trade`.
 
 ### `fx-scenario`
 

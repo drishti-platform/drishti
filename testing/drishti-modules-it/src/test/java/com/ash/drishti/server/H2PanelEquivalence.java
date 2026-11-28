@@ -93,7 +93,7 @@ abstract class H2PanelEquivalence {
     List<String[]> olds() throws Exception {
         List<String[]> out = new ArrayList<>();
         for (String pack : packs()) {
-            Path dir = Path.of(TestRoots.module(), "src", "test", "resources", "sutra-next-h2", pack);
+            Path dir = Path.of(TestRoots.repo(), "testing", "drishti-modules-it", "src", "test", "resources", "sutra-next-h2", pack)   /* this module's own folder: lake.module.root names the server's */;
             if (!Files.isDirectory(dir)) {
                 continue;
             }

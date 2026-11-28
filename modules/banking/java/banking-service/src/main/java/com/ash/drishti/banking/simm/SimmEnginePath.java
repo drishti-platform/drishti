@@ -462,6 +462,9 @@ public class SimmEnginePath {
         if (list instanceof int[] a) {
             return a;
         }
+        if (list instanceof double[] a) {
+            return java.util.Arrays.stream(a).mapToInt(x -> (int) x).toArray();
+        }
         if (list instanceof long[] a) {
             return java.util.Arrays.stream(a).mapToInt(x -> (int) x).toArray();
         }

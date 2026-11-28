@@ -366,6 +366,49 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
    on the capture). `GET /compare?b=now&path=engine` reads now from the engine. A lens other than the offered one and a scope whose
    parts are positions or terms are refused in words on the engine path (captured in-tree).
 
+### Status, R2 lane A2: SIMM and VaR leftovers (2026-11-28 09:2x, paused by the owner; branch `r2/exposure-routes`; drishti-risk `r2/exposure-routes` 3c508fe + the steps fix)
+
+Every switch default unchanged (`in-tree`); nothing removed; no tolerance loosened. A fresh lane continues from here.
+
+- **Regression, mapped tier, lane heads after a full reactor install (exec JAR and .dmod 08:00, after the last code change)**:
+  `PackagedVarGoldenTest` 2/2 (BANK VaR 167,372,692, ES 210,131,972), `RiskSideBySideTest` 14/14 cases unchanged (headline 1,572 answers,
+  3,918 raw bits; tree 786 rows; contributions 1,572; path 786; horizons 1,441; other confidences 1,572; parametric 2,023,570 numbers
+  within 1e-12; history 864; statistics 2,144; backtesting 402; captures 786 pairs; what-ifs 393 + 39; scope kinds 300, 678 raw bits),
+  `HomesSideBySideTest` (12 tables, 1,054 rows), `ExposureSideBySideTest` and `ExposureHomesSideBySideTest` (all cases 0 differences),
+  `RiskMaxPartsSideBySideTest` (786, 540 cut, 0 differences), drishti-risk `CcrRecordedIT` and `MarketRecordedIT` green.
+  `ConsumersSideBySideTest`: 2 differences on the report runs (`annual-report-var`: the engine server answers no report record), lane B's
+  VRES/consumers work, not this lane's code; to recheck on lane B's branch. **Heap tier not run** (paused before it).
+  drishti-risk kit ITs (`MarketKitIT`, `CcrKitIT`): delivery/scan findings (bytedeco links, hostcompat static state), failing already on
+  2026-11-27, not from this lane.
+- **SIMM, done and proved (mapped tier)**: `GET /simm` 230 answers equal (as before); **parameter overrides and the hand-built examples**
+  (engine params `simm-overrides`, `simm-scope: EXAMPLE`): 156 asks (76 netting sets x 2 override sets, the examples 3 ways, an analytic
+  scope) every field equal, 2 refused overrides refused on both paths in the same words; **`/netting-sets`** (3 lists) and **`/against`**
+  (76 netting sets) every field equal; **`/versions`** (engine output `simm-versions`) version, installed, effective date, SHA-256, problem
+  and the default equal (where the file lives differs by design: the lake table against the parameter folder).
+- **SIMM, built, not yet proved**: `/explain` (engine outputs `simm-charge`, `simm-bucket`, `simm-factor`, `simm-group`, `simm-addon`): the
+  run refused it (the bucket's member list was given as int[] to a list column; fixed after the pause, unproved); the CSA's **add-ons**
+  (params `simm-addon-fixed`, `-multipliers`, `-factors`, `-lines`): on the engine path, **no proof possible on the sample** (no CSA carries
+  IM add-on terms and no `simm-addon` line is served); a proof needs a test CSA with IM_FIXED_ADDON / IM_PRODUCT_MULTIPLIERS /
+  IM_ADDON_FACTORS and simm-addon lines.
+- **SIMM stays in the module**: the playground (workbook, recipes, compare) reads `Simm.Result` internals; it moves only with the
+  playground family (owner's list), so `compute/simm` stays until it does.
+- **VaR leftovers, done and proved (mapped tier)**: the **tree through a lens** (`node-var-horizon` for every node; 10-day both methods,
+  USD and EUR, the stress set at 1 and 10 days, offered confidences): 51 trees, 2,227 node rows, 0 differences, 306 engine VaR and ES
+  equal to the in-tree headline's raw bits.
+- **VaR leftovers, built, 3 differences**: the **parts of an expression of terms** (`VarEnginePath.termParts`: each positive term's
+  allocated rows by `scope-contributions`, the term alone by `scope-var`): 144 answers (12 more than before), 3 differ by one unit in
+  EUR `diversification` (in-tree 9,482,775, engine 9,482,776): the in-tree sums the parts' standalone in another order; to align
+  before it counts as proved.
+- **VaR leftovers, remaining (each needs engine work, said in words on the engine path)**: matured items (the engine's index holds no
+  matured rows); `within` trees (each node's part of a basket: one `scope-var` per node, labels from the host's book); the P&L path,
+  contributions, history and captures through a lens (`scope-path`, `scope-contributions`, `scope-backtest` take no lens params);
+  the P&L path of an expression of terms.
+- **For the gate brief's removal list** (lane B's section): add `banking-service/simm`: `SimmService.run`, `assemble`, `input`,
+  `params`, `resolve`, `version`, the parameter-folder install (`versions`), `SimmAnswer.result`/`explain`/`against(Run)` in-tree halves,
+  `SimmRecipes` replay (with the playground), and `compute/simm` once the playground moves; kept host-side: `SimmData`, `SimmEnginePath`,
+  `SimmAnswer` shaping (`against(Side)`), the controller's switch parse. VaR: the in-tree tree walk through a lens (`VarViews.tree`
+  with a lens) and `VarSelection.parts` (vectors) go; `VarSelection.terms`/`label` stay host-side (words).
+
 ### Status, R2 SIMM and VaR leftovers (2026-11-28 05:4x, branch `r2/exposure-routes`; drishti-risk `r2/exposure-routes` c341cc3)
 
 R2 split by the owner (2026-11-28): this lane owns SIMM on the engine and the VaR leftovers; the remaining consumers, the zero-copy

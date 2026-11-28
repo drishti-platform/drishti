@@ -49,20 +49,22 @@ public class VarEnginePath {
     public static final String ENGINE = "market-risk";
     static final String SETTING = "drishti.module.banking.var.route";   // engines/var.yaml
 
-    private final ObjectProvider<Engines> engines;
+    // the collaborators, each resolved once at first use (a bean lookup per ask or per tree row cost more than the ask itself); a
+    // collaborator not made (yet) is looked up again on the next use
+    private final org.springframework.util.function.SingletonSupplier<Engines> engines;
     private final Environment env;
     /** The saved and system baskets and captures (Drishti's, kept); the in-tree engine half is not asked for a figure. */
-    private final ObjectProvider<VarService> service;
+    private final org.springframework.util.function.SingletonSupplier<VarService> service;
 
     /** The limit status words (within, near, breach) of a use: the banking module's configured rule. */
-    private final ObjectProvider<com.ash.drishti.banking.RiskLimits> limits;
+    private final org.springframework.util.function.SingletonSupplier<com.ash.drishti.banking.RiskLimits> limits;
 
     VarEnginePath(ObjectProvider<Engines> engines, Environment env, ObjectProvider<VarService> service,
             ObjectProvider<com.ash.drishti.banking.RiskLimits> limits) {
-        this.engines = engines;
+        this.engines = org.springframework.util.function.SingletonSupplier.of(engines::getIfAvailable);
         this.env = env;
-        this.service = service;
-        this.limits = limits;
+        this.service = org.springframework.util.function.SingletonSupplier.of(service::getIfAvailable);
+        this.limits = org.springframework.util.function.SingletonSupplier.of(limits::getIfAvailable);
     }
 
     /** True when this request is answered by the engine: its own {@code path}, else the family's switch. */
@@ -89,7 +91,7 @@ public class VarEnginePath {
 
     /** Whether the engine runs here (what a consumer's {@code on()} says on the engine path). */
     public boolean running() {
-        Engines e = engines.getIfAvailable();
+        Engines e = engines.get();
         return e != null && e.running(ENGINE);
     }
 
@@ -188,7 +190,7 @@ public class VarEnginePath {
         out.put("limitUse", Double.isNaN(official.limit()) || official.limit() == 0 ? null : official.var() / official.limit());
         if (resolvedNode != null) {                                     // the parts (child nodes): standalone sum and diversification
             EngineScopeBook book = index(p, date, currency);
-            VarService svc = service.getIfAvailable();
+            VarService svc = service.get();
             boolean leaf = book.children.getOrDefault(resolvedNode, List.of()).isEmpty();
             if (!leaf || svc != null) {                                 // a leaf node's parts are its positions, every one (never cut)
                 ScopeResolver.Resolution nr = resolve(p, book, "NODE:" + resolvedNode, date);
@@ -223,7 +225,7 @@ public class VarEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the override is answered nowhere");
         }
@@ -295,7 +297,7 @@ public class VarEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         String currency = VarCurrencies.normalise(ccy);
         EngineScopeBook book = index(p, date, currency);
         ScopeResolver.Resolution res = resolve(p, book, scope == null ? "" : scope.trim(), date);
@@ -355,7 +357,7 @@ public class VarEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the path is answered nowhere");
         }
@@ -393,7 +395,7 @@ public class VarEnginePath {
         }
         // the parts: each child node whole, the engine's figure of it (the in-tree route takes the child's stored aggregate)
         List<Object[]> parts = new ArrayList<>();
-        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(com.ash.drishti.api.AsOf.of(date), svc.hierarchies());
+        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(date, svc.hierarchies());
         for (String c : kids) {
             OrdinalSet m = book.members(c).and(res.set());
             if (m.isEmpty()) {
@@ -500,7 +502,7 @@ public class VarEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the tree is answered nowhere");
         }
@@ -519,7 +521,10 @@ public class VarEnginePath {
         for (Map<String, Object> r : rows(a, "node-var")) {
             byId.put(String.valueOf(r.get("NODE_ID")), r);
         }
-        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(com.ash.drishti.api.AsOf.of(date), svc.hierarchies());
+        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(date, svc.hierarchies());
+        Hierarchies hs = svc.hierarchies();                             // read once for the tree, never per row
+        com.ash.drishti.banking.RiskLimits rl = limits.get();
+        com.ash.drishti.banking.compute.var.VarLens lens = svc.props().defaultLens();
         List<Map<String, Object>> out = new ArrayList<>();
         java.util.ArrayDeque<Object[]> stack = new java.util.ArrayDeque<>();
         stack.push(new Object[] {root, 0});
@@ -548,17 +553,16 @@ public class VarEnginePath {
             m.put("esExact", es);
             double limit = r.get("LIMIT") == null ? Double.NaN : ((Number) r.get("LIMIT")).doubleValue();
             boolean noLimit = Double.isNaN(limit);
-            boolean comparable = svc.loader().limitBasis(date, id).matches(svc.props().defaultLens());
+            boolean comparable = svc.loader().limitBasis(date, id).matches(lens);
             m.put("limit", noLimit ? null : VarViews.round(limit));
             m.put("limitUse", noLimit || limit == 0 || !comparable ? null : var / limit);
-            com.ash.drishti.banking.RiskLimits rl = limits.getIfAvailable();
             m.put("limitStatus", rl == null ? null : rl.status((Double) m.get("limitUse")));
             m.put("limitComparable", noLimit ? null : comparable);
             int trades = members == null ? 0 : members.size();
             m.put("trades", trades);
             m.put("hidden", 0);
             m.put("expandable", !kids.isEmpty() || trades > 0);
-            String blank = svc.hierarchies().blankNote(h, id, String.valueOf(r.get("LEVEL")), trades);
+            String blank = hs.blankNote(h, id, String.valueOf(r.get("LEVEL")), trades);
             if (blank != null) {
                 m.put("blank", true);
                 m.put("blankNote", blank);
@@ -572,10 +576,10 @@ public class VarEnginePath {
         t.put("hierarchy", h);
         t.put("currency", currency);
         t.put("intraday", null);
-        List<Map<String, Object>> info = svc.hierarchies().describe(present);
+        List<Map<String, Object>> info = hs.describe(present);
         t.put("hierarchies", info.stream().map(x -> String.valueOf(x.get("id"))).toList());
         t.put("hierarchyInfo", info);
-        t.put("title", svc.hierarchies().title(h));
+        t.put("title", hs.title(h));
         t.put("businessDate", date.toString());
         t.put("nodes", out);
         List<Map<String, Object>> ports = new ArrayList<>();
@@ -651,7 +655,7 @@ public class VarEnginePath {
      * position is shown (not a leaf, or no more than max-parts).
      */
     private java.util.Set<String> largestPositions(Principal p, ScopeResolver.Resolution res, LocalDate date, String currency, int total) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null || total <= svc.props().maxParts()) {
             return null;
         }
@@ -684,7 +688,7 @@ public class VarEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the history is answered nowhere");
         }
@@ -798,7 +802,7 @@ public class VarEnginePath {
      * history, which is never published) or when its period, average days or stress weeks are configured otherwise than here.
      */
     public Map<String, Object> statistics(Principal p, String node, String measure, VarPeriodStats.Period period, int averageDays, int stressWeeks) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the statistics are answered nowhere");
         }
@@ -916,7 +920,7 @@ public class VarEnginePath {
      * backtest confidence (before contract 1.6): those dates are named.
      */
     VarBacktesting.Engine backtesting(Principal p, LocalDate last, VarBacktesting held, List<Double> confidences, int window) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the backtest is answered nowhere");
         }
@@ -1023,10 +1027,10 @@ public class VarEnginePath {
 
     /** A node's name as the tree and the headline's label show it (the reference entity's name when the level has one). */
     String nodeName(Principal p, LocalDate date, String currency, String node) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         EngineScopeBook book = index(p, date, currency);
         return svc == null ? book.names.getOrDefault(node, node)
-                : nodeName(book, svc.loader().names(com.ash.drishti.api.AsOf.of(date), svc.hierarchies()), node);
+                : nodeName(book, svc.loader().names(date, svc.hierarchies()), node);
     }
 
     static String nodeName(EngineScopeBook book, com.ash.drishti.banking.compute.var.Cells.Names names, String c) {
@@ -1039,7 +1043,7 @@ public class VarEnginePath {
     record Parts(double var, double es, List<Map<String, Object>> rows) {}
 
     Parts nodeParts(Principal p, EngineScopeBook book, ScopeResolver.Resolution res, LocalDate date, String currency) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the parts are answered nowhere");
         }
@@ -1052,7 +1056,7 @@ public class VarEnginePath {
         params.put("node", res.node());
         List<Integer> all = new ArrayList<>();
         List<String> named = new ArrayList<>();
-        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(com.ash.drishti.api.AsOf.of(date), svc.hierarchies());
+        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(date, svc.hierarchies());
         for (String c : kids) {
             all.addAll(ordinals(book.members(c).and(res.set())));
             all.add(-1);
@@ -1213,7 +1217,7 @@ public class VarEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the what-if is answered nowhere");
         }
@@ -1344,7 +1348,7 @@ public class VarEnginePath {
         if (Double.isNaN(limit) || limit == 0 || !svc.loader().limitBasis(date, res.node() != null ? res.node() : port).matches(svc.props().defaultLens())) {
             out.put("limit", null);
         } else {
-            com.ash.drishti.banking.RiskLimits lim = limits.getIfAvailable(com.ash.drishti.banking.RiskLimits::defaults);
+            com.ash.drishti.banking.RiskLimits lim = java.util.Objects.requireNonNullElseGet(limits.get(), com.ash.drishti.banking.RiskLimits::defaults);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("limit", VarViews.round(limit));
             m.put("useBefore", bv / limit);
@@ -1463,7 +1467,7 @@ public class VarEnginePath {
      * ({@link #hostPositions}) measured by the engine's {@code scope-pcomponents} against the node's own fit, keyed by position id.
      */
     Map<String, PositionComponent> pPositionComponents(Principal p, LocalDate date, String currency, String node) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         if (svc == null) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the VaR service is not configured here: the parts are answered nowhere");
         }
@@ -1510,7 +1514,7 @@ public class VarEnginePath {
 
     /** A lens's confidences when they are not the configured ones (an offered confidence, lane G part 6): the engine's lens-* params. */
     private void lensConfidences(Map<String, Object> params, com.ash.drishti.banking.compute.var.VarLens lens) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         com.ash.drishti.banking.compute.var.VarLens d = svc == null ? null : svc.props().defaultLens();
         if (d == null || lens.confidence() != d.confidence()) {
             params.put("lens-confidence", lens.confidence());
@@ -1528,7 +1532,7 @@ public class VarEnginePath {
      * order, each the child's rows in the scope, from the engine's {@code scope-pmatrix}.
      */
     PMatrix pMatrix(Principal p, String scope, LocalDate date, String ccy, int max) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         String currency = VarCurrencies.normalise(ccy);
         EngineScopeBook book = index(p, date, currency);
         ScopeResolver.Resolution res = resolve(p, book, scope, date);
@@ -1542,7 +1546,7 @@ public class VarEnginePath {
         }
         boolean truncated = kids.size() > max;
         List<String> shown = truncated ? kids.subList(0, max) : kids;
-        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(com.ash.drishti.api.AsOf.of(date), svc.hierarchies());
+        com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(date, svc.hierarchies());
         List<Integer> all = new ArrayList<>();
         List<String> labels = new ArrayList<>();
         for (String c : shown) {
@@ -1634,6 +1638,23 @@ public class VarEnginePath {
     private final Map<String, Object[]> indexes = new java.util.concurrent.ConcurrentHashMap<>();
 
     EngineScopeBook index(Principal p, LocalDate date, String currency) {
+        // once per request: a route (and the screen's blocks it adds: the parametric figures, the node's name) reads one index of the
+        // date, kept on the request (never beyond it, never another person's)
+        org.springframework.web.context.request.RequestAttributes request = org.springframework.web.context.request.RequestContextHolder
+                .getRequestAttributes();
+        String held = "drishti.var.engine-index|" + (p == null ? "" : p.user() + "|" + p.roles()) + "|" + date + "|" + currency;
+        if (request != null && request.getAttribute(held, org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST)
+                instanceof EngineScopeBook b) {
+            return b;
+        }
+        EngineScopeBook b = indexAsked(p, date, currency);
+        if (request != null) {
+            request.setAttribute(held, b, org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST);
+        }
+        return b;
+    }
+
+    private EngineScopeBook indexAsked(Principal p, LocalDate date, String currency) {
         Map<String, Object> words = ask(p, List.of("scope-words"), Map.of(), Map.of("date", date.toString()));
         Object stamp = stamp(words);
         String key = date + "|" + currency;                            // a rule's amounts are in the reporting currency
@@ -1661,7 +1682,7 @@ public class VarEnginePath {
 
     /** The scope as the in-tree route resolves it: the grammar, the system and saved baskets and captures are Drishti's. */
     ScopeResolver.Resolution resolve(Principal p, EngineScopeBook book, String scope, LocalDate date) {
-        VarService svc = service.getIfAvailable();
+        VarService svc = service.get();
         ScopeExpr parsed;
         ScopeResolver.Resolution res;
         try {
@@ -1707,7 +1728,7 @@ public class VarEnginePath {
     }
 
     Map<String, Object> ask(Principal p, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot) {
-        Engines e = engines.getIfAvailable();
+        Engines e = engines.get();
         if (e == null || !e.running(ENGINE)) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " is not running here (drishti-risk-market in "
                     + "lib/engines and config/engines/market-risk.yaml); the VaR routes answer nothing on the engine path without it");

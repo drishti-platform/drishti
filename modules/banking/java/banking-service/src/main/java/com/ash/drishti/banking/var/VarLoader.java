@@ -415,6 +415,27 @@ final class VarLoader {
      * entity (at most {@link #NAME_READS} a kind, then by value).
      */
     com.ash.drishti.banking.compute.var.Cells.Names names(AsOf asOf, Hierarchies hs) {
+        return readNames(asOf, hs);
+    }
+
+    /**
+     * A date's display names as {@link #names} reads them, kept once per date, hierarchies and reference-data version (each naming kind's
+     * data version, as a hot file's digest names them): a new load of a desk or book kind is a new key, never a stale name. For the readers
+     * outside a load (the engine path's tree and labels, the pivot's labels); listed and purged with {@code var.views} (Admin, Caches).
+     */
+    com.ash.drishti.banking.compute.var.Cells.Names names(LocalDate date, Hierarchies hs) {
+        return namesByDate.get(date + "|" + hs.digest() + namesKey(date, hs), k -> readNames(AsOf.of(date), hs));
+    }
+
+    /** The names {@link #names(LocalDate, Hierarchies)} keeps: a few dates and their reference versions, least recently used out. */
+    private final com.github.benmanes.caffeine.cache.Cache<String, com.ash.drishti.banking.compute.var.Cells.Names> namesByDate =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder().maximumSize(16).recordStats().build();
+
+    com.github.benmanes.caffeine.cache.Cache<String, com.ash.drishti.banking.compute.var.Cells.Names> namesCache() {
+        return namesByDate;
+    }
+
+    private com.ash.drishti.banking.compute.var.Cells.Names readNames(AsOf asOf, Hierarchies hs) {
         java.util.Set<String> levels = new java.util.HashSet<>();
         hs.specs().forEach(s -> levels.addAll(s.levelNames()));
         Map<String, Map<String, String>> byKind = new java.util.concurrent.ConcurrentHashMap<>();

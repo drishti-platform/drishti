@@ -54,6 +54,7 @@ panels:
   - use: core/data-table@1
     as: products
     with:
+      id: products
       title: Products held
       key: F2
       rows: $.products

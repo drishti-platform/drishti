@@ -52,6 +52,7 @@ panels:
   - use: core/tabbed-views@1
     as: legs
     with:
+      id: legs
       title: Legs
       key: F2
       each: $.legs
@@ -69,6 +70,7 @@ panels:
   - use: core/data-table@1
     as: cashflows
     with:
+      id: cashflows
       title: Cashflows
       code: CF · by currency
       key: F3

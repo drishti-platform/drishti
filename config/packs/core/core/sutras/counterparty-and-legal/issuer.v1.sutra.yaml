@@ -52,6 +52,7 @@ panels:
   - use: core/data-table@1
     as: bonds
     with:
+      id: bonds
       title: Bonds outstanding
       key: F2
       rows: $.BONDS

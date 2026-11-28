@@ -21,13 +21,13 @@ One place, used by every generator (it post-processes the text of a generated Su
 
 A panel is converted only when every key it carries is one the fragment takes (or a use-level key: area, source, waits); a panel
 with any other key (pivot, children, expand, highlight, moreLabel, emits, phone, controls' extras ...) stays inline and is
-reported. The panel's id becomes the use's {@code as}, so ids, keys and references do not change. Idempotent: a use is left alone.
+reported. The panel's id is passed as the fragment's {@code id} (Rachana 1.1.1, panel-id) and also becomes the use's {@code as}, so ids, keys and references do not change. Idempotent: a use is left alone.
 """
 from __future__ import annotations
 
 import re
 
-TABLE_KEYS = {"title", "rows", "columns", "search", "limit", "totalLabel", "key", "code", "empty", "when", "span"}
+TABLE_KEYS = {"title", "rows", "columns", "search", "limit", "totalLabel", "key", "code", "empty", "when", "span", "where"}
 KV_KEYS = {"title", "rows", "columns", "key", "code", "when", "span"}
 TABS_KEYS = {"title", "each", "tabTitle", "layout", "key", "code", "when", "span", "panels", "body"}
 USE_LEVEL = {"area", "source", "waits"}
@@ -117,7 +117,7 @@ def _convert_item(block: list[str], ind: int, report: list, where: str):
         if k in d:
             out += _shift(d[k], 0)
     out.append(" " * (ind + 2) + "with:")
-    w: list[str] = []
+    w: list[str] = [" " * (ind + 4) + f"id: {pid}"] if pid else []     # Rachana 1.1.1 panel-id: the converted panel keeps its old id
     if kind == "kv":
         if "rows" in d:
             w += _shift(_rename_first(d["rows"], "record"), 2)

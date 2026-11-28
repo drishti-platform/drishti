@@ -50,6 +50,7 @@ panels:
   - use: core/data-table@1
     as: accounts
     with:
+      id: accounts
       title: Clearing accounts
       key: F2
       rows: $.ACCOUNTS

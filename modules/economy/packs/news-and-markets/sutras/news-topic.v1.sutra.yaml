@@ -55,6 +55,7 @@ panels:
     as: headlines
     source: "link($.NEWS_ID, 'news')"
     with:
+      id: headlines
       title: "Headlines, newest first"
       code: NEWS
       key: F2
@@ -79,6 +80,7 @@ panels:
     area: right
     source: "link($.NEWS_ID, 'news')"
     with:
+      id: pipeline
       title: "How the headlines were chosen"
       key: F4
       rows: $.PIPELINE
@@ -90,6 +92,7 @@ panels:
     as: everything
     source: "link($.NEWS_ALL_ID, 'news')"
     with:
+      id: everything
       title: "Everything the feed returned for this name (no relevance filter)"
       key: F5
       rows: $.ITEMS

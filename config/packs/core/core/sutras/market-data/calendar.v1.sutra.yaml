@@ -51,6 +51,7 @@ panels:
   - use: core/data-table@1
     as: holidays
     with:
+      id: holidays
       title: Holidays
       key: F2
       rows: $.HOLIDAYS

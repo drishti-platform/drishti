@@ -55,6 +55,7 @@ panels:
   - use: core/data-table@1
     as: arms
     with:
+      id: arms
       title: Arms
       key: F3
       rows: $.arms

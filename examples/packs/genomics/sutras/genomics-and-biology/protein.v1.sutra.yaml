@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: domains
     with:
+      id: domains
       title: Domains and regions
       key: F2
       rows: $.domains

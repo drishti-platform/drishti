@@ -49,6 +49,7 @@ panels:
   - use: core/data-table@1
     as: members
     with:
+      id: members
       title: Member genes
       key: F2
       rows: $.members

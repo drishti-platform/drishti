@@ -64,6 +64,7 @@ panels:
   - use: core/record-card@1
     as: delivery
     with:
+      id: delivery
       record: "$"
       title: "Physical delivery at the hub"
       code: DLV
@@ -79,6 +80,7 @@ panels:
   - use: core/record-card@1
     as: inventory
     with:
+      id: inventory
       record: "$"
       title: "Warehouse warrants (inventory)"
       code: INV

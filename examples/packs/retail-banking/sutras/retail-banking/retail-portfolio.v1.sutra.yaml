@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: stages
     with:
+      id: stages
       title: By IFRS 9 stage
       key: F2
       rows: $.stages

@@ -51,6 +51,7 @@ panels:
   - use: core/data-table@1
     as: desks
     with:
+      id: desks
       title: Desks
       key: F2
       rows: $.DESKS

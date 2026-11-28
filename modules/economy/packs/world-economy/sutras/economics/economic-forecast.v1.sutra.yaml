@@ -57,6 +57,7 @@ panels:
   - use: core/data-table@1
     as: projections          # nine columns of one source: written in place (a fragment's columns are fixed)
     with:
+      id: projections
       title: IMF series by year
       key: F2
       rows: $.PROJECTIONS

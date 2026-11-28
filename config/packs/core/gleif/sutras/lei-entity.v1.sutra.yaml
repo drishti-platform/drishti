@@ -92,6 +92,7 @@ panels:
     as: addresses
     area: right
     with:
+      id: addresses
       record: "$"
       title: Addresses
       facts:
@@ -118,6 +119,7 @@ panels:
     as: identifiers
     area: right
     with:
+      id: identifiers
       record: "$"
       title: Identifiers
       facts:
@@ -131,6 +133,7 @@ panels:
     as: listed
     area: right
     with:
+      id: listed
       record: "$"
       title: US listed company (us-equities)
       when: "nonblank($.US_COMPANY)"
@@ -142,6 +145,7 @@ panels:
     as: exceptions
     area: right
     with:
+      id: exceptions
       title: Reporting exceptions (why no parent is reported)
       rows: $.PARENT_EXCEPTIONS
       search: false

@@ -64,6 +64,7 @@ panels:
   - use: core/data-table@1
     as: grid
     with:
+      id: grid
       title: Vol (%) by moneyness
       key: F2
       rows: $.GRID

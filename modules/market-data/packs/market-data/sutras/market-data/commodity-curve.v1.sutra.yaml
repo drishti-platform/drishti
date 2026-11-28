@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: points
     with:
+      id: points
       title: Settlements
       rows: $.POINTS
       columns:

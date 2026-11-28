@@ -55,6 +55,7 @@ panels:
   - use: core/record-card@1
     as: regression
     with:
+      id: regression
       record: "$"
       title: The regression of the daily log returns
       key: F2
@@ -71,6 +72,7 @@ panels:
     as: window
     area: right
     with:
+      id: window
       record: "$"
       title: The window
       facts:

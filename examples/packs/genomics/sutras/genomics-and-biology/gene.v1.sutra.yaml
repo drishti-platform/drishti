@@ -55,6 +55,7 @@ panels:
   - use: core/data-table@1
     as: variants
     with:
+      id: variants
       title: Known variants
       key: F3
       rows: $.variants

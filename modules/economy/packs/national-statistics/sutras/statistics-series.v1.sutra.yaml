@@ -56,6 +56,7 @@ panels:
     as: about
     area: right
     with:
+      id: about
       record: "$"
       title: About this series
       facts:

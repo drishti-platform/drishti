@@ -63,6 +63,7 @@ panels:
   - use: core/data-table@1
     as: legislature
     with:
+      id: legislature
       title: "Seats by party, lower chamber"
       key: F2
       rows: $.LEGISLATURE
@@ -72,6 +73,7 @@ panels:
   - use: core/data-table@1
     as: indicators
     with:
+      id: indicators
       title: Society and governance (latest)
       key: F3
       rows: $.INDICATORS
@@ -84,6 +86,7 @@ panels:
   - use: core/data-table@1
     as: partiesListed
     with:
+      id: partiesListed
       title: Political parties (as published)
       key: F4
       rows: $.PARTIES_LISTED

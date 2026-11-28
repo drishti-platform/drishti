@@ -56,6 +56,7 @@ panels:
   - use: core/data-table@1
     as: statements
     with:
+      id: statements
       title: Statements
       key: F3
       rows: $.statements

@@ -51,6 +51,7 @@ panels:
   - use: core/data-table@1
     as: countries
     with:
+      id: countries
       title: Countries by entities
       key: F2
       rows: $.COUNTRY_ROWS

@@ -54,6 +54,7 @@ panels:
   - use: core/data-table@1
     as: trackers
     with:
+      id: trackers
       title: "Funds tracking the ${$.NAME}, by net assets (a fund opens its page)"
       key: F2
       code: TRK

@@ -52,6 +52,7 @@ panels:
   - use: core/data-table@1
     as: route
     with:
+      id: route
       title: Route
       code: LEGS
       key: F2
@@ -78,6 +79,7 @@ panels:
   - use: core/record-card@1
     as: cargo
     with:
+      id: cargo
       title: Cargo
       record: $
       facts: [ { label: Commodity, bind: $.commodity }, { label: Departed, bind: $.departed, fmt: date } ]

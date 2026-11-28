@@ -91,6 +91,7 @@ panels:
     as: the-fund
     area: side
     with:
+      id: the-fund
       record: "$"
       title: The fund
       code: FND
@@ -111,6 +112,7 @@ panels:
     as: flows
     area: low
     with:
+      id: flows
       title: "Flows and returns, three months (N-PORT)"
       span: 4
       rows: $.FLOWS
@@ -125,6 +127,7 @@ panels:
     as: providers
     area: low
     with:
+      id: providers
       record: "$"
       title: Service providers (N-CEN, GLEIF)
       span: 4

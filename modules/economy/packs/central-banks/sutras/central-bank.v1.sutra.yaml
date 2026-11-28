@@ -56,6 +56,7 @@ panels:
   - use: core/data-table@1
     as: series
     with:
+      id: series
       title: "The bank's series (a row opens its history)"
       key: F3
       code: SER
@@ -71,6 +72,7 @@ panels:
     as: bank
     area: right
     with:
+      id: bank
       record: "$"
       title: The bank
       facts:

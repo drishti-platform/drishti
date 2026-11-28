@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: constituents
     with:
+      id: constituents
       title: Top constituents
       key: F2
       rows: $.CONSTITUENTS

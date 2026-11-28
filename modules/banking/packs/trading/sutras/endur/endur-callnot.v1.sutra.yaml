@@ -64,6 +64,7 @@ panels:
   - use: core/record-card@1
     as: deposit
     with:
+      id: deposit
       record: "$"
       title: "Call-notice deposit (nostro)"
       code: DEP

@@ -131,8 +131,7 @@ abstract class H2PanelEquivalence {
     }
 
     static String same(JsonNode view, boolean dropNulls) {
-        return normal(view.deepCopy(), dropNulls).toString().replaceAll("Sutra ([\\w-]+) v\\d+", "Sutra $1 vN")
-                .replaceAll("\"([\\w-]+?)-(table|card|views)\"", "\"$1\"");   // a Core fragment scopes its panel id as <as>-table, -card, -views (reported to the lead)
+        return normal(view.deepCopy(), dropNulls).toString().replaceAll("Sutra ([\\w-]+) v\\d+", "Sutra $1 vN");
     }
 
     void proveSame() throws Exception {

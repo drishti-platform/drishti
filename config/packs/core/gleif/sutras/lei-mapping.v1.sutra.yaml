@@ -52,6 +52,7 @@ panels:
   - use: core/record-card@1
     as: mapping
     with:
+      id: mapping
       record: "$"
       title: The mapping
       key: F2

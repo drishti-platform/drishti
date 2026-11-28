@@ -119,6 +119,7 @@ panels:
     source: { pack: core, kind: counterparty, id: "@trades.open.ref" }
     waits: Pick a trade to see its counterparty and credit limit
     with:
+      id: counterparty
       record: "$"
       title: Counterparty
       facts:
@@ -132,6 +133,7 @@ panels:
     source: { pack: counterparty-risk, kind: credit-limit, where: "@.COUNTERPARTY == @trades.open.ref", limit: 1 }
     waits: Pick a trade to see its counterparty and credit limit
     with:
+      id: limit
       record: "$"
       title: Credit limit
       facts:

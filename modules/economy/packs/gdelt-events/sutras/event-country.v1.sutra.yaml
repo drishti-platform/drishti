@@ -62,6 +62,7 @@ panels:
   - use: core/data-table@1
     as: stories
     with:
+      id: stories
       title: "The most-mentioned stories (an address opens the original)"
       key: F5
       code: TOP

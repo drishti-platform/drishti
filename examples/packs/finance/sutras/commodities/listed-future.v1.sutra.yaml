@@ -66,6 +66,7 @@ panels:
   - use: core/record-card@1
     as: margin
     with:
+      id: margin
       record: "$"
       title: Margin
       code: MRG

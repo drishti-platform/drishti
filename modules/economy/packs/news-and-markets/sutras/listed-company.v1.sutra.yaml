@@ -55,6 +55,7 @@ panels:
     as: quote
     source: "link($.QUOTE_ID, 'quote')"
     with:
+      id: quote
       record: "$"
       title: "Quote"
       code: QUOTE
@@ -83,6 +84,7 @@ panels:
     as: headlines
     source: "link($.NEWS_ID, 'news')"
     with:
+      id: headlines
       title: "Headlines, newest first"
       code: NEWS
       key: F4

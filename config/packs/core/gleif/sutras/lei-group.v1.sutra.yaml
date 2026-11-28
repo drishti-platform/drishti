@@ -79,6 +79,7 @@ panels:
     as: facts
     area: right
     with:
+      id: facts
       record: "$"
       title: The group
       facts:
@@ -96,6 +97,7 @@ panels:
     as: seeds
     area: right
     with:
+      id: seeds
       title: Why the group is in the pack (its seeded entities)
       rows: "$.ROWS[?nonblank(@.SEGMENT)]"
       search: false

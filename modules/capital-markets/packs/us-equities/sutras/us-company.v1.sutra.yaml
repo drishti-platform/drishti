@@ -79,6 +79,7 @@ panels:
     area: funds
     source: { pack: funds, kind: fund-holder, id: $.TICKER }
     with:
+      id: held-by-funds
       title: "Held by funds (a fund opens its page)"
       key: F8
       code: HLD
@@ -96,6 +97,7 @@ panels:
     area: funds
     source: { pack: funds, kind: fund-holder, id: $.TICKER }
     with:
+      id: fund-ownership
       record: "$"
       title: Fund ownership
       facts:
@@ -110,6 +112,7 @@ panels:
     as: indexes
     area: right
     with:
+      id: indexes
       title: Index memberships
       rows: $.INDEXES
       search: false

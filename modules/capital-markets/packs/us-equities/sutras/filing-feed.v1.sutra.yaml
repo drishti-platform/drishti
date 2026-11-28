@@ -63,6 +63,7 @@ panels:
     as: forms
     area: right
     with:
+      id: forms
       record: "$"
       title: Browse by form
       facts:

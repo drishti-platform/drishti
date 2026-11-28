@@ -51,6 +51,7 @@ panels:
   - use: core/data-table@1
     as: points
     with:
+      id: points
       title: Terms
       rows: $.POINTS
       columns:

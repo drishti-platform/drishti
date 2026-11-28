@@ -52,6 +52,7 @@ panels:
   - use: core/tabbed-views@1
     as: legs
     with:
+      id: legs
       title: Legs
       key: F2
       each: $.legs
@@ -72,6 +73,7 @@ panels:
   - use: core/data-table@1
     as: cashflows
     with:
+      id: cashflows
       title: Cashflows · Leg 1
       code: CF · ladder
       key: F3
@@ -90,6 +92,7 @@ panels:
   - use: core/record-card@1
     as: leg2
     with:
+      id: leg2
       record: "$"
       title: "Leg 2 · ${$.legs[1].label}"
       code: collapsed

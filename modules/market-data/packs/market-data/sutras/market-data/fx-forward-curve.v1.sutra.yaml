@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: outright
     with:
+      id: outright
       title: Outrights
       rows: $.POINTS
       columns:

@@ -56,6 +56,7 @@ panels:
   - use: core/data-table@1
     as: latest
     with:
+      id: latest
       title: "Latest releases, newest first (a title opens the release, an address the original)"
       key: F2
       code: LIST
@@ -71,6 +72,7 @@ panels:
     as: terms
     area: right
     with:
+      id: terms
       record: "$"
       title: Terms of reuse
       facts:

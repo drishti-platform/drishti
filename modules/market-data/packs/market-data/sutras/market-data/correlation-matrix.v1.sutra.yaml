@@ -67,6 +67,7 @@ panels:
     as: pairs
     source: { kind: correlation-result, id: "$.MATRIX_ID", params: { window: ctl.window, estimator: ctl.estimator } }
     with:
+      id: pairs
       title: Pairs (ρ of the daily log returns)
       key: F3
       rows: "$src.PAIRS"
@@ -78,6 +79,7 @@ panels:
     as: factors
     source: { kind: correlation-result, id: "$.MATRIX_ID", params: { window: ctl.window, estimator: ctl.estimator } }
     with:
+      id: factors
       title: The factors over the window
       key: F4
       rows: "$src.FACTOR_STATS"

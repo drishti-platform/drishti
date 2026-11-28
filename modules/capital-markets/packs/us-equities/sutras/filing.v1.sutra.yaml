@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: items
     with:
+      id: items
       title: Items reported (8-K)
       rows: $.ITEMS
       search: false

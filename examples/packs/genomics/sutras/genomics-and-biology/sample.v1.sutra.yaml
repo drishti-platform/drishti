@@ -55,6 +55,7 @@ panels:
   - use: core/data-table@1
     as: calls
     with:
+      id: calls
       title: Variant calls
       key: F2
       rows: $.calls

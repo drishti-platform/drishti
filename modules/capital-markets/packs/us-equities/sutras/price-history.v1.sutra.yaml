@@ -57,6 +57,7 @@ panels:
     as: analytics
     area: right
     with:
+      id: analytics
       record: "$"
       title: Analytics (computed from the closes when read)
       key: F3
@@ -74,6 +75,7 @@ panels:
     as: quote
     area: right
     with:
+      id: quote
       record: "$"
       title: Quote
       facts:

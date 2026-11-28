@@ -53,6 +53,7 @@ panels:
   - use: core/record-card@1
     as: release
     with:
+      id: release
       record: "$"
       title: The release
       key: F2

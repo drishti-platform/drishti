@@ -66,6 +66,7 @@ panels:
   - use: core/data-table@1
     as: grid
     with:
+      id: grid
       title: Surface (vol %)
       key: F3
       rows: $.GRID

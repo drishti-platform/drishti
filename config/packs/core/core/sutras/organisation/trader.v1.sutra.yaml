@@ -50,6 +50,7 @@ panels:
   - use: core/data-table@1
     as: books
     with:
+      id: books
       title: Books
       key: F2
       rows: $.BOOKS

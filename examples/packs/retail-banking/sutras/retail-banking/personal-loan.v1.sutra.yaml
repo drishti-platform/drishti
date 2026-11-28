@@ -31,7 +31,7 @@ doc:
     - "PLN PLN-100238"
   category: "Retail banking"
   tags: ["personal-loan", "retail-banking", "schedule"]
-  use-when: "You have one personal loan (its id, or a link from another screen) and want to read it in full: An unsecured instalment loan: purpose, instalments and remaining balance."
+  use-when: "You have one personal loan (its id, or a link from another screen) and want to read it in full: an unsecured instalment loan: purpose, instalments and remaining balance."
   avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
   data:
     in-words: "One personal loan record (kind personal-loan); the page reads loanId, borrowerName, purpose, balance, instalment, rate, daysPastDue, schedule, customer."

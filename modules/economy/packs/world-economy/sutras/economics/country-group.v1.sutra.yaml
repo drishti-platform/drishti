@@ -63,6 +63,7 @@ panels:
   - use: core/data-table@1
     as: members
     with:
+      id: members
       title: Every member economy (largest first)
       key: F2
       rows: $.ROWS

@@ -67,6 +67,7 @@ panels:
   - use: core/record-card@1
     as: fixed-float
     with:
+      id: fixed-float
       record: "$"
       title: "Fixed against floating"
       code: SWAP
@@ -80,6 +81,7 @@ panels:
   - use: core/record-card@1
     as: basis
     with:
+      id: basis
       record: "$"
       title: "Basis: one index against another"
       code: BAS

@@ -53,6 +53,7 @@ panels:
   - use: core/data-table@1
     as: measures
     with:
+      id: measures
       title: "Measures, latest period (a row opens its history)"
       key: F2
       code: MEAS

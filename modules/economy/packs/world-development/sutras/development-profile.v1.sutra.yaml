@@ -55,6 +55,7 @@ panels:
   - use: core/data-table@1
     as: indicators
     with:
+      id: indicators
       title: "Indicators, latest year (a row opens its series)"
       key: F2
       code: IND

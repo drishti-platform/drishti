@@ -64,6 +64,7 @@ panels:
   - use: core/record-card@1
     as: payment
     with:
+      id: payment
       record: "$"
       title: "Cash payment"
       code: CSH

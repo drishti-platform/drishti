@@ -54,6 +54,7 @@ panels:
   - use: core/data-table@1
     as: results
     with:
+      id: results
       title: Seats by party
       key: F2
       rows: $.RESULTS

@@ -67,6 +67,7 @@ panels:
     area: right
     source: { pack: funds, kind: index-funds, id: $.INDEX }
     with:
+      id: tracked-by
       title: "ETFs and funds tracking it (the funds pack; a fund opens its page)"
       key: F4
       code: ETF

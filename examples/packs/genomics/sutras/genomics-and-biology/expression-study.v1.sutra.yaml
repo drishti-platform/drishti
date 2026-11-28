@@ -51,6 +51,7 @@ panels:
   - use: core/data-table@1
     as: results
     with:
+      id: results
       title: Results
       key: F3
       rows: $.results

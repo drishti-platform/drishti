@@ -62,6 +62,7 @@ panels:
   - use: core/data-table@1
     as: groups
     with:
+      id: groups
       title: Groups present (entities here)
       key: F3
       rows: $.GROUP_ROWS
@@ -72,6 +73,7 @@ panels:
     as: note
     area: right
     with:
+      id: note
       record: "$"
       title: The list
       facts:

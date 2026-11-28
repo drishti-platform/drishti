@@ -57,6 +57,7 @@ panels:
     as: found
     source: { kind: lei-entity, search: "ctl.q", limit: 50 }
     with:
+      id: found
       title: "Entities found${ctl.q ? ' for ' + ctl.q : ''} (the first 50)"
       key: F2
       code: FIND

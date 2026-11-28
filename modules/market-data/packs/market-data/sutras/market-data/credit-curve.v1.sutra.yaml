@@ -55,6 +55,7 @@ panels:
   - use: core/data-table@1
     as: points
     with:
+      id: points
       title: Term structure
       key: F3
       rows: $.POINTS

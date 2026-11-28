@@ -64,6 +64,7 @@ panels:
 - use: core/record-card@1
   as: record
   with:
+    id: record
     record: "$"
     title: Association of a variant with a trait
     facts:

@@ -57,6 +57,7 @@ panels:
   - use: core/data-table@1
     as: coupons
     with:
+      id: coupons
       title: Coupons
       key: F3
       rows: $.COUPONS

@@ -162,6 +162,15 @@ public final class ProductionProfile {
         } else if (!home.isEmpty() && Path.of(site).toAbsolutePath().normalize().startsWith(Path.of(home).toAbsolutePath().normalize())) {
             out.add("drishti.site.dir (" + site + ") is inside the release folder (" + home + "), which is never written. Fix: name a site folder outside the release (/etc/drishti)");
         }
+        String data = env.getProperty(com.ash.drishti.api.DataDir.PROPERTY, "").strip();
+        if (data.isEmpty()) {
+            out.add("drishti.data.dir is not set: the data folder would be <home>/data, inside the release, which an upgrade replaces. Fix: name the data folder "
+                    + "outside the release (DRISHTI_DATA_DIR, /srv/drishti/data)");
+        } else if (!Path.of(data).isAbsolute()) {
+            out.add("drishti.data.dir (" + data + ") is a relative path. Fix: name the data folder by its absolute path outside the release (/srv/drishti/data)");
+        } else if (!home.isEmpty() && Path.of(data).normalize().startsWith(Path.of(home).toAbsolutePath().normalize())) {
+            out.add("drishti.data.dir (" + data + ") is inside the release folder (" + home + "), which is never written. Fix: name a data folder outside the release (/srv/drishti/data)");
+        }
         String db = env.getProperty("drishti.identity.database-url", "");
         if (db.startsWith("jdbc:sqlite") && clustered(env)) {
             out.add("drishti.identity.database-url is SQLite but this server is a node of a cluster. Fix: point every node at one PostgreSQL identity database (db.identity.url)");

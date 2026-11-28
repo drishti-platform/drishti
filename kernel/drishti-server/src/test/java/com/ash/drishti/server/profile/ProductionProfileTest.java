@@ -59,6 +59,15 @@ class ProductionProfileTest {
                 "drishti.production.tls", "proxy"));
         safe.put("drishti.home", dir.resolve("release").toString());
         safe.put("drishti.site.dir", dir.resolve("etc-drishti").toString());
+        safe.put("drishti.data.dir", dir.resolve("srv-data").toString());
+    }
+
+    /** Pre-gate S3: the data folder is named, absolute and outside the release. */
+    @Test
+    void theDataFolderMustBeNamedAndOutsideTheRelease() {
+        assertOne(refusals(m -> m.put("drishti.data.dir", "")), "drishti.data.dir is not set");      // blank: surefire sets the property for the run
+        assertOne(refusals(m -> m.put("drishti.data.dir", "data")), "relative path");
+        assertOne(refusals(m -> m.put("drishti.data.dir", dir.resolve("release/data").toString())), "inside the release folder");
     }
 
     private StandardEnvironment env(Map<String, Object> m) {

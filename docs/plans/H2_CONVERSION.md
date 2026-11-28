@@ -171,3 +171,19 @@ The conversion is `tools/packgen/common/corefrag.py`, called from `sutradoc.enri
 - `core/data-table`: `pivot` (host profile feature), `moreLabel`, tree rows (`children`, `expand`, `highlight`: use core/tree-table, which has no key/code/source), `emits`, `phone`.
 - `core/record-card`: a kv with `rows:` and no `columns:` (the record's own fields as they are) needs `facts` optional; `phone` tiers.
 - `core/tabbed-views`: the slot holds at most 6 panels (the fund `views` tab has 12 and a per-tab `when`).
+
+## Where this stopped (2026-11-28 09:20, paused by the lead to free build slots)
+
+- Converted and committed: 115 of 143 inline table, record and tabs panels (list above); the converter is `tools/packgen/common/corefrag.py`,
+  called from `sutradoc.enrich`, so every generator writes the converted form. The generators' `--check` was NOT run (it needs the exec jar
+  in `lib/`); the hand-written Sutras were converted by the same function, so a regenerate is expected to match (to prove on resume).
+- Proof so far: `DocumentedSutrasTest` green; `CoreSutraNextEquivalenceTest` ran twice: the only differences left were the panel id scoping
+  (below); the last normalisation (also `maskedPanels`) is committed but NOT re-run. `H2LakePanelEquivalenceTest` and
+  `H2SamplePanelEquivalenceTest` (modules-it, run with `verify`: tests run in the integration-test phase) are written, never run.
+  Not run either: the other equivalence tests, GleifPackTest, UsEquitiesPackTest, FundsPackTest (they read panel ids), the Economics 404 check.
+- Decision for the lead: a Core fragment scopes its panel ids as `<as>-table`, `-card`, `-views` (TypedFragment.scoped). Every converted panel
+  therefore changes id (`holidays` -> `holidays-table`), and so do the function-key targets, `maskedPanels`, events, `panel:` references of
+  controls, and any test or console code naming the id (FundsPackTest: fund-ownership, held-by-funds; GleifPackTest: identifiers, listed).
+  Either Rachana lets a use keep the id (an `id` pass-through or an unscoped `as`), or the references move. The equivalence tests ignore the suffix.
+- A record-card also draws a `state` status panel when the record has a `status` field: not seen in the samples, check on a kind with one.
+- Maven copy `~/drishti-bench-scratch/i8-m2-h2` still exists (removed at the end).

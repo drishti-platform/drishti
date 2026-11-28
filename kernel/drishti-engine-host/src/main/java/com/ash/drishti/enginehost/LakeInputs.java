@@ -71,6 +71,8 @@ final class LakeInputs implements Inputs {
     private final Map<String, RowRule> wheres;
     private final AtomicLong rowsIn;
     private final Map<String, Table> tables = new ConcurrentHashMap<>();
+    /** Told when a read finds an input at another version than the session's stamp names (the host marks the session stale). */
+    private volatile Runnable moved = () -> { };
 
     /**
      * @param viewer the caller (per-viewer isolation), or null for a shared session (no caller's rule applied; the engine filters by the
@@ -87,6 +89,11 @@ final class LakeInputs implements Inputs {
         this.date = date;
         this.wheres = wheres;
         this.rowsIn = rowsIn;
+    }
+
+    /** {@code r} runs when a read finds an input moved past the version this session's stamp names. */
+    void onMoved(Runnable r) {
+        moved = r == null ? () -> { } : r;
     }
 
     @Override
@@ -231,15 +238,52 @@ final class LakeInputs implements Inputs {
             return input.per() != null && input.per().isEmpty() && !bound.onOrBefore() && bound.field() == null;
         }
 
-        /** Reads {@code contractColumns} of every kind of the input (their union), applies each kind's rule and the site's where. */
+        /**
+         * Reads {@code contractColumns} at one version: the sources' versions are taken before and after the read and the read is made
+         * again while they differ (a commit between), so the rows are exactly the version the stamp names. When the session's stamp is
+         * fixed already and the version read is another, the input has moved since the session opened: the host is told (the session is
+         * stale) and the read refused as "preparing", never served under the old stamp.
+         */
         private Loaded read(List<String> contractColumns) throws EngineException {
+            for (int attempt = 0; ; attempt++) {
+                String before = versions();
+                Loaded l = readOnce(contractColumns, before);
+                String after = versions();
+                if (before.equals(after)) {
+                    verify(before);
+                    return l;
+                }
+                if (attempt == 2) {
+                    throw movedWhileReading(before, after);
+                }
+            }
+        }
+
+        /** The read is of {@code version}; it must be the one the session's stamp names, once that is fixed. */
+        private void verify(String version) throws EngineException {
+            String fixed = stamp;
+            if (fixed != null && !fixed.equals(version)) {
+                moved.run();
+                throw new EngineException("ENG-5025", Kind.UNAVAILABLE, name + " moved from " + fixed + " to " + version
+                        + " since the session opened: its new version is being prepared; ask again in a few seconds",
+                        Map.of("input", name, "stage", "a new version of " + name, "retry-after-seconds", "2"), null);
+            }
+        }
+
+        private EngineException movedWhileReading(String before, String after) {
+            moved.run();
+            return new EngineException("ENG-5025", Kind.UNAVAILABLE, name + " kept changing while it was read (" + before + " to " + after
+                    + "): its new version is being prepared; ask again in a few seconds",
+                    Map.of("input", name, "stage", "a new version of " + name, "retry-after-seconds", "2"), null);
+        }
+
+        private Loaded readOnce(List<String> contractColumns, String version) throws EngineException {
             if (kinds.isEmpty()) {
                 return new Loaded(Map.of(), 0, null, "absent", false);
             }
             RowRule where = where();
             List<ColumnSet> sets = new ArrayList<>();
             List<RowRule> rules = new ArrayList<>();
-            StringBuilder stamp = new StringBuilder();
             for (String kind : kinds) {
                 check();
                 RowRule rule = rule(kind);
@@ -261,20 +305,17 @@ final class LakeInputs implements Inputs {
                             rules.add(rule);
                         }
                     }
-                    stamp.append(stamp.length() == 0 ? "" : ";").append(kind).append('=').append(held.size()).append(" dates to ")
-                            .append(held.last()).append(':').append(data.stamp(kind, held.last()).orElse("?"));
                     continue;
                 }
                 Optional<ColumnSet> set = bound.onOrBefore() || bound.field() != null
                         ? data.columns(kind, paths, date, bound.onOrBefore(), bound.field()) : data.columns(kind, paths, date);
-                stamp.append(stamp.length() == 0 ? "" : ";").append(kind).append('=').append(data.stamp(kind, date).orElse(set.isPresent() ? "?" : "absent"));
                 if (set.isPresent()) {
                     sets.add(set.get());
                     rules.add(rule);
                 }
             }
             if (sets.isEmpty()) {
-                return new Loaded(Map.of(), 0, null, stamp.toString(), false);
+                return new Loaded(Map.of(), 0, null, version, false);
             }
             ColumnSet all = ColumnSet.concat(sets);
             int size = all.size();
@@ -313,7 +354,7 @@ final class LakeInputs implements Inputs {
                     cols.put(c, new ColumnBatch.Column(null, all.ids(), null, masked));   // the key is the entity's id
                 }
             }
-            return new Loaded(java.util.Collections.unmodifiableMap(cols), size, visible, stamp.toString(), true);
+            return new Loaded(java.util.Collections.unmodifiableMap(cols), size, visible, version, true);
         }
 
         @Override
@@ -368,9 +409,7 @@ final class LakeInputs implements Inputs {
         @Override
         public String stamp() {
             if (input.open()) {
-                StringBuilder s = new StringBuilder();
-                kinds.forEach(k -> s.append(s.length() == 0 ? "" : ";").append(k).append('=').append(data.stamp(k, date).orElse("?")));
-                return s.length() == 0 ? "absent" : s.toString();
+                return versions();
             }
             String s = stamp;
             if (s == null) {
@@ -385,37 +424,29 @@ final class LakeInputs implements Inputs {
             return s;
         }
 
-        /**
-         * The stamp a read names, from the sources' data versions alone (a stamp is not a read): per kind its version on the date, or for
-         * an input read across dates the count of dates and the newest one's version. A kind with no version on the date says whether it
-         * is there at all only by a read, so that one case reads (as before).
-         */
+        /** The stamp the input would have now: {@link #versions()}. */
         private String composedStamp() {
-            if (input.open()) {
-                StringBuilder o = new StringBuilder();
-                kinds.forEach(k -> o.append(o.length() == 0 ? "" : ";").append(k).append('=').append(data.stamp(k, date).orElse("?")));
-                return o.length() == 0 ? "absent" : o.toString();
-            }
+            return versions();
+        }
+
+        /**
+         * The input's version from the sources' data versions alone, without reading a row (one form for a read and for a look): per kind
+         * its version on the date, {@code ?} when the source names none, or for an input read across dates the count of dates and the
+         * newest one's version; {@code absent} when no kind is bound (or the caller may open none).
+         */
+        private String versions() {
             if (kinds.isEmpty()) {
                 return "absent";
             }
             StringBuilder out = new StringBuilder();
             for (String kind : kinds) {
-                java.util.NavigableSet<LocalDate> held = whole() ? data.dates(kind).orElse(null) : null;
+                out.append(out.length() == 0 ? "" : ";").append(kind).append('=');
+                java.util.NavigableSet<LocalDate> held = !input.open() && whole() ? data.dates(kind).orElse(null) : null;
                 if (held != null && !held.isEmpty()) {
-                    out.append(out.length() == 0 ? "" : ";").append(kind).append('=').append(held.size()).append(" dates to ")
-                            .append(held.last()).append(':').append(data.stamp(kind, held.last()).orElse("?"));
-                    continue;
+                    out.append(held.size()).append(" dates to ").append(held.last()).append(':').append(data.stamp(kind, held.last()).orElse("?"));
+                } else {
+                    out.append(data.stamp(kind, date).orElse("?"));
                 }
-                Optional<String> v = data.stamp(kind, date);
-                if (v.isEmpty()) {
-                    try {
-                        return load().stamp();                         // no version: absent or "?" only a read can tell
-                    } catch (EngineException e) {
-                        return "unread";
-                    }
-                }
-                out.append(out.length() == 0 ? "" : ";").append(kind).append('=').append(v.get());
             }
             return out.toString();
         }
@@ -499,6 +530,8 @@ final class LakeInputs implements Inputs {
             if (input.vector() == null || !input.vector().equals(scan.column())) {
                 throw new EngineException("ENG-2003", Kind.REFUSED, scan.column() + " is not the vector column of " + name);
             }
+            String version = versions();
+            verify(version);                                           // the vectors of the version the session's stamp names
             RowRule where = where();
             List<String> asked = scan.texts();
             for (String kind : kinds) {
@@ -553,6 +586,10 @@ final class LakeInputs implements Inputs {
                 } catch (Exception e) {
                     throw new EngineException("ENG-2010", Kind.UNAVAILABLE, kind + " could not be read for " + name + ": " + e.getMessage(), Map.of(), e);
                 }
+            }
+            String after = versions();
+            if (!after.equals(version)) {
+                throw movedWhileReading(version, after);               // a commit during the read: these rows are of no one version
             }
         }
 

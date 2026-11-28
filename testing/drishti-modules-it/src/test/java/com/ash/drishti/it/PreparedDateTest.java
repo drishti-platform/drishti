@@ -75,15 +75,21 @@ class PreparedDateTest {
             Timed ready = ask(server);
             out.put("first_ask_after_ready_ms", ready.ms());
             out.put("first_ask_after_ready_status", ready.status());
+            memory(server, out, "after_ready");
             // 3. a new version of an input committed while asking: stale, its successor prepared; each ask answered or "preparing"
             long t0 = System.nanoTime();
             Thread load = Thread.ofPlatform().start(() -> reload(folder, lake));
             List<Long> during = new ArrayList<>();
             List<Integer> statuses = new ArrayList<>();
+            List<String> slow = new ArrayList<>();                     // each ask over 2.5 s: when it began (ms after the load began), how long
             while (load.isAlive()) {
+                long at = (System.nanoTime() - t0) / 1_000_000;
                 Timed t = ask(server);
                 during.add(t.ms());
                 statuses.add(t.status());
+                if (t.ms() > 2_500) {
+                    slow.add(at + "+" + t.ms());
+                }
             }
             load.join();
             long committed = (System.nanoTime() - t0) / 1_000_000;
@@ -91,9 +97,13 @@ class PreparedDateTest {
             long staleSeen = awaitState(server, "stale", 120_000);
             out.put("stale_seen_ms_after_commit", staleSeen);
             while (!readyNow(server)) {
+                long at = (System.nanoTime() - t0) / 1_000_000;
                 Timed t = ask(server);
                 during.add(t.ms());
                 statuses.add(t.status());
+                if (t.ms() > 2_500) {
+                    slow.add(at + "+" + t.ms());
+                }
             }
             out.put("ready_after_commit_ms", (System.nanoTime() - t0) / 1_000_000 - committed);
             Timed after = ask(server);
@@ -101,7 +111,9 @@ class PreparedDateTest {
             out.put("asks_during_reload", during.size());
             out.put("ask_during_reload_max_ms", during.stream().mapToLong(Long::longValue).max().orElse(0));
             out.put("ask_during_reload_statuses", statuses.stream().distinct().toList());
+            out.put("asks_over_2500_ms", slow);
         }
+        Files.copy(work.resolve("server.log"), work.resolve("server-first.log"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         // 4. a restart with the kept images present (the data folder kept; the config links made again): ready and the first ask
         try (var s = Files.list(work.resolve("config"))) {
             for (Path c : s.toList()) {
@@ -116,6 +128,7 @@ class PreparedDateTest {
             out.put("ready_after_restart_ms", awaitReady(again, 600_000));
             Timed t = ask(again);
             out.put("first_ask_after_restart_ms", t.ms());
+            memory(again, out, "after_restart");
             for (JsonNode c : again.get("/api/v1/admin/caches").path("caches")) {
                 if (c.path("name").asText().equals("engines.kept")) {
                     out.put("kept_images", c.path("entries").asLong());
@@ -137,6 +150,21 @@ class PreparedDateTest {
     }
 
     record Timed(long ms, int status) {}
+
+    /** The engine's own count of what its sessions hold (the card), the server's resident memory, and the host's answer cache hits. */
+    static void memory(PackagedServer s, Map<String, Object> out, String when) throws Exception {
+        out.put("engine_memory_mb_" + when, s.get(CARD).path("memoryBytes").asLong() / (1024 * 1024));
+        for (String l : Files.readAllLines(Path.of("/proc/" + s.pid() + "/status"))) {
+            if (l.startsWith("VmRSS:")) {
+                out.put("rss_mb_" + when, Long.parseLong(l.replaceAll("[^0-9]", "")) / 1024);
+            }
+        }
+        for (JsonNode c : s.get("/api/v1/admin/caches").path("caches")) {
+            if (c.path("name").asText().equals("engines.answers")) {
+                out.put("answer_cache_" + when, c.toString());
+            }
+        }
+    }
 
     /** The engine headline of the bank: 200, or 503 DRS-1024 (preparing, busy) is an outcome; anything else fails the run. */
     static Timed ask(PackagedServer s) throws Exception {

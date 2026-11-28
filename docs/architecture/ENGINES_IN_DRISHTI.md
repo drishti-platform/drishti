@@ -101,9 +101,17 @@ someone asks:
 
 - `on: start` runs a `prepare` ask when the engine reaches running; `on: data-version` runs it when the newest date of its inputs is new
   or a new version of it lands (the lake's commit: a load, a publish), after the trigger's `quiet` period and at most its `max-wait`.
-  The data-version look is the one way the host learns that inputs changed: it polls every `drishti.engine-lib.poll-seconds`, and a
+  A trigger's `ask` may be a list, run in order; consecutive prepare asks of one date are one preparation (the date shows "preparing"
+  until the last is cached). An answer is kept under its request's stamp, so each prepare ask is a request a page makes: the same outputs,
+  its parameters read from the same settings as the page's (`config/engines/market-risk.yaml`: the VaR pages' index, node figures and
+  parametric node figures, `window` from `drishti.module.banking.var.window`, whose `all` is the engine's word for 0, the currency from
+  `.reporting-currency`).
+  The data-version look is the one way the host learns that inputs changed, run for every engine whether or not its file has a
+  `data-version` trigger (the trigger only adds the asks it runs): it polls every `drishti.engine-lib.poll-seconds`, and a
   module that writes a kind an engine reads (a capture's publish) tells the host at once (`Engines.inputsChanged(kind)`), which looks
-  then. A session whose inputs' versions moved since it opened is stale.
+  then. A session whose inputs' versions moved since it opened is stale. An input's stamp is fixed when the session opens and every
+  read is of the version it names: a read that finds a newer version (a commit the look has not seen yet) marks the session stale and
+  is answered "preparing", never with the new rows under the old stamp.
 - A stale session keeps answering, each answer noted ("a newer version of 2026-09-30 is being prepared; this answer is of the version
   before"), while its successor opens from the new data; the host swaps when the successor is ready. A snapshot the lake has moved past is
   never served without that note.

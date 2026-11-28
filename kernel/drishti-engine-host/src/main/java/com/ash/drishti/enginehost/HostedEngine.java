@@ -576,11 +576,11 @@ public final class HostedEngine implements AutoCloseable {
         Preparing mine = PREPARER.get();
         if (mine != null) {
             mine.control().set(control);                                // the stage the engine names while it prepares, for those who wait
-        } else {
-            awaitPrepared(snapshot, ask.requestClass());
+        } else if (!sessions.servesStale(key)) {
+            awaitPrepared(snapshot, ask.requestClass());                // no stale version answers meanwhile: wait (briefly) for the preparation
         }
         Answer answer;
-        try (Admission.Permit permit = admission.admit(ask.requestClass(), id); Sessions.Lease lease = sessions.lease(key, control, openWait(ask.requestClass()))) {
+        try (Admission.Permit permit = admission.admit(ask.requestClass(), id); Sessions.Lease lease = sessions.lease(key, control, openWait(ask.requestClass()), mine != null)) {
             LakeInputs.CURRENT.set(control);
             ASKING.set(key);
             ASKING_SESSION.set(lease.session());
@@ -780,6 +780,16 @@ public final class HostedEngine implements AutoCloseable {
         ViewerAccess v = key.signature() == null ? null : viewers.get(key.signature());
         LakeInputs in = new LakeInputs(descriptor(), binding.inputs(), data, v, date == null ? null : LocalDate.parse(date), compiledWheres, rowsIn);
         in.stamps();                                                    // the versions it reads, fixed before it opens (5.2 rule 8): a later commit makes it stale
+        in.onMoved(() -> {                                              // a read found a newer version than the stamp: stale now, not at the next look
+            Sessions s = sessions;
+            if (s != null) {
+                boolean due = preparationDue(key.snapshot());
+                s.stale(key.snapshot(), due);
+                if (due) {
+                    prepareOn("data-version", null);
+                }
+            }
+        });
         inputsByKey.put(key, in);
         return in;
     }
@@ -810,6 +820,41 @@ public final class HostedEngine implements AutoCloseable {
 
     /** Runs a named ask of the engine file as its identity ({@code as}, default {@code system}) and publishes its tables. */
     public Answer runAsk(String name, RequestClass c) throws EngineException {
+        return runAsks(List.of(name), c).get(0);
+    }
+
+    /**
+     * Runs named asks in order (a trigger's {@code ask: [a, b]}, 9.3). Consecutive prepare asks of one snapshot are one preparation: the
+     * snapshot shows "preparing" from the first until the last has filled the answer cache, so nobody sees it ready half prepared.
+     */
+    public List<Answer> runAsks(List<String> names, RequestClass c) throws EngineException {
+        List<Answer> out = new ArrayList<>();
+        int i = 0;
+        while (i < names.size()) {
+            Named first = named(names.get(i), c);
+            if (!first.ask().prepare()) {
+                out.add(ask(first.request(), first.as()));
+                i++;
+                continue;
+            }
+            List<Named> group = new ArrayList<>(List.of(first));       // the prepare asks of the same snapshot that follow it
+            while (i + group.size() < names.size()) {
+                Named next = named(names.get(i + group.size()), c);
+                if (!next.ask().prepare() || !next.snapshot().equals(first.snapshot())) {
+                    break;
+                }
+                group.add(next);
+            }
+            out.addAll(prepare(first.snapshot(), group));
+            i += group.size();
+        }
+        return out;
+    }
+
+    /** A named ask resolved: the file's ask, the request it makes, its snapshot, its identity. */
+    private record Named(EngineFile.NamedAsk ask, Ask request, Snapshot snapshot, ViewerAccess as) {}
+
+    private Named named(String name, RequestClass c) throws EngineException {
         EngineFile.NamedAsk a = file.asks().get(name);
         if (a == null) {
             throw new EngineException("ENG-3003", Kind.REFUSED, id + " has no named ask " + name + "; its asks are " + file.asks().keySet());
@@ -824,23 +869,43 @@ public final class HostedEngine implements AutoCloseable {
         }
         // a prepare ask opens the session and fills the answer cache, published nowhere (9.3 rule 4); any other publishes its tables
         Ask ask = new Ask(a.outputs(), a.params(), snap, c, !a.prepare());
-        ViewerAccess as = ViewerAccess.system(a.as() == null ? "system" : a.as());
-        if (!a.prepare()) {
-            return ask(ask, as);
-        }
-        Snapshot snapshot = snapshot(descriptor(), snap);
+        return new Named(a, ask, snapshot(descriptor(), snap), ViewerAccess.system(a.as() == null ? "system" : a.as()));
+    }
+
+    /** One preparation of {@code snapshot}: its prepare asks in order, under one "preparing" mark (one preparation of a snapshot at a time). */
+    private List<Answer> prepare(Snapshot snapshot, List<Named> group) throws EngineException {
+        List<Answer> out = new ArrayList<>();
         Preparing p = new Preparing(Instant.now(), new java.util.concurrent.atomic.AtomicReference<>(),
                 new java.util.concurrent.CompletableFuture<>());
         Preparing was = preparing.putIfAbsent(snapshot, p);
         if (was != null) {
-            awaitPrepared(snapshot, RequestClass.EVENT);               // one preparation of a snapshot at a time: this one after it (its answers cached)
-            return ask(ask, as);
+            awaitPrepared(snapshot, RequestClass.EVENT);               // another preparation of it runs: these after it (from its cache)
+            for (Named n : group) {
+                out.add(ask(n.request(), n.as()));
+            }
+            return out;
         }
         PREPARER.set(p);
         try {
-            return ask(ask, as);
+            EngineException failed = null;
+            for (Named n : group) {                                     // each ask tried: one that fails leaves the others' answers cached
+                try {
+                    out.add(ask(n.request(), n.as()));
+                } catch (EngineException e) {
+                    LOG.warn("engine {}: preparing {}: {} failed: {}", id, snapshot.text(), n.request().outputs(), e.getMessage());
+                    failed = failed == null ? e : failed;
+                }
+            }
+            if (failed != null) {
+                throw failed;
+            }
+            return out;
         } finally {
             PREPARER.remove();
+            Sessions s = sessions;
+            if (s != null) {
+                s.prepared(snapshot);                                   // a held new version swapped in, its answers cached
+            }
             preparing.remove(snapshot, p);
             p.done().complete(null);
         }
@@ -907,20 +972,26 @@ public final class HostedEngine implements AutoCloseable {
      * the answer cache before any user asks); {@code only}: the triggers of these names only (null: all). Failures are audited by ask.
      */
     private void prepareOn(String on, java.util.function.Predicate<EngineFile.Trigger> only) {
-        List<String> names = file.triggers().stream().filter(t -> on.equals(t.on()) && t.ask() != null && (only == null || only.test(t)))
-                .map(EngineFile.Trigger::ask).distinct().toList();
+        List<String> names = file.triggers().stream().filter(t -> on.equals(t.on()) && (only == null || only.test(t)))
+                .flatMap(t -> t.asks().stream()).distinct().toList();
         if (names.isEmpty()) {
             return;
         }
         Thread.ofVirtual().name("drishti-engine-" + id + "-" + on).start(() -> {
-            for (String name : names) {
-                try {
-                    runAsk(name, RequestClass.EVENT);
-                } catch (EngineException | RuntimeException e) {
-                    LOG.warn("engine {}: the {} trigger's ask {} failed: {}", id, on, name, e.getMessage());
-                }
+            try {
+                runAsks(names, RequestClass.EVENT);
+            } catch (EngineException | RuntimeException e) {
+                LOG.warn("engine {}: the {} trigger's asks {} failed: {}", id, on, names, e.getMessage());
             }
         });
+    }
+
+    /** True when a data-version trigger will prepare {@code snapshot}: its prepare ask's snapshot is the newest date, and this is it. */
+    private boolean preparationDue(Snapshot snapshot) {
+        boolean prepares = file.triggers().stream().filter(t -> "data-version".equals(t.on())).flatMap(t -> t.asks().stream())
+                .map(n -> file.asks().get(n)).anyMatch(a -> a != null && a.prepare() && "latest".equals(String.valueOf(a.snapshot().get("date"))));
+        String date = snapshot.dimensions().get("date");
+        return prepares && date != null && latestDate().map(d -> d.toString().equals(date)).orElse(false);
     }
 
     /** Per data-version trigger: the newest snapshot and its inputs' versions last seen, and a change waiting for its quiet period. */
@@ -928,29 +999,36 @@ public final class HostedEngine implements AutoCloseable {
     private final Map<Integer, long[]> pendingLatest = new ConcurrentHashMap<>();
 
     /**
-     * The {@code data-version} trigger's look (9.3), the one way this host learns that inputs changed (a module that commits data tells
-     * the host through {@code inputsChanged}, which looks at once): when a bound kind's stamp for an open snapshot moved, the snapshot's
-     * sessions are stale (each answers, noted, until its successor is ready) and the named asks are run again; when the newest snapshot of
+     * The data-version look (9.3), the one way this host learns that inputs changed (a module that commits data tells the host through
+     * {@code inputsChanged}, which looks at once), run for every running engine whether or not its file has a {@code data-version}
+     * trigger: when a bound kind's stamp for an open snapshot moved, the snapshot's sessions are stale (each answers, noted, until its
+     * successor is ready), so a new data version is always a new key; with the trigger, the named asks are also run again; when the newest snapshot of
      * the trigger's inputs is new (a newer date, or a new version of it: the lake's commit), after the trigger's quiet period (at most its
      * max-wait) its ask runs (a {@code prepare} ask: the new snapshot opened and cached before users ask). Returns the snapshots found stale.
      */
     public synchronized List<Snapshot> lookAtDataVersions() {
         Sessions s = sessions;
         EngineInstance i = instance;
-        if (s == null || i == null || i.state() != LifecycleState.RUNNING || file.triggers().stream().noneMatch(t -> "data-version".equals(t.on()))) {
-            return List.of();
+        if (s == null || i == null || i.state() != LifecycleState.RUNNING) {
+            return List.of();                                           // every running engine's sessions are watched; a trigger only adds its asks
         }
         List<Snapshot> stale = new ArrayList<>();
+        boolean prepareNow = false;
         for (Sessions.Key key : s.keys()) {                            // an open session whose inputs' versions moved since it read them
             if (s.isStale(key) || stale.contains(key.snapshot()) || !(s.inputsOf(key) instanceof LakeInputs in)) {
                 continue;
             }
             if (!in.stamps().equals(in.currentStamps())) {
-                s.stale(key.snapshot());
+                boolean due = preparationDue(key.snapshot());
+                s.stale(key.snapshot(), due);
+                prepareNow |= due;
                 stale.add(key.snapshot());
             }
         }
-        if (!stale.isEmpty()) {
+        if (prepareNow) {
+            prepareOn("data-version", null);                            // the stale newest date prepared at once: its successor is held for it
+        }
+        if (!stale.isEmpty() && file.triggers().stream().anyMatch(t -> "data-version".equals(t.on()))) {   // re-asks: the trigger's
             for (Map.Entry<String, EngineFile.NamedAsk> a : file.asks().entrySet()) {
                 if (a.getValue().prepare()) {
                     continue;                                           // preparations run by their triggers below
@@ -965,7 +1043,7 @@ public final class HostedEngine implements AutoCloseable {
         long nowMs = System.currentTimeMillis();
         for (int t = 0; t < file.triggers().size(); t++) {
             EngineFile.Trigger trig = file.triggers().get(t);
-            if (!"data-version".equals(trig.on()) || trig.ask() == null) {
+            if (!"data-version".equals(trig.on()) || trig.asks().isEmpty()) {
                 continue;
             }
             String newest = newestSignature(trig);

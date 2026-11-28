@@ -18,6 +18,7 @@ package com.ash.drishti.enginehost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.ash.drishti.api.ColumnSet;
 import com.ash.engine.Answer;
 import com.ash.engine.EngineException;
 import com.ash.engine.Health;
@@ -27,6 +28,7 @@ import com.ash.engine.Table;
 import com.ash.engine.Tables;
 import com.ash.engine.host.HealthBoard;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +133,58 @@ class EngineHostTest {
             gt.purgeAnswers();
             gt.ask(TOTALS, ANN);
             assertThat(gt.answerCache()[3]).as("after a purge the engine answers again").isEqualTo(3L);
+        }
+    }
+
+    @Test
+    void aCommitToABoundKindWithNoTriggerIsANewKeyAndTheNextAnswersAreOfTheNewData(@TempDir Path root) throws Exception {
+        EngineHostSettings s = Fixtures.home(root, Fixtures.sampleJar(), Map.of("group-totals", Fixtures.GROUP_TOTALS), null);   // no trigger
+        Fixtures.Kinds data = Fixtures.items();
+        try (EngineHost host = Fixtures.host(s, data)) {
+            host.start();
+            HostedEngine gt = host.require("group-totals");
+            Answer before = gt.ask(TOTALS, ANN);
+            assertThat(rows(before)).containsExactly(new Object[] {"A", 2L, 3L, 4.0}, new Object[] {"B", 2L, 7L, 7.0});
+            // a loader (or another node) commits a new version of the kind: other rows under a new data version
+            data.put("item", new ColumnSet(new String[] {"i1", "i2"}, Map.of("QTY", new double[] {10, 20}, "AMOUNT", new double[] {1.0, 3.0}),
+                    Map.of("GROUP", new String[] {"A", "B"}), LocalDate.of(2026, 11, 20)));
+            data.stamps.put("item", "v2");
+            assertThat(gt.lookAtDataVersions()).as("the look runs with no data-version trigger").hasSize(1);
+            Answer after = gt.ask(TOTALS, ANN);
+            for (int i = 0; i < 50 && !after.notes().isEmpty(); i++) {  // the stale session answers, noted, until its successor is ready
+                assertThat(after.stamp().inputs()).containsEntry("items", "item=v1");
+                Thread.sleep(20);
+                after = gt.ask(TOTALS, ANN);
+            }
+            assertThat(after.notes()).isEmpty();
+            assertThat(after.stamp().inputs()).containsEntry("items", "item=v2");
+            assertThat(after.stamp().text()).isNotEqualTo(before.stamp().text());
+            assertThat(rows(after)).containsExactly(new Object[] {"A", 1L, 10L, 1.0}, new Object[] {"B", 1L, 20L, 3.0});
+            assertThat(gt.answerCache()[3]).as("the new version missed the cache").isGreaterThanOrEqualTo(2L);
+        }
+    }
+
+    @Test
+    void aReadThatFindsANewerVersionThanTheSessionsStampIsRefusedAsPreparingNeverServedUnderTheOldStamp(@TempDir Path root) throws Exception {
+        EngineHostSettings s = Fixtures.home(root, Fixtures.sampleJar(), Map.of("group-totals", Fixtures.GROUP_TOTALS), null);
+        Fixtures.Kinds data = Fixtures.items();
+        try (EngineHost host = Fixtures.host(s, data)) {
+            host.start();
+            HostedEngine gt = host.require("group-totals");
+            gt.ask(TOTALS, ANN);                                        // the session open, its stamp item=v1
+            data.put("item", new ColumnSet(new String[] {"i1"}, Map.of("QTY", new double[] {99}, "AMOUNT", new double[] {9.0}),
+                    Map.of("GROUP", new String[] {"A"}), LocalDate.of(2026, 11, 20)));
+            data.stamps.put("item", "v2");                              // a commit the look has not seen yet
+            gt.purgeAnswers();                                          // the next ask reaches the engine, which may read its input again
+            try {
+                Answer a = gt.ask(TOTALS, ANN);                         // from what the session read at v1, under v1's stamp
+                assertThat(a.stamp().inputs()).containsEntry("items", "item=v1");
+                assertThat(rows(a)).containsExactly(new Object[] {"A", 2L, 3L, 4.0}, new Object[] {"B", 2L, 7L, 7.0});
+            } catch (EngineException e) {
+                assertThat(e.code()).isEqualTo("ENG-5025");             // a read of v2's rows refused as "preparing", the session stale
+            }
+            // and the look makes the version a new key
+            gt.lookAtDataVersions();
         }
     }
 

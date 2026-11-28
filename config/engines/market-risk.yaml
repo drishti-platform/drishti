@@ -49,15 +49,24 @@ drishti:
         vector-tier: ${drishti.var.tier.mode:${DRISHTI_VAR_TIER:mapped}}
       # prepared dates (ENGINE_SPEC 9.3 rules 4 and 5): the newest date opened and its headline answers cached at start and whenever a load
       # commits a new date or a new version of one (the lake's data version), so no user waits for an open; an ask during the open waits at
-      # most limits.open-wait-seconds, then is told "preparing" (ENG-5025); a stale date answers, noted, until its successor is ready
+      # most limits.open-wait-seconds, then is told "preparing" (ENG-5025); a stale date answers, noted, until its successor is ready.
+      # An answer is kept under its request's stamp, so each prepare ask is a request the VaR pages make (modules/banking VarEnginePath:
+      # the date's stamp look, its index, the node figures, the parametric node figures), with its parameters read from the same settings
+      # (drishti.module.banking.var.window, all or N, the engine's words; .reporting-currency)
       triggers:
         - { on: request }
-        - { on: start, ask: prepare }
-        - { on: data-version, inputs: [ pnl-vector, scenario-pv, scenario-set, fx-scenario, var-limit ], ask: prepare, quiet: 5s, max-wait: 60s }
+        - { on: start, ask: [ prepare-words, prepare-index, prepare-nodes, prepare-pnodes ] }
+        - { on: data-version, inputs: [ pnl-vector, scenario-pv, scenario-set, fx-scenario, var-limit ],
+            ask: [ prepare-words, prepare-index, prepare-nodes, prepare-pnodes ], quiet: 5s, max-wait: 60s }
       asks:
-        prepare: { prepare: true, as: system, snapshot: { date: latest },
-                   outputs: [ scope-index, scope-positions, scope-position-values, scope-nodes, scope-words, scope-limits, node-var, node-pvar ],
-                   params: { window: ${drishti.module.banking.var.window:250}, currency: USD } }
+        prepare-words: { prepare: true, as: system, snapshot: { date: latest }, outputs: [ scope-words ] }
+        prepare-index: { prepare: true, as: system, snapshot: { date: latest },
+                         outputs: [ scope-index, scope-positions, scope-position-values, scope-nodes, scope-words, scope-limits ],
+                         params: { window: ${drishti.module.banking.var.window:250}, currency: ${drishti.module.banking.var.reporting-currency:USD} } }
+        prepare-nodes: { prepare: true, as: system, snapshot: { date: latest }, outputs: [ node-var ],
+                         params: { window: ${drishti.module.banking.var.window:250}, currency: ${drishti.module.banking.var.reporting-currency:USD} } }
+        prepare-pnodes: { prepare: true, as: system, snapshot: { date: latest }, outputs: [ node-pvar ],
+                          params: { window: ${drishti.module.banking.var.window:250}, currency: ${drishti.module.banking.var.reporting-currency:USD} } }
       snapshot: { hot: 1 }               # one business date's session kept open (its books released when another date is asked)
       limits:
         memory-mb: ${DRISHTI_MARKET_RISK_MEMORY_MB:768}   # the books of one date: every window and currency asked of it (the speed check sets more)

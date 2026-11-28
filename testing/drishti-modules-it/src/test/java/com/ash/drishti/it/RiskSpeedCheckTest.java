@@ -132,6 +132,10 @@ class RiskSpeedCheckTest {
         for (JsonNode n : server.get("/api/v1/risk/var/tree?hierarchy=MGMT&asOf=" + DATE + "&path=in-tree").path("nodes")) {
             (n.path("level").asText().equals("book") ? leaves : nodes).add(n.path("id").asText());   // books expand into positions: the leaves
         }
+        int innerAsked = Integer.getInteger("speed.nodes", nodes.size());   // a profiling run may ask fewer inner nodes (the scripted run: all)
+        if (innerAsked < nodes.size()) {
+            nodes = new ArrayList<>(nodes.subList(0, innerAsked));
+        }
         out.put("nodes", nodes.size());
         out.put("leaves", leaves.size());
         List<String> differ = new ArrayList<>();
@@ -184,7 +188,15 @@ class RiskSpeedCheckTest {
         }
         out.put("figures_differ", differ.size());
         out.put("rss_mb_end", rssMb());
-        out.put("zero_copy_served", Files.readString(work0.resolve("server.log")).contains("served to the engine in place"));
+        String log = Files.readString(work0.resolve("server.log"));
+        out.put("zero_copy_served", log.contains("served to the engine in place"));
+        out.put("zero_copy_lines", log.lines().filter(l -> l.contains("zero copy") || l.contains("not served")).map(String::strip).distinct().limit(6).toList());
+        for (JsonNode c : server.get("/api/v1/admin/caches").path("caches")) {    // the host's answer cache of the engine path
+            if (c.path("name").asText().equals("engines.answers")) {
+                out.put("engine_answers_hits", c.path("hits").asLong());
+                out.put("engine_answers_misses", c.path("misses").asLong());
+            }
+        }
         String line = PackagedServer.JSON.writeValueAsString(out);
         System.out.println("speed check: " + line + "; first differences " + differ.stream().limit(5).toList());
         Files.writeString(folder.resolve("speed-" + out.get("tier") + "-zc-" + ZERO_COPY + ".json"), line + "\n");

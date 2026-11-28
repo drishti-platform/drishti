@@ -53,6 +53,10 @@ import java.util.function.Function;
  */
 final class LakeInputs implements Inputs {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(LakeInputs.class);
+    /** The views not served, said once each. */
+    private static final java.util.Set<String> TOLD = ConcurrentHashMap.newKeySet();
+
     /** A cancellation point. */
     @FunctionalInterface
     interface Check {
@@ -419,16 +423,24 @@ final class LakeInputs implements Inputs {
                 return InputTable.super.vectorView(name);
             }
             if (where() != RowRule.ALL) {
-                return null;
+                return notServed(name, "the input has a where: a view is never filtered");
             }
             for (String kind : kinds) {
                 if (rule(kind) != RowRule.ALL) {
-                    return null;
+                    return notServed(name, "the caller has a row rule on " + kind + ": a view is never filtered");
                 }
                 Object v = data.vectorView(kind, name, date);
                 if (v != null) {
                     return v;
                 }
+            }
+            return notServed(name, "no service holds the view of " + kinds + " on " + date);
+        }
+
+        /** Null, with the reason said once per input, view and reason (the engine then builds its rows itself). */
+        private Object notServed(String view, String why) {
+            if (TOLD.add(this.name + "|" + view + "|" + why)) {
+                LOG.info("engine input {}: view {} not served ({})", this.name, view, why);
             }
             return null;
         }

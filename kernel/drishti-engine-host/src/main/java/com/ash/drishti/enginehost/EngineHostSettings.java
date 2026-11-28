@@ -40,9 +40,10 @@ import java.util.function.Function;
  * @param provided     what this server provides to engine JARs
  * @param kitMajor     the major of the kit whose certificates the host accepts
  * @param poll         how often health, stats and data versions are looked at
+ * @param answers      {@code drishti.engine-lib.answers}: the answers each engine's host cache keeps by stamp (specification 13 rule 6); 0: off
  */
 public record EngineHostSettings(Path libPath, StartChecks.Trust trust, Path licenceFile, Path enginesDir, Path workRoot, Provided provided,
-        String kitMajor, Duration poll) {
+        String kitMajor, Duration poll, int answers) {
 
     /** The platform library versions of this build (drishti-engine-host.properties, filled from the pins of the root pom). */
     public static Provided builtProvided() {
@@ -73,7 +74,8 @@ public record EngineHostSettings(Path libPath, StartChecks.Trust trust, Path lic
                 anchored(home, value(settings, "drishti.engine-lib.licence", configDir.resolve("licence.yaml").toString())),
                 anchored(home, value(settings, "drishti.engines.dir", configDir.resolve("engines").toString())),
                 dataDir.resolve("engines").resolve("work").toAbsolutePath().normalize(), builtProvided(), "1",
-                Duration.ofSeconds(Long.parseLong(value(settings, "drishti.engine-lib.poll-seconds", "10"))));
+                Duration.ofSeconds(Long.parseLong(value(settings, "drishti.engine-lib.poll-seconds", "10"))),
+                Integer.parseInt(value(settings, "drishti.engine-lib.answers", "256")));
     }
 
     private static String value(Function<String, String> settings, String key, String dflt) {

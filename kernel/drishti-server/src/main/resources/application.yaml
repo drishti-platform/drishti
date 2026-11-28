@@ -216,6 +216,7 @@ drishti:
     poll-seconds: 10                 # how often the engines' health and stats are polled and their inputs' data versions looked at
     read-seconds: 60                 # the longest one input read through the router may take
     store-format: delta              # the lake format a stored output (outputs.<name>.store) is written in: delta or iceberg
+    answers: 256                     # the answers each engine's host cache keeps by stamp (engine, options, the inputs' data versions the session read, the request and the viewer's visibility: a kept answer is only ever served to the same question over the same rows); a new data version or an options change asks the engine again; Admin -> Caches lists and purges it; 0: off
   launcher:                          # the Python launcher's stop (docs/DEPLOYMENT_AND_QA_GUIDE.md section 7.1; POST /launcher/stop)
     stop-key: ${DRISHTI_STOP_KEY:}   # the key `drishti.py start server` makes and keeps in the pid file; `stop server` sends it straight from this machine (loopback, no proxy header) to stop gracefully on every OS; empty: every call refused (403); never logged
   access:                            # the access model's files (docs/architecture/KERNEL_AND_MODULES.md): the access registry reads them, nothing else does

@@ -156,36 +156,6 @@ public final class ModuleTemplates {
     /** As above, the release's shipped switch files ({@code defaultsDir}) read where the site's folder has no file of a module. */
     public static Predicate<String> offline(Map<String, PackResolver.Module> modules, Path defaultsDir, Path switchesDir,
             Function<String, String> property, Function<Path, Map<String, Object>> yaml) {
-        Map<String, Boolean> on = new TreeMap<>();
-        for (String id : modules.keySet()) {
-            Boolean set = null;
-            String v = property.apply("drishti.modules." + id + ".enabled");
-            if (v != null && !v.isBlank()) {
-                set = List.of("true", "on", "yes").contains(v.strip().toLowerCase(Locale.ROOT));
-            } else {
-                for (Path dir : new Path[] {defaultsDir, switchesDir}) {   // the release's file first, the site's after it (it wins)
-                    if (dir != null && Files.isRegularFile(dir.resolve(id + ".yaml"))) {
-                        try {
-                            Object e = yaml.apply(dir.resolve(id + ".yaml")).get("enabled");
-                            set = e == null ? set : Boolean.valueOf(String.valueOf(e));
-                        } catch (RuntimeException e) {
-                            set = null;                                  // an unreadable switch: the module's own default
-                        }
-                    }
-                }
-            }
-            on.put(id, set == null || set);
-        }
-        boolean changed = true;
-        while (changed) {                                               // a module whose requirement is off is off
-            changed = false;
-            for (PackResolver.Module m : modules.values()) {
-                if (on.get(m.id()) && m.requires().stream().anyMatch(r -> modules.containsKey(r) && !on.get(r))) {
-                    on.put(m.id(), false);
-                    changed = true;
-                }
-            }
-        }
-        return id -> "core".equals(id) || on.getOrDefault(id == null ? "" : id.strip().toLowerCase(Locale.ROOT), false);
+        return ModuleSwitches.decide(modules, defaultsDir, switchesDir, property, yaml);
     }
 }

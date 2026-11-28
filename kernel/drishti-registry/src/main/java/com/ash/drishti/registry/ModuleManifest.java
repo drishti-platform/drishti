@@ -195,14 +195,7 @@ public record ModuleManifest(String id, String domain, String title, String abou
     }
 
     static Boolean bool(Object o) {
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof Boolean b) {
-            return b;
-        }
-        String s = String.valueOf(o).strip().toLowerCase(Locale.ROOT);
-        return "true".equals(s) || "on".equals(s) || "yes".equals(s);
+        return com.ash.drishti.api.resolution.ModuleSwitches.parse(o);
     }
 
     static List<String> list(Object o) {

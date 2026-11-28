@@ -402,16 +402,14 @@ public final class EmbeddedAccessRegistry implements AccessRegistry, AutoCloseab
         } else if (!visiting.add(m.id())) {
             reason = "its requirements form a cycle";
         } else {
-            for (String need : m.requires()) {
-                if (ModuleManifest.CORE.equals(need)) {
-                    continue;
-                }
-                ModuleManifest dep = byId.get(need);
+            String need = com.ash.drishti.api.resolution.ModuleSwitches.firstRequirementOff(m.requires(), r -> {
+                ModuleManifest dep = byId.get(r);
                 ModuleState ds = dep == null ? null : state(dep, byId, model, today, states, visiting);
-                if (ds == null || !ds.on()) {
-                    reason = "needs the module '" + need + "', which is " + (ds == null ? "not known here" : "off");
-                    break;
-                }
+                return ds == null ? null : ds.on();
+            });
+            if (need != null) {
+                ModuleManifest dep = byId.get(need);
+                reason = "needs the module '" + need + "', which is " + (dep == null ? "not known here" : "off");
             }
             visiting.remove(m.id());
         }

@@ -24,6 +24,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / "docs" / "guides" / "OPERATIONS_GUIDE.md"
+pytestmark = pytest.mark.static
+
 UNITS = sorted((ROOT / "deploy" / "systemd" / "prod").glob("*.service"))
 
 

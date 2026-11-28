@@ -15,7 +15,7 @@
  */
 (function (g) { g.Drishti = g.Drishti || {}; })(typeof window !== 'undefined' ? window : globalThis); /* one namespace for everything the console puts on window (tools/dev/asset_prefix.py) */
 /* Admin -> Capacity's planner in the browser (docs/guides/CLUSTER_GUIDE.md 9.7). The server serves
-   capacity/planner.yaml as JSON; this evaluates its expressions as you type, exactly as tools/sizing_planner.py's
+   capacity/planner.yaml as JSON; this evaluates its expressions as you type, exactly as drishti.py admin capacity-workbook's
    evaluator does for the workbook (a small Excel subset: names, + - * / ^ &, comparisons, IF, MAX, MIN, CEILING, INT,
    ROUND, AND, OR, CHAR). The shared test vectors (kernel/drishti-server/src/test/resources/capacity/test-vectors.json) keep
    the two, and the workbook Excel recalculates, in agreement. No DOM here: drishti_capacity-page.js draws the page, and the
@@ -191,7 +191,7 @@
   // ------------------------------------------------------------------------------------- the derived formulas
   function q(s) { return '"' + s.replace(/"/g, '""') + '"'; }
 
-  /** One nested YAML block of every setting (tools/sizing_planner.py yaml_block_formula, line for line). */
+  /** One nested YAML block of every setting (drishti.py admin capacity-workbook yaml_block_formula, line for line). */
   function yamlBlockFormula(plan) {
     var tree = {}, order = [];
     function child(node, k) {
@@ -235,14 +235,14 @@
     return out.join('&');
   }
 
-  /** The whole command line (tools/sizing_planner.py _command_formula). */
+  /** The whole command line (drishti.py admin capacity-workbook _command_formula). */
   function commandFormula(plan) {
     var parts = ['JvmArenas&" java"'];
     plan.jvm.forEach(function (j) { if (j.name !== 'JvmArenas') { parts.push('IF(' + j.name + '="",""," "&' + j.name + ')'); } });
     return parts.join('&') + '&" -jar "&ServerJar';
   }
 
-  /** Every named cell: the inputs (overrides in place), coefficients and every expression (tools/sizing_planner.py workbook_cells). */
+  /** Every named cell: the inputs (overrides in place), coefficients and every expression (drishti.py admin capacity-workbook workbook_cells). */
   function cells(plan, overrides) {
     var c = {};
     plan.inputs.forEach(function (i) { c[i.name] = i['default']; });

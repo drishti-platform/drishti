@@ -28,8 +28,6 @@ public final class IdentityRepositories {
 
     public interface Roles extends JpaRepository<RoleEntity, String> {}
 
-    public interface PackStates extends JpaRepository<PackStateEntity, String> {}
-
     /** The administrators' switches of commands and packs (Admin → Functions): the newest state of each. */
     public interface Switches extends JpaRepository<SwitchEntity, String> {}
 

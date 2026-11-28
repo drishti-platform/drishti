@@ -15,6 +15,7 @@
  */
 package com.ash.drishti.plugin.delta;
 
+import com.ash.drishti.lakehost.MappedIdMap;
 import com.ash.lake.read.IdMap;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -79,7 +79,7 @@ public class PackOverviewController {
             if (!entitlements.mayOpen(principal, kind)) {
                 continue;
             }
-            var listing = router.list(kind, "", search.maxScan() + 1, search.budget(), asOf, new com.ash.drishti.engine.source.SourceFailures());
+            var listing = router.list(kind, "", search.maxScan() + 1, search.budget(), asOf, new com.ash.rachana.bind.SourceFailures());
             List<EntityHit> hits = listing.hits();
             Map<String, Object> k = new LinkedHashMap<>();
             k.put("kind", kind);

@@ -19,7 +19,7 @@
 # calendar-year returns), the SEC and Nasdaq Trader ticker files and GLEIF's fund relationships (CC0). Linked to us-equities (a
 # holding opens its company; a company lists the funds that hold it; an index lists the funds that track it) and to gleif (LEIs).
 # Hand-written; tools/packgen/funds/make.py writes the data (data/testdata/funds/<kind>/, gzipped parts, built into the lake by
-# tools/build_demo_lakes.py and served by the Delta connector funds-store below), a few reference samples, the README and
+# drishti.py lake demo-all and served by the Delta connector funds-store below), a few reference samples, the README and
 # guides/funds.md, from the downloads drishti.py feed run funds keeps in the data folder. No prices or NAV history.
 pack: funds
 domain: external-data   # the external-data module's (its Markets lens; docs/architecture/KERNEL_AND_MODULES.md)
@@ -70,7 +70,7 @@ columns:
   fund-holder: [TICKER, NAME, FUNDS, TOTAL_VALUE, PCT_OF_SHARES]
   index-funds: [INDEX, NAME, FUNDS, TOTAL_NET_ASSETS]
 # The pack's data: the committed snapshot data/testdata/funds/<kind>/ (fund in gzipped parts of about 1.2 MB) built into
-# <lake>/funds/<kind>/ by tools/build_demo_lakes.py (drishti.py lake demo), one Delta table per kind keyed by its id field (TICKER,
+# <lake>/funds/<kind>/ by drishti.py lake demo-all (drishti.py lake demo), one Delta table per kind keyed by its id field (TICKER,
 # TICKER, INDEX). The promoted columns answer the search form; the type-ahead also matches a fund's name and every share class ticker.
 connectors:
   funds-store:

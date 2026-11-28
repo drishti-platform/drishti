@@ -17,8 +17,7 @@
 
     drishti.py pack make data/testdata/trades/endur/trade_endur.2026-07-08.jsonl.gz --kind trade --match PRODUCT_TYPE --name my-bank
 
-Writes <out>/ with README.txt, pack/<name>/ (Sutras, samples, tests, about), data/delta (or data/files), bundle/, config/, run-server.sh,
-run-server.ps1 and MANIFEST.json. It reuses packgen/pack_from_jsonl.py (which uses sutragen.py and ingest_jsonl.py) and packbundle.py
+Writes <out>/ with README.txt, pack/<name>/ (Sutras, samples, tests, about), data/delta (or data/files), bundle/, config/ and MANIFEST.json. It reuses packgen/pack_from_jsonl.py (which uses sutragen.py and ingest_jsonl.py) and packbundle.py
 through `drishti.py`; this module only chooses the key and date, lays the folder out and writes the instructions.
 """
 from __future__ import annotations
@@ -30,7 +29,6 @@ import json
 import pathlib
 import re
 import shutil
-import stat
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "lake"))
@@ -132,59 +130,21 @@ def tree_files(root: pathlib.Path) -> list[pathlib.Path]:
     return sorted(p for p in root.rglob("*") if p.is_file())
 
 
-def write_scripts(out: pathlib.Path, name: str, store: str) -> None:
+def start_lines(name: str, store: str) -> list[str]:
+    """The README's start-this-folder-alone lines: the one command, ``drishti.py start server``, over this folder's pack and data."""
     root_var = lakeconfig.DEMO_ROOT_ENV if store == "delta" else "DRISHTI_FILES_ROOT"
     sub = "delta" if store == "delta" else "files"
-    sh = f"""#!/usr/bin/env bash
-# Starts the Drishti server on this folder alone: the pack from ./pack, the data from ./data/{sub}.
-# Needs JDK 21+ and the server jar: the newest in $DRISHTI_HOME/lib (the install; python tools/drishti.py build jar makes it), else one beside this script.
-# Optional: DRISHTI_PORT (default 18480), {root_var} (default ./data/{sub}), DRISHTI_TMP_DIR (default ./data/tmp/server), JAVA_HOME.
-set -euo pipefail
-HERE="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
-JAVA="${{JAVA_HOME:+$JAVA_HOME/bin/}}java"
-JAR="$(ls -t "${{DRISHTI_HOME:-$HERE/../../..}}"/lib/drishti-server-*-exec.jar "$HERE"/drishti-server-*-exec.jar 2>/dev/null | head -1 || true)"
-if [ -z "$JAR" ] || [ ! -f "$JAR" ]; then echo "no server jar: set DRISHTI_HOME to the Drishti install whose lib/ holds drishti-server-*-exec.jar (python tools/drishti.py build jar makes it), or copy the jar beside this script (see README.txt)" >&2; exit 2; fi
-export DRISHTI_PACKS="{name}"
-export DRISHTI_PACKS_DIR="$HERE/pack"
-export {root_var}="${{{root_var}:-$HERE/data/{sub}}}"
-export SPRING_CONFIG_ADDITIONAL_LOCATION="optional:file:$HERE/config/drishti-site.yaml"
-# the JVM's temp folder is the server's own (native libraries unpack there, not in /tmp; the server sweeps stale copies at start)
-TMP_DIR="${{DRISHTI_TMP_DIR:-$HERE/data/tmp/server}}"
-mkdir -p "$TMP_DIR"
-cd "$HERE"
-exec "$JAVA" -Djava.io.tmpdir="$TMP_DIR" -jar "$JAR" "$@"
-"""
-    ps = f"""# Starts the Drishti server on this folder alone: the pack from .\\pack, the data from .\\data\\{sub}.
-# Needs JDK 21+ and the server jar: the newest in $env:DRISHTI_HOME\\lib (the install; python tools/drishti.py build jar makes it), else one beside this script.
-# Optional: DRISHTI_PORT (default 18480), {root_var}, DRISHTI_TMP_DIR (default .\\data\\tmp\\server), JAVA_HOME.
-$ErrorActionPreference = 'Stop'
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$java = if ($env:JAVA_HOME) {{ Join-Path $env:JAVA_HOME 'bin\\java.exe' }} else {{ 'java' }}
-$home_ = if ($env:DRISHTI_HOME) {{ $env:DRISHTI_HOME }} else {{ Join-Path $here '..\\..\\..' }}
-$jar = (Get-ChildItem -Path (Join-Path $home_ 'lib'), $here -Filter 'drishti-server-*-exec.jar' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1).FullName
-if (-not $jar -or -not (Test-Path $jar)) {{ Write-Error 'no server jar: set DRISHTI_HOME to the Drishti install whose lib folder holds drishti-server-*-exec.jar (python tools/drishti.py build jar makes it), or copy the jar beside this script (see README.txt)'; exit 2 }}
-$env:DRISHTI_PACKS = '{name}'
-$env:DRISHTI_PACKS_DIR = Join-Path $here 'pack'
-if (-not $env:{root_var}) {{ $env:{root_var} = Join-Path $here 'data\\{sub}' }}
-$env:SPRING_CONFIG_ADDITIONAL_LOCATION = 'optional:file:' + ((Join-Path $here 'config\\drishti-site.yaml') -replace '\\\\', '/')
-# the JVM's temp folder is the server's own (native libraries unpack there, not in the system temp folder)
-$tmp = if ($env:DRISHTI_TMP_DIR) {{ $env:DRISHTI_TMP_DIR }} else {{ Join-Path $here 'data\\tmp\\server' }}
-New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-Set-Location $here
-& $java "-Djava.io.tmpdir=$tmp" -jar $jar @args
-"""
-    sp = out / "run-server.sh"
-    sp.write_text(sh, encoding="utf-8", newline="\n")
-    sp.chmod(sp.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    (out / "run-server.ps1").write_text(ps, encoding="utf-8")
+    return [f"      export {root_var}=/PATH/TO/this-folder/data/{sub}",
+            f"      python3 tools/drishti.py start server --packs {name} --server-arg=--drishti.packs.dir=/PATH/TO/this-folder/pack"
+            "        (JDK 21+ and the server jar: drishti.py build jar)"]
 
 
 def write_site_yaml(out: pathlib.Path, name: str, store: str) -> None:
     root_var = lakeconfig.DEMO_ROOT_ENV if store == "delta" else "DRISHTI_FILES_ROOT"
     sub = "delta" if store == "delta" else "files"
     (out / "config").mkdir(exist_ok=True)
-    (out / "config" / "drishti-site.yaml").write_text(f"""# A server configuration overlay for this folder (README.txt, step 3). run-server.sh passes it as
-# SPRING_CONFIG_ADDITIONAL_LOCATION; on your own server copy these lines into application.local.yaml.
+    (out / "config" / "drishti-site.yaml").write_text(f"""# A server configuration overlay for this folder (README.txt, step 3). on your own server copy these lines into application.local.yaml
+# (or start with drishti.py start server --server-arg=--spring.config.additional-location=optional:file:/PATH/TO/this-folder/config/drishti-site.yaml).
 # Each ${{VAR:default}} is read from the environment first; the default after the colon is a PLACEHOLDER path
 # (/PATH/TO/...): replace it with where you put the folder, or set the variable.
 drishti:
@@ -221,7 +181,6 @@ def readme_text(v: dict) -> str:
         w("  (no data/)       no date field was found or given, so no dated store was written; the pack serves its samples only")
     w(f"  bundle/          {n}-{v['version']}.tar.gz + .sha256: the pack alone, versioned and checksummed, for servers that install by copying")
     w("  config/          drishti-site.yaml: a ready server configuration overlay")
-    w("  run-server.sh    run-server.ps1: start a server on this folder only (JDK 21+ and the server jar needed)")
     w("  MANIFEST.json    what was generated: counts, the chosen key and date, tool versions, checksums\n")
     w("What was chosen for you")
     w(f"  kind          {kind}")
@@ -238,7 +197,8 @@ def readme_text(v: dict) -> str:
     w("3. DEPLOY")
     w("-" * 72)
     w("  Quickest, on this machine (nothing is copied):")
-    w("      DRISHTI_HOME=/path/to/drishti DRISHTI_PORT=18480 ./run-server.sh        (Windows: .\\run-server.ps1)")
+    for line in start_lines(n, store):
+        w(line)
     w("  On an existing server:")
     w(f"    a. The pack. Copy pack/{n}/ into the server's packs folder (the one DRISHTI_PACKS_DIR / drishti.packs.dir names), e.g.")
     w(f"           cp -r pack/{n} /opt/drishti/packs/")
@@ -405,7 +365,6 @@ def make(a, cli) -> int:
     ver = cli.main(["pack", "verify", str(archive), *tool_args])
 
     write_site_yaml(out, a.name, a.store)
-    write_scripts(out, a.name, a.store)
     groups = sorted(p.name for p in (pack_dir / "tests").iterdir() if p.is_dir()) if (pack_dir / "tests").is_dir() else []
     by_date: dict[str, int] = {}
     if date:
@@ -433,6 +392,6 @@ def make(a, cli) -> int:
     print(f"\npack make: {out}")
     print(f"  {len(groups)} Sutra group(s) for {len(docs)} {a.kind} document(s)" + (f", {len(by_date)} date(s) in data/{data_dir.name}" if date else ", no dated store")
           + f"; pack check {'passed' if chk == 0 else 'FAILED'}, pack verify {'passed' if ver == 0 else 'FAILED'}")
-    print(f"next: read {out / 'README.txt'}; for a new server  DRISHTI_HOME=<install> DRISHTI_PORT=18480 {out / 'run-server.sh'}; "
+    print(f"next: read {out / 'README.txt'}; to start a server on this folder alone, the lines of its step 3; "
           f"on a running one, copy {out / 'pack' / a.name} into its packs folder and the server checks it and loads it by itself (no restart)")
     return 1 if (chk or ver) else 0

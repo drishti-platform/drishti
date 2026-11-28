@@ -1712,7 +1712,7 @@ public-data folders are whole tables, a date each, and load as they are.
 chosen per system when the demo lakes are built, so one installation proves that the connectors, history, search, the grouped pages and
 BI answer the same whatever the storage. Every other dataset stays in Delta.
 
-| Command (`python3 tools/build_demo_lakes.py …`; Windows `py -3.13 tools\build_demo_lakes.py …`) | Result |
+| Command (`python3 tools/drishti.py lake demo-all …`; Windows `py -3.13 tools\drishti.py lake demo-all …`) | Result |
 |---|---|
 | (no `--store`) | everything in Delta |
 | `--store calypso=iceberg` | CALYPSO in Iceberg, ENDUR and MUREX in Delta (the mixed case) |
@@ -1821,7 +1821,7 @@ python tools/drishti.py data load --store iceberg ./data/iceberg --trades 10000 
 DRISHTI_CONNECTORS_DIR=config/connectors.examples/iceberg DRISHTI_PACKS=market-risk,counterparty-risk java -jar lib/drishti-server-*-exec.jar
 ```
 
-Design: [ICEBERG_CONNECTOR.md](../../plugins/drishti-plugin-iceberg/README.md). (The loader is the server jar's; or put the demo lakes' trades in Iceberg with `build_demo_lakes.py --store`: [above](#92-mixed-delta-and-iceberg-storage).)
+Design: [ICEBERG_CONNECTOR.md](../../plugins/drishti-plugin-iceberg/README.md). (The loader is the server jar's; or put the demo lakes' trades in Iceberg with `lake demo-all --store`: [above](#92-mixed-delta-and-iceberg-storage).)
 
 ### 9.7 DuckDB
 
@@ -1937,7 +1937,7 @@ legal-entities:
 ```
 
 The defaults are the names above, so the file changes nothing until you edit it. The names are applied **as the demo lakes are
-built**: `drishti.py lake demo` and `tools/build_demo_lakes.py` (both take `--names FILE`, default `config/demo/names.yaml`; with
+built**: `drishti.py lake demo` and `drishti.py lake demo-all` (both take `--names FILE`, default `config/demo/names.yaml`; with
 `--dry-run` they print the mapping and build nothing) rename, in every kind as it is loaded, each value that **is** an old name, and
 each value that **starts with** an old name followed by a comma (a branch keeps its suffix). The committed test data
 (`data/testdata`) is never rewritten. **LEIs and BICs stay as they are**: they are identifiers. In the committed data the names are in:

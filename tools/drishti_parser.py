@@ -440,6 +440,12 @@ def build_parser(h) -> argparse.ArgumentParser:
     for mod in ("varcli", "expcli", "frtbcli", "simmcli", "pivotcli"):   # var show|parts|path|whatif; exposure; sens, frtb, play frtb; simm, play simm
         load_module(mod, mod + ".py").register(groups, srv, play_ctx)
     adm = load_module("capacitycli", "capacitycli.py").register(groups, srv, {"Api": Api, "CliError": CliError, "say_json": say_json})   # admin capacity (2.9.11)
+    cl = group("cluster", "A cluster's operations: the rolling upgrade")
+    ro = add(cl, "roll", lambda a, extra: load_module("rolling", "rolling.py").run(a), "cluster roll: upgrade a cluster one node at a time, no downtime (VMs or ECS): "
+             "BI and data members, coordinators, shard owners zone by zone, consoles last", [],
+             "examples:\n  drishti.py cluster roll --inventory cluster.yaml --version 2.9.7 --dry-run\n  drishti.py cluster roll --inventory cluster.yaml --version 2.9.7 --from var-3\n"
+             "Guide: docs/guides/CLUSTER_GUIDE.md section 10.1; inventory example deploy/rolling.example.yaml")
+    load_module("rolling", "rolling.py").add_arguments(ro)
     load_module("enginescli", "enginescli.py").register(sv, adm, srv, {"Api": Api, "CliError": CliError, "ApiError": ApiError, "say_json": say_json})   # server engines, admin engines (2.9.11)
     load_module("dataloadcli", "dataloadcli.py").register(groups, srv, {"Api": Api, "CliError": CliError, "ApiError": ApiError, "say_json": say_json})   # dataload status|run|retry
     load_module("feedcli", "loaders/common/cli.py").register(groups)                                                          # feed list|run|status|schedule (2.9.11.g)

@@ -126,7 +126,7 @@ final class RouterKindData implements KindData {
                 boolean whole = router.documents(kind, asOf(date), d -> docs.put(d.ref().id(), d));
                 if (!whole) {                                       // as the in-tree loaders: the listing only when the kind cannot be read whole
                     docs.clear();
-                    var listing = router.listAcross(kind, DOCUMENT_ROWS, budget, asOf(date), new com.ash.drishti.engine.source.SourceFailures());
+                    var listing = router.listAcross(kind, DOCUMENT_ROWS, budget, asOf(date), new com.ash.rachana.bind.SourceFailures());
                     var refs = listing.hits().stream().map(h -> h.ref()).toList();
                     router.fetchAll(refs, budget, asOf(date)).forEach((ref, d) -> docs.put(ref.id(), d));
                 }

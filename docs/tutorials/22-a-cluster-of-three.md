@@ -311,7 +311,7 @@ drishti:
 ```
 
 The servers' Docker and ECS images and the systemd unit run this drain by themselves on a stop; a whole cluster is upgraded one node at a
-time with `python tools/rolling.py` ([OPERATIONS_GUIDE.md, upgrades](../guides/OPERATIONS_GUIDE.md#18-upgrades-and-rollback)).
+time with `python tools/drishti.py cluster roll` ([OPERATIONS_GUIDE.md, upgrades](../guides/OPERATIONS_GUIDE.md#18-upgrades-and-rollback)).
 
 Now stop node a, the one the console was given. Within `fail_after` failed requests or health checks the console sets a aside and moves your
 session to another server: a read that failed is retried once there, a write is never repeated (it fails with an error naming the server, and you check and make it again). The
@@ -381,7 +381,7 @@ $ curl -s http://$IP:17784/readyz                         # the console can reac
 
 You should see `UP` three times; on the node you drained in step 7 the readiness answer is `OUT_OF_SERVICE` until you undrain it. For people, **Admin → Health** shows the status of the node the console is on (`OK`, `DEGRADED` when a source is down or a pack has a problem), the version and the heap, and what is being retried; **Admin → Cluster → Members** shows every node. Monitoring with Prometheus and the suggested alerts are in [OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#13-monitoring-and-health), the single-server checklist in [DEPLOYMENT_AND_QA_GUIDE.md](../DEPLOYMENT_AND_QA_GUIDE.md#14-a-production-checklist-step-by-step).
 
-A cluster is upgraded one node at a time, so it never stops answering: **drain** the node (step 7, wait for *Safe to stop*), stop it, replace its jar and `config/packs/` (keep its `config/net/` and its `application.local.yaml`), start it, wait for its readiness to be `UP` and for it to be `alive` in Members, then do the next. Upgrade the console together with the servers (a new console cannot sign anyone in to an older server). `python tools/rolling.py` does the loop for you ([CLUSTER_GUIDE.md, rolling upgrades](../guides/CLUSTER_GUIDE.md#82-rolling-upgrades)); rolling back is the same loop with the old jar.
+A cluster is upgraded one node at a time, so it never stops answering: **drain** the node (step 7, wait for *Safe to stop*), stop it, replace its jar and `config/packs/` (keep its `config/net/` and its `application.local.yaml`), start it, wait for its readiness to be `UP` and for it to be `alive` in Members, then do the next. Upgrade the console together with the servers (a new console cannot sign anyone in to an older server). `python tools/drishti.py cluster roll` does the loop for you ([CLUSTER_GUIDE.md, rolling upgrades](../guides/CLUSTER_GUIDE.md#82-rolling-upgrades)); rolling back is the same loop with the old jar.
 
 You should see Members with all three nodes `alive` at the new version after the last one, and the console's page never reloading to the sign-in.
 

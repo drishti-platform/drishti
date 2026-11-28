@@ -6824,7 +6824,7 @@ endpoint (C2), saved charts (C4, C5), the `chart` panel kind and Promote (C8), O
 Feature decided by the product owner, beside BI runs
 ([ARCHITECTURE.md §28](../architecture/ARCHITECTURE.md#287-bi-runs-every-bi-query-as-a-bounded-visible-job)) and the two Drishti\*net transport items ([CLUSTER_GUIDE.md](CLUSTER_GUIDE.md#1-several-servers-as-one-drishtinet)). Written
 2026-10-20 from the agreed feature, checked against the console and server code on `develop`. Builds on the pivot engine
-(drishti-bicompute on the server; `drishti_pivot-engine.js`, its browser client, and `drishti_pivot-grid.js`, its grid; [PIVOT.md](bi/PIVOT.md)),
+(drishti-bicompute on the server; `drishti_pivot-engine.js`, its browser client, and drishti-grid (Drishti Elements), its grid; [PIVOT.md](bi/PIVOT.md)),
 the chart panels (`drishti_charts.js`, [Panels: the twenty-two kinds, and developing a new one](#panels-the-twenty-two-kinds-and-developing-a-new-one)), the BI visuals ([REPORT_FILE_FORMAT_STATEMENTS.md](bi/REPORT_FILE_FORMAT_STATEMENTS.md#1-the-report-file-pages-visuals-filters-and-slicers) section 5.3) and
 history queries ([DATA_ARCHITECTURE.md](../architecture/DATA_ARCHITECTURE.md#2-history-queries-an-entity-over-time)).
 
@@ -6858,7 +6858,7 @@ The product owner, 2026-10-20: **every table can be charted.**
 | Sutra table cells | `web/templates/_macros/panels.html` (`table`, `drill`, `pivot_table`) | Cells are **display text** (`cell_text(c)`, e.g. `1.5m`, `−30,205,543`); a column is only flagged `numeric`. Raw values are not in the page. A table cut at its `limit` says `d.more` in its footer. |
 | Panel records | `GET /api/pivot/records/{kind}/{id}/{panel}` → `ViewController.records` → `PivotBinder.records` | Every row of a panel up to `drishti.pivot.max-records` (50,000) as **raw values**, with the view's business date and masks (a masked field reads `•••`), `total` and `truncated`. **Today only for panels whose Sutra says `pivot:`**, and only the pivot's fields. |
 | The pivot engine | drishti-bicompute (Java, [PIVOT.md](bi/PIVOT.md)); in the browser `web/static/js/drishti_pivot-engine.js` (`window.Drishti.pivotEngine`, also `module.exports` for node tests) | Every figure is computed on the server: `POST /api/pivot/query` over a source (a Export data kind, a panel's rows `panel/<kind>/<panel>/<id>`) and `POST /api/pivot/inline` over rows the page already holds (a chart of the shown rows). `drishti_pivot-engine.js` only asks and lays the answer out as a cube (`query`, `inline`, `fromAnswer`), and holds `keyText` and `format` by the Sutra's format names; it never adds up a figure. |
-| The pivot grid | `web/static/js/drishti_pivot-grid.js` (`window.Drishti.PivotCore`) | The one renderer of pivot rows: the Pivot screen and a Sutra's nested `pivot` panel draw with it; + and − on groups, subtotals, the grand total, conditional formats. |
+| The pivot grid | `drishti-grid` (Drishti Elements) | The one renderer of pivot rows: the Pivot screen and a Sutra's nested `pivot` panel draw with it; + and − on groups, subtotals, the grand total, conditional formats. |
 | Saved pivot views | `/api/pivot/views` (`/api/v1/pivot/views`) | Per-user pivot views (bi/PIVOT.md), shareable with roles; a cell is addressable as `pivot://owner/name@v/Measure[DIM=V]`. |
 | Chart panels | `web/static/js/drishti_charts.js` (`window.Drishti.charts`) | `tokens(root)` reads `--d-*` from `<html>` or a shadow host, `palette(t)` (8 tokens), `compact()` numbers, `axis()`, `tooltip()`; a "Data" table under every chart for keyboards, screen readers and print; redraws on a theme change. |
 | Sutra chart kinds | [Panels: the twenty-two kinds, and developing a new one](#panels-the-twenty-two-kinds-and-developing-a-new-one): `line`, `area`, `hbar` (`shape: donut`), `scatter`, `histogram`, `waterfall` | One series per kind (or `area`'s list of bands); **no grouped or stacked bars, no combo, no second axis, no split, no Top N**. |
@@ -7094,7 +7094,7 @@ agg}]`** (`count` with no field). Date bucketing is done before the cube by deri
 browser, or by the server pivot's existing date grain when the search pivot has it (else the search path buckets in the browser from the
 day cube). Scatter without aggregation skips the cube and reads the points directly.
 
-`drishti_pivot-grid.js` draws the nested-pivot panels' grid and the Pivot screen's; the chart's option builder needs time axes, two value axes, combo,
+`drishti-grid` draws the nested-pivot panels' grid and the Pivot screen's; the chart's option builder needs time axes, two value axes, combo,
 stacking, pie and scatter. Both use `drishti_charts.js`'s `tokens`, `palette`, `compact`, `axis` and `tooltip`, which `drishti_charts.js` exports on
 `window.Drishti.charts` (C1 adds them to its public object).
 

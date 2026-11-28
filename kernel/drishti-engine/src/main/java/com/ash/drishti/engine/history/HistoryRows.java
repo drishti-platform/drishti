@@ -25,8 +25,6 @@ import com.ash.rachana.el.Expr;
 import com.ash.rachana.el.Values;
 import com.ash.rachana.format.Formats;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -399,8 +397,7 @@ public final class HistoryRows {
             }
         }
         if (v instanceof Number n) {
-            DecimalFormat f = new DecimalFormat("#,##0.##########", DecimalFormatSymbols.getInstance(Locale.ROOT));
-            return f.format(n.doubleValue());
+            return com.ash.drishti.common.NumberText.grouped(n.doubleValue(), 10, Locale.ROOT);
         }
         return Values.text(v);
     }

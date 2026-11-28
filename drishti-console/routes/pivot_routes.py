@@ -15,7 +15,7 @@
 """The pivot screen (docs/guides/bi/README.md; mock-up A of docs/architecture/ARCHITECTURE.md section 26): ``PIVOT <GO>``,
 ``PIVOT <table> <GO>`` (a table of Export data, or ``var``), ``PIVOT @owner/name <GO>`` (a saved view), Views → Pivot and "Pivot" on a
 table; ``/pivot?preset=<name>`` is a preset (config/pivot-presets.yaml: the MR cube, ``MCUBE``, and the CCR cube), the same screen with a source,
-a lens and a landing, never a grid of its own. The page is a shell that web/static/js/drishti_pivot-grid.js and drishti_pivot.js fill: the field list and its four zones on the right, the grid with
+a lens and a landing, never a grid of its own. The page is a shell that drishti-grid (Drishti Elements) and web/static/js/drishti_pivot.js fill: the field list and its four zones on the right, the grid with
 nested rows opened with + and −, the scan-estimate bar, the provenance popover, a chart of a selection and the Export menu. Every figure is
 the server's (``/api/v1/pivot``, asked as the person through the same-origin proxy ``/api/pivot/...``); the console only draws."""
 from __future__ import annotations

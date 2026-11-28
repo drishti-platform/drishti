@@ -15,7 +15,7 @@
 # Example: copy to config/connectors/risk-store.yaml to read the risk domain from Iceberg instead of Delta (Delta is the default;
 # Iceberg only by configuration). It replaces the market-risk pack's risk-store connector (settings are not merged), with the same
 # kinds and layouts: the P&L and scenario-PV vectors are list<double> columns (layout.<kind>.vectors), as `lake build --format iceberg`
-# and `build_demo_lakes.py --store risk=iceberg` write them. Credentials are ${ENV_VAR} references.
+# and `lake demo-all --store risk=iceberg` write them. Credentials are ${ENV_VAR} references.
 # The lake (iceberg, its root or catalog, storage and tables) is config/lakes.examples/iceberg/iceberg.yaml: copy it to
 # config/lakes/iceberg.yaml beside this file (docs/guides/DATA_LAKE_GUIDE.md). This file keeps only what the connector reads.
 plugin: iceberg

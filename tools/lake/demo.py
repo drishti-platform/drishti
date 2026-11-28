@@ -867,7 +867,7 @@ class DemoLake:
             if e is None:
                 notes.append(f"{name}: {layered.unused.get(name) or 'no template and no file'}")
                 continue
-            if e.plugin != "delta":                              # a system stored elsewhere (build_demo_lakes.py --store calypso=iceberg)
+            if e.plugin != "delta":                              # a system stored elsewhere (lake demo-all --store calypso=iceberg)
                 notes.append(f"{name}: reads {e.plugin}, left as it is ({f})")
                 continue
             root = e.settings.get("root", DEFAULT_ROOT)

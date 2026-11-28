@@ -39,7 +39,7 @@ class CapacityLazyTemplateTest {
         AtomicInteger builds = new AtomicInteger();
         Supplier<CapacityWorkbook> missing = CapacityController.lazy(() -> {
             builds.incrementAndGet();
-            throw new IllegalStateException("the server has no capacity/template/xl/styles.xml (tools/sizing_planner.py writes it)");
+            throw new IllegalStateException("the server has no capacity/template/xl/styles.xml (drishti.py admin capacity-workbook writes it)");
         });
         assertThat(builds).hasValue(0);                                          // constructing the controller reads nothing
         assertThatThrownBy(missing::get).isInstanceOfSatisfying(DrishtiException.class, e -> {

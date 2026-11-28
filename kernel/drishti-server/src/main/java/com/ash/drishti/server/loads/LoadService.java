@@ -22,7 +22,7 @@ import com.ash.drishti.api.SourcePlugin;
 import com.ash.drishti.api.error.DrishtiException;
 import com.ash.drishti.api.error.ErrorCode;
 import com.ash.drishti.engine.ViewPipeline;
-import com.ash.drishti.engine.source.SourceFailures;
+import com.ash.rachana.bind.SourceFailures;
 import com.ash.drishti.engine.source.SourceRegistry;
 import com.ash.drishti.engine.source.SourceRouter;
 import com.ash.drishti.engine.time.BusinessDates;

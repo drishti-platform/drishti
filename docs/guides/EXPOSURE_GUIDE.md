@@ -1235,7 +1235,7 @@ names the format and the table in `publishError`. A table keeps the format it wa
 BI's `exposure-results` connector follows the format by itself (generated as `plugin: iceberg` over the official root; a file never
 edited follows a change, an edited one is kept and listed; `lake demo` leaves the file to the server).
 
-**Exposure from an Iceberg CCR lake.** `simulation-run` and `exposure-path` may live in Iceberg (`build_demo_lakes.py --store
+**Exposure from an Iceberg CCR lake.** `simulation-run` and `exposure-path` may live in Iceberg (`lake demo-all --store
 risk=iceberg` switches `exposure-store.yaml` with the market-risk pack's `risk-store.yaml`): the same day on Delta and on Iceberg gives
 EE, PFE, EPE, the profiles, the contributions and the official records equal to the cent (`ExposureFormatEqualityTest`). Exposure has
 one reporting currency, so there is no second one to compare.

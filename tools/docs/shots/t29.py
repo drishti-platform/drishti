@@ -14,7 +14,7 @@
 
 """Pictures of tutorial 16, Part E, the risk lake and the official results on Iceberg (docs/tutorials/16-load-your-own-data-into-a-new-lake.md), written to
 docs/tutorials/img/t29/. Its own stack, built as the tutorial says: the VaR test data (and MUREX's trades, so the lake holds a Delta
-table beside the Iceberg ones) with `build_demo_lakes.py --as-of data --store risk=iceberg`, the official results to Iceberg under the
+table beside the Iceberg ones) with `lake demo-all --as-of data --store risk=iceberg`, the official results to Iceberg under the
 Iceberg root (application.local.yaml), then the scratch server and console, and var-results reset to the pack's default. Run it on its own:
 
     python3 tools/docs/screenshots.py --guide t29
@@ -45,7 +45,7 @@ def start_servers(work) -> list:
     """The tutorial's steps 1 to 3 on a scratch folder, then the stack."""
     WORK[:] = [str(work)]
     lake, ice, conns = work / "delta", work / "iceberg", work / "connectors"
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "build_demo_lakes.py"), "--as-of", "data", "--lake", str(lake), "--connectors-dir", str(conns),
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "drishti.py"), "lake", "demo-all", "--as-of", "data", "--lake", str(lake), "--connectors-dir", str(conns),
                         "--only", VAR_KINDS + ",trades/murex", "--store", "risk=iceberg"], capture_output=True, text=True, cwd=ROOT, timeout=1800)
     if r.returncode != 0 or not (ice / "risk" / "pnl-vector" / "metadata").is_dir():
         sys.exit("could not build the Iceberg risk lake: " + (r.stderr or r.stdout)[-800:])

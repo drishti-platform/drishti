@@ -17,8 +17,6 @@ package com.ash.drishti.server.dist;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 /** How a cell of an export reads on a page (PDF, PNG, email): grouped numbers, trimmed decimals, plain dates. Excel and CSV keep the typed value instead. */
@@ -46,8 +44,6 @@ final class DocFmt {
     }
 
     private static String grouped(BigDecimal b, int maxScale) {
-        DecimalFormat f = new DecimalFormat("#,##0", DecimalFormatSymbols.getInstance(Locale.ROOT));
-        f.setMaximumFractionDigits(Math.max(0, Math.min(maxScale, Math.max(0, b.scale()))));
-        return f.format(b);
+        return com.ash.drishti.common.NumberText.grouped(b, Math.max(0, Math.min(maxScale, Math.max(0, b.scale()))), Locale.ROOT);
     }
 }

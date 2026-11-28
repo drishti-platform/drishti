@@ -18,7 +18,7 @@
 # companies, their SIC sectors, filings and annual XBRL financials; the index members from the tracking ETFs' Form N-PORT (SPY, QQQ, DIA);
 # Wikidata (CC0) for headquarters and founding;
 # GLEIF (CC0) for the LEI; the Nasdaq Trader symbol directory for the listing market. Hand-written; tools/packgen/us_equities/make.py
-# writes the data (data/testdata/us-equities/<kind>/, built into the lake by tools/build_demo_lakes.py and served by the Delta
+# writes the data (data/testdata/us-equities/<kind>/, built into the lake by drishti.py lake demo-all and served by the Delta
 # connector us-equities-store below), a few reference samples and guides/us-equities.md from the cache tools/packgen/us_equities/fetch.py
 # fills. No index weights or levels, no GICS, and no prices: price-history is read live by an off-by-default connector, for internal use only.
 pack: us-equities
@@ -99,7 +99,7 @@ columns:
   index-membership: [INDEX, NAME, MEMBERS]
   filing-feed: [FEED, NAME, FILINGS]
 # The pack's data: the committed snapshot data/testdata/us-equities/<kind>/ built into <lake>/us-equities/<kind>/ by
-# tools/build_demo_lakes.py (drishti.py lake demo), one Delta table per kind keyed by its id field (TICKER, ACCESSION, FACT_ID ...).
+# drishti.py lake demo-all (drishti.py lake demo), one Delta table per kind keyed by its id field (TICKER, ACCESSION, FACT_ID ...).
 # The promoted columns answer the search form; the type-ahead also matches a company's name and LEI (layout.<kind>.type-ahead).
 # TEMPLATE: written once to config/connectors/us-equities-prices.yaml, DISABLED. INTERNAL USE ONLY: free price feeds forbid
 # redistribution; turning it on sends every ticker opened to Yahoo Finance. Nothing it reads is committed.

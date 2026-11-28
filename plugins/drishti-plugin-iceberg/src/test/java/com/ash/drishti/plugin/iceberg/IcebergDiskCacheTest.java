@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ash.drishti.api.AsOf;
 import com.ash.drishti.api.EntityRef;
+import com.ash.drishti.lakehost.MappedIdMap;
 import com.ash.drishti.testkit.DatedSourceContract;
 import java.nio.file.Files;
 import java.nio.file.Path;

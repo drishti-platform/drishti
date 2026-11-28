@@ -21,7 +21,7 @@ import com.ash.drishti.api.DataNode;
 import com.ash.drishti.api.EntityDocument;
 import com.ash.drishti.api.EntityHit;
 import com.ash.drishti.api.EntityRef;
-import com.ash.drishti.engine.source.SourceFailures;
+import com.ash.rachana.bind.SourceFailures;
 import com.ash.drishti.engine.source.SourceRouter;
 import com.ash.drishti.packs.PackRegistry;
 import java.time.Duration;

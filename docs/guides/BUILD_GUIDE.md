@@ -660,7 +660,7 @@ published public data such as the us-equities and gleif packs):
    file a business day (the first the snapshot, then each day's changes), or one dated snapshot the same on every day, or a tar of
    `<table>/<YYYY-MM-DD>/` folders where a date is several files; each dataset listed in `data/testdata/testdata.yaml` with its pack, kind,
    Delta connector and key (`tools/testdata/make_testdata.py` and `tools/testdata/publicsnap.py` write it; never by hand);
-2. `python3 tools/drishti.py lake demo` (or `tools/build_demo_lakes.py`) builds them into the demo lake;
+2. `python3 tools/drishti.py lake demo` (or `drishti.py lake demo-all`) builds them into the demo lake;
 3. a Delta connector in the pack's `pack.yaml` serves them (`plugin: delta`, its `domain`, the kinds, `layout.<kind>.columns` for the fields
    searches and the search form filter on, `layout.<kind>.type-ahead` for the columns a name is found by).
 
@@ -4842,7 +4842,7 @@ examples, guides, starter workspaces and monitors disappear; `GET /api/v1/packs`
 its inbox rules are not matched (the files wait in the inbox) and the Help pages that name it (`pack:` in a `help.yaml` page) leave Help. Everything stays loaded,
 so switching it back on is instant. **A pack that a switched-on pack builds on cannot be switched off** (*Needed by …: switch those off first*;
 `DRS-5001 'trading' is needed by [counterparty-risk, market-risk]; switch those off first`); **switching a pack on switches on everything it builds on**;
-a pack that is not loaded cannot be switched on. The choice is kept in the identity database (`drishti_pack_state`), survives restarts, reaches the
+a pack that is not loaded cannot be switched on. The choice is kept in the switches ledger (`drishti_switch`, in the identity database), survives restarts, reaches the
 other servers sharing that database within `drishti.identity.refresh-seconds`, and is audited (`pack-enabled`, `pack-disabled`). For programs:
 `GET /api/v1/admin/packs` lists each pack with `loaded`, `enabled` and `requiredBy`; `PUT /api/v1/admin/packs/<name>` with `{"enabled": false}`
 switches one ([API_REFERENCE.md](API_REFERENCE.md)).

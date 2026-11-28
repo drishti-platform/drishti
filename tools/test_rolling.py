@@ -210,9 +210,9 @@ class Running(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             inv = Path(d, "c.json")
             inv.write_text(json.dumps(DOC), encoding="utf-8")
-            r = subprocess.run([sys.executable, str(ROOT / "tools" / "rolling.py"), "--help"], capture_output=True, text=True, check=False)
+            r = subprocess.run([sys.executable, str(ROOT / "tools" / "drishti.py"), "cluster", "roll", "--help"], capture_output=True, text=True, check=False)
             self.assertEqual(r.returncode, 0, r.stderr)
-            r = subprocess.run([sys.executable, str(ROOT / "tools" / "rolling.py"), "--inventory", str(inv), "--dry-run"],
+            r = subprocess.run([sys.executable, str(ROOT / "tools" / "drishti.py"), "cluster", "roll", "--inventory", str(inv), "--dry-run"],
                                capture_output=True, text=True, check=False)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("== owners in zone az-b", r.stdout)

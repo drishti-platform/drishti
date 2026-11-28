@@ -103,6 +103,18 @@ def cmd_demo(a, extra) -> int:
     return _mod("demo").run(a)
 
 
+def _bdl():
+    tools = str(HERE.parent)
+    if tools not in sys.path:
+        sys.path.append(tools)
+    import build_demo_lakes
+    return build_demo_lakes
+
+
+def cmd_demo_all(a, extra) -> int:
+    return _bdl().demo_all(a)
+
+
 def cmd_undo(a, extra) -> int:
     return _mod("undo").run(a)
 
@@ -147,6 +159,11 @@ def register(groups, add, srv, ctx: dict | None = None) -> None:
              "  drishti.py lake demo --with-real ~/Downloads/endur.json,~/Downloads/ComSwap.json      (LOCAL ONLY: never into data/testdata)\n"
              "Guide: data/testdata/README.md")
     _mod("demo").add_arguments(dm)
+    da = add(sub, "demo-all", cmd_demo_all, "lake demo-all: every demo lake from start to finish (lake demo, then your ENDUR or other system's files, a store per "
+             "system in Delta or Iceberg, a server told once)", [],
+             "examples:\n  drishti.py lake demo-all\n  drishti.py lake demo-all --endur-dir ~/private/endur --as-of 2026-10-16 --dry-run\n"
+             "  drishti.py lake demo-all --store risk=iceberg\nGuide: docs/guides/DATA_LAKE_GUIDE.md")
+    _bdl().add_arguments(da)
     u = add(sub, "undo", cmd_undo, "lake undo: remove one load's rows by its load id, in every table of the lake (a replace restored); asks "
             "to confirm", [], "examples:\n  drishti.py lake undo 20261104T093000.123-4242.1 --lake data/delta/demo --dry-run\n"
             "  drishti.py lake undo 20261104T093000.123-4242.1 --lake data/delta/demo --yes\nGuide: docs/guides/DATA_LAKE_GUIDE.md section 5.5")

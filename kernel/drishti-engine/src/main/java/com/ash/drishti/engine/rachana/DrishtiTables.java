@@ -54,32 +54,20 @@ public final class DrishtiTables implements TableProvider {
 
     @Override
     public List<EntityHit> list(String kind, String text, int limit, Duration budget, AsOf at, SourceFailures failures) {
-        com.ash.drishti.engine.source.SourceFailures f = new com.ash.drishti.engine.source.SourceFailures();
-        try {
-            return router.list(kind, text, limit, budget, Hosted.asOf(at), f).hits().stream().map(Hosted::hit).toList();
-        } finally {
-            copy(f, failures);
-        }
+        SourceFailures f = failures == null ? new SourceFailures() : failures;
+        return router.list(kind, text, limit, budget, Hosted.asOf(at), f).hits().stream().map(Hosted::hit).toList();
     }
 
     @Override
     public List<EntityHit> listAcross(String kind, int max, Duration budget, AsOf at, SourceFailures failures) {
-        com.ash.drishti.engine.source.SourceFailures f = new com.ash.drishti.engine.source.SourceFailures();
-        try {
-            return router.listAcross(kind, max, budget, Hosted.asOf(at), f).hits().stream().map(Hosted::hit).toList();
-        } finally {
-            copy(f, failures);
-        }
+        SourceFailures f = failures == null ? new SourceFailures() : failures;
+        return router.listAcross(kind, max, budget, Hosted.asOf(at), f).hits().stream().map(Hosted::hit).toList();
     }
 
     @Override
     public Map<EntityRef, Entity> fetchAll(Collection<EntityRef> refs, Duration budget, AsOf at, SourceFailures failures) {
-        com.ash.drishti.engine.source.SourceFailures f = new com.ash.drishti.engine.source.SourceFailures();
-        try {
-            return Hosted.entities(router.fetchAll(Hosted.refs(refs), budget, Hosted.asOf(at), f));
-        } finally {
-            copy(f, failures);
-        }
+        SourceFailures f = failures == null ? new SourceFailures() : failures;
+        return Hosted.entities(router.fetchAll(Hosted.refs(refs), budget, Hosted.asOf(at), f));
     }
 
     @Override
@@ -98,9 +86,4 @@ public final class DrishtiTables implements TableProvider {
         return ComputeRef.format(id, params);
     }
 
-    private static void copy(com.ash.drishti.engine.source.SourceFailures from, SourceFailures to) {
-        if (to != null && !from.isEmpty()) {
-            from.asMap().forEach(to::add);
-        }
-    }
 }

@@ -15,10 +15,10 @@
 
 """The single-node sizing planner workbook (CLUSTER_GUIDE.md, Sizing a single node: the planner workbook).
 
-    python3 tools/sizing_planner.py                 writes docs/architecture/Drishti-Sizing-Planner.xlsx, the server's template
+    python3 tools/drishti.py admin capacity-workbook              writes docs/architecture/Drishti-Sizing-Planner.xlsx, the server's template
                                                     (capacity/template/) and the shared test vectors, all from capacity/planner.yaml
-    python3 tools/sizing_planner.py --out DIR       writes the workbook into DIR instead
-    python3 tools/sizing_planner.py --check         exit 1 when the committed workbook differs from a fresh build
+    python3 tools/drishti.py admin capacity-workbook --out DIR       writes the workbook into DIR instead
+    python3 tools/drishti.py admin capacity-workbook --check         exit 1 when the committed workbook differs from a fresh build
 
 The workbook has four tabs: Inputs (the yellow cells a planner types: positions, dates in memory, users, the Java version...),
 Results (every heap, page-cache, RAM, disk and CPU figure, the settings with their keys, the JVM arguments and the warnings, each a
@@ -883,7 +883,7 @@ def template_parts() -> dict:
             if f'<c r="D{num}"' in line and f">{escape(name)}</t>" in line.split(f'<c r="D{num}"')[1].split("</c>")[0]:
                 rows[name] = num
     inputs = {name: {"row": rows[name], "kind": kind} for _s, name, _l, _d, _u, kind, _h in INPUTS}
-    meta = {"comment": "Written by tools/sizing_planner.py: do not edit; edit capacity/planner.yaml and run the tool.",
+    meta = {"comment": "Written by drishti.py admin capacity-workbook: do not edit; edit capacity/planner.yaml and run the tool.",
             "parts": sorted(parts), "files": SOURCE_NAMES, "inputsSheet": "xl/worksheets/sheet1.xml", "valueColumn": "B", "extraColumn": "F", "headerRow": 3,
             "styles": {k: styles[k] for k in ("head", "text", "note", "input.num", "input.dec", "input.text", "num0")}, "inputs": inputs}
     import license_headers                                                   # each .xml part carries the copyright notice (the server drops comments)
@@ -896,7 +896,7 @@ def template_parts() -> dict:
 
 def vectors() -> dict:
     """Every named figure at three shapes: the shared test vectors the Python, Java and JavaScript evaluators are checked against."""
-    out = {"comment": "Written by tools/sizing_planner.py from capacity/planner.yaml: every named figure at three shapes. Numbers rounded to 6 "
+    out = {"comment": "Written by drishti.py admin capacity-workbook from capacity/planner.yaml: every named figure at three shapes. Numbers rounded to 6 "
                       "decimals; text exact. The console's drishti_capacity.js and the server's test check their evaluation against these.", "shapes": {}}
     for shape, inputs in VECTOR_SHAPES.items():
         inputs = BENCH_SHAPE if inputs is None else inputs
@@ -931,11 +931,20 @@ def write_template(folder: Path = TEMPLATE_OUT) -> None:
         f.write_text(text, encoding="utf-8")
 
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+def add_arguments(ap: argparse.ArgumentParser) -> None:
+    """The words of ``drishti.py admin capacity-workbook``."""
     ap.add_argument("--out", help="the folder to write the workbook into (default docs/architecture); the template and vectors are not written")
     ap.add_argument("--check", action="store_true", help="exit 1 when the committed workbook, the server's template or the test vectors differ from a fresh build")
-    a = ap.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    """The same through ``drishti.py admin capacity-workbook`` (a test calls this with the words)."""
+    ap = argparse.ArgumentParser(prog="drishti.py admin capacity-workbook", description=__doc__.split("\n")[0])
+    add_arguments(ap)
+    return run(ap.parse_args(argv))
+
+
+def run(a: argparse.Namespace) -> int:
     parts = build()
     if a.check:
         bad = []
@@ -947,7 +956,7 @@ def main(argv=None) -> int:
         if not VECTORS.exists() or VECTORS.read_text(encoding="utf-8") != _vectors_text():
             bad.append(str(VECTORS.relative_to(ROOT)))
         if bad:
-            print(f"out of date: {'; '.join(bad)}: run python3 tools/sizing_planner.py", file=sys.stderr)
+            print(f"out of date: {'; '.join(bad)}: run python3 tools/drishti.py admin capacity-workbook", file=sys.stderr)
             return 1
         print(f"{OUT.relative_to(ROOT)}, the server's template and the test vectors are current")
         return 0
@@ -962,7 +971,3 @@ def main(argv=None) -> int:
     VECTORS.write_text(_vectors_text(), encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)}, {TEMPLATE_OUT.relative_to(ROOT)}/ and {VECTORS.relative_to(ROOT)}")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

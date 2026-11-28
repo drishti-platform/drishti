@@ -19,7 +19,7 @@ give the same answers through a running server.
 1. Source files: the first ``--trades`` trades (default 1,000) of each system's committed test data (data/testdata/trades), five business
    days (the snapshot, then four days of changes), under ``<work>/src`` (synthetic only).
 2. Lake A: every system in Delta; lake B: ``--store endur=delta``, ``calypso=iceberg``, ``murex=iceberg``; each built with
-   ``build_demo_lakes.py --source-dir … --files-only``, each with its own connector folder and data folder under ``<work>``.
+   ``lake demo-all --source-dir … --files-only``, each with its own connector folder and data folder under ``<work>``.
 3. One server at a time on ``--port`` (the exec jar, ``-Xmx`` ``--heap``, packs core and trading, samples off) over A, then B: trade pages,
    history (``TRD <id> 10``), counterparty-trades pages, searches and one BI model query, each answer normalised (timings, data-version
    stamps and the provenance panel's generation are storage identifiers, not answers) and compared.
@@ -76,7 +76,7 @@ def sources(work: pathlib.Path, n: int) -> None:
 
 def build(work: pathlib.Path, name: str, stores: dict[str, str]) -> None:
     for system, store in stores.items():
-        subprocess.run([sys.executable, str(ROOT / "tools" / "build_demo_lakes.py"), "--source-dir", str(work / "src" / system), "--system", system,
+        subprocess.run([sys.executable, str(ROOT / "tools" / "drishti.py"), "lake", "demo-all", "--source-dir", str(work / "src" / system), "--system", system,
                         "--files-only", "--lake", str(work / name / "delta"), "--connectors-dir", str(work / name / "connectors"),
                         "--store", f"{system}={store}"], check=True, cwd=ROOT, stdout=subprocess.DEVNULL)
 

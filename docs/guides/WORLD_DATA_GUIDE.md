@@ -85,11 +85,11 @@ Run these from the Drishti folder (the repository root, or the install folder of
 
 ```bash
 export DRISHTI_PACKS=core,market-data,trading,counterparty-risk,market-risk,world-economy,news-and-markets,us-equities,gleif,funds
-python3 tools/drishti.py lake demo                    # every table; or: python3 tools/build_demo_lakes.py --only funds
+python3 tools/drishti.py lake demo                    # every table; or: python3 tools/drishti.py lake demo-all --only funds
 ```
 
 On Windows, `py -3.13 tools\drishti.py start server --demo` loads the public-data packs including `funds`, and
-`py -3.13 tools\build_demo_lakes.py --only funds` builds its three tables. The demo cluster (`deploy/stack/stack.yaml`) loads it on
+`py -3.13 tools\drishti.py lake demo-all --only funds` builds its three tables. The demo cluster (`deploy/stack/stack.yaml`) loads it on
 every node. Type `FUNDS` and press Enter: the pack's overview lists its three commands with their counts (what the pack holds is in
 [the funds pack README](../../modules/external-data/packs/funds/README.md)).
 
@@ -384,7 +384,7 @@ On Windows (from the repository folder; the console's Python, nothing else to in
 py -3.13 tools\drishti.py feed status funds
 py -3.13 tools\drishti.py feed run funds --dry-run
 py -3.13 tools\drishti.py feed run funds
-py -3.13 tools\build_demo_lakes.py --only funds
+py -3.13 tools\drishti.py lake demo-all --only funds
 ```
 
 The dry run names every request and writes nothing:
@@ -1460,7 +1460,7 @@ second (its limit is 10); GLEIF and Wikidata about one a second.
 `data/testdata/us-equities/<kind>/<kind>.<date>.jsonl.gz` (the load rules' name), listed in `data/testdata/testdata.yaml`; the pack's `samples/` folder keeps
 only a few reference documents and its guide and README are rebuilt. The server reads the data from the demo lake through the pack's
 Delta connector `us-equities-store`, never through the demo connector, so after a refresh rebuild the lake:
-`python3 tools/drishti.py lake demo` (or `python3 tools/build_demo_lakes.py`).
+`python3 tools/drishti.py lake demo` (or `python3 tools/drishti.py lake demo-all`).
 
 ```bash
 python3 tools/drishti.py feed status us-equities                           # also the committed pack's companies and retrieval date
@@ -2080,7 +2080,7 @@ Segments of the groups: US equities 485, Bank 66, G-SIB 17, Insurer 16, Asset ma
 
 **Where the data lives.** The documents are committed as Drishti's standard test data: one gzipped JSON Lines snapshot per
 kind, `data/testdata/gleif/<kind>/<kind>.<date>.jsonl.gz`, listed in `data/testdata/testdata.yaml`. `python3 tools/drishti.py lake demo`
-(or `python3 tools/build_demo_lakes.py`) builds them into the demo lake, the same documents on every business day it holds, and the
+(or `python3 tools/drishti.py lake demo-all`) builds them into the demo lake, the same documents on every business day it holds, and the
 pack's Delta connector `gleif-store` serves them. Nothing is served by the demo connector: a server with `DRISHTI_DEMO_ENABLED=false`
 opens every page of the pack from the lake. The pack's `samples/` folder keeps only a few reference documents for this guide and the
 README.
@@ -2127,7 +2127,7 @@ python3 tools/packgen/gleif/make.py --check                       # no network: 
 ```
 
 After a refresh, rebuild the lake so the server reads the new snapshot: `python3 tools/drishti.py lake demo` (or
-`python3 tools/build_demo_lakes.py`), then restart the server or let it pick the tables up at its next refresh.
+`python3 tools/drishti.py lake demo-all`), then restart the server or let it pick the tables up at its next refresh.
 
 The picture above is made by `tools/packgen/gleif/shot.py` (its own scratch server and console on 18760 and 18761).
 
@@ -2173,7 +2173,7 @@ Holdings kept: 73,577 of 411,796 (a fund keeps its 600 largest; the reverse look
 
 **Where the data lives.** The documents are committed as Drishti's standard test data, gzipped JSON Lines under
 `data/testdata/funds/<kind>/` (the fund kind in parts of about 1.2 MB, 5.7 MB in all), listed in `data/testdata/testdata.yaml`.
-`python3 tools/drishti.py lake demo` (or `python3 tools/build_demo_lakes.py`) builds them into the demo lake and the pack's Delta
+`python3 tools/drishti.py lake demo` (or `python3 tools/drishti.py lake demo-all`) builds them into the demo lake and the pack's Delta
 connector `funds-store` serves them; nothing is served by the demo connector. `samples/` keeps a few reference documents.
 
 ### Data sources and licences
@@ -2255,7 +2255,7 @@ equity. Banks and insurers report revenue under several tags; where none of the 
 
 **Where the data lives.** The documents are committed as Drishti's standard test data: one gzipped JSON Lines snapshot per
 kind, `data/testdata/us-equities/<kind>/<kind>.<date>.jsonl.gz`, listed in `data/testdata/testdata.yaml`. `python3 tools/drishti.py lake demo`
-(or `python3 tools/build_demo_lakes.py`) builds them into the demo lake, the same documents on every business day it holds, and the
+(or `python3 tools/drishti.py lake demo-all`) builds them into the demo lake, the same documents on every business day it holds, and the
 pack's Delta connector `us-equities-store` serves them. Nothing is served by the demo connector: a server with `DRISHTI_DEMO_ENABLED=false`
 opens every page of the pack from the lake. The pack's `samples/` folder keeps only a few reference documents for this guide and the
 README.
@@ -2318,7 +2318,7 @@ seven concepts, so the cache stays small. Prices are never part of a refresh int
 snapshot to the data folder only (internal use only). Set `DRISHTI_FEEDS_USER_AGENT` to your own name and contact before running it.
 
 After a refresh, rebuild the lake so the server reads the new snapshot: `python3 tools/drishti.py lake demo` (or
-`python3 tools/build_demo_lakes.py`), then restart the server or let it pick the tables up at its next refresh.
+`python3 tools/drishti.py lake demo-all`), then restart the server or let it pick the tables up at its next refresh.
 
 The picture
 above is made by `tools/packgen/us_equities/shot.py` (its own scratch server and console on 18742 and 18743).

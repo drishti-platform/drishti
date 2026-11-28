@@ -1043,14 +1043,14 @@ For good: `enabled: false` in its node.yaml (it leaves cleanly), then **Remove**
 One node at a time, in this order: **BI and data-serving**, then **coordinators**, then **owners one zone at a time**, then the
 **consoles** last (a console newer than its servers cannot sign anyone in, so every server is on the new release first).
 For each: drain (a console: deregister from the LB and wait for connections to close) → `safeToStop` → stop → upgrade → start → readiness →
-next. **The rolling upgrade runner**, `python tools/rolling.py`, does exactly this from an
+next. **The rolling upgrade runner**, `python tools/drishti.py cluster roll`, does exactly this from an
 inventory (`deploy/rolling.example.yaml`):
 
 ```bash
 export DRISHTI_DRAIN_TOKEN=drk_...                    # an administrator's personal API token with the node:drain scope
-python tools/rolling.py --inventory my-cluster.yaml --version <version> --dry-run    # every step printed, nothing called
-python tools/rolling.py --inventory my-cluster.yaml --version <version>              # the upgrade
-python tools/rolling.py --inventory my-cluster.yaml --version <version> --from var-3 # resume after a stop
+python tools/drishti.py cluster roll --inventory my-cluster.yaml --version <version> --dry-run    # every step printed, nothing called
+python tools/drishti.py cluster roll --inventory my-cluster.yaml --version <version>              # the upgrade
+python tools/drishti.py cluster roll --inventory my-cluster.yaml --version <version> --from var-3 # resume after a stop
 ```
 
 - **Order:** `bi` and `data`, then `coordinator`, then `owner` nodes zone by zone (`zones:` gives the order; owners without a zone after
@@ -1394,11 +1394,11 @@ instance's NVMe (`register.sh --cache nvme` on EC2 mounts the host's `/mnt/nvme/
 
 **A new version**, one node at a time in the rolling order of section 8.2: register task definition revisions with the new image tags
 (`register.sh`), then for each node drain and wait for `safeToStop`, update its service (ECS stops the old task, starts the new on the same EFS
-folders), wait for readiness. `python tools/rolling.py --inventory <file> --version <v>` with `platform: ecs` runs these steps:
+folders), wait for readiness. `python tools/drishti.py cluster roll --inventory <file> --version <v>` with `platform: ecs` runs these steps:
 
 ```bash
-python tools/rolling.py --inventory prod-ecs.yaml --version <version> --dry-run
-python tools/rolling.py --inventory prod-ecs.yaml --version <version>
+python tools/drishti.py cluster roll --inventory prod-ecs.yaml --version <version> --dry-run
+python tools/drishti.py cluster roll --inventory prod-ecs.yaml --version <version>
 # one owner by hand, the same steps
 DRISHTI_NODE_URL=http://var-3.drishti.local:18480 DRISHTI_DRAIN_WAIT=1800 python tools/drishti.py node drain
 aws ecs update-service --cluster "$ECS_CLUSTER" --service var-3 --task-definition "drishti-$ENV-var-3:$REV" --force-new-deployment
@@ -2064,7 +2064,7 @@ benchmark, or estimate); **Explain** says it in plain words with examples; the *
 The same planner is **Admin → Capacity** in the console (it evaluates as you type and offers **Download the working (.xlsx)** with every
 formula live; [the operations guide](OPERATIONS_GUIDE.md#146-admin--capacity-today-against-the-plan)) and `drishti.py admin capacity`.
 All three read one file, `kernel/drishti-server/src/main/resources/capacity/planner.yaml`; to calibrate to your servers change a coefficient there
-and run `python3 tools/sizing_planner.py` (`--check` exits 1 when the workbook, its template or the test vectors are stale). It plans one
+and run `python3 tools/drishti.py admin capacity-workbook` (`--check` exits 1 when the workbook, its template or the test vectors are stale). It plans one
 server: a sharded cluster divides the hot files, page cache and loads among members but copies each date's skeleton to every member.
 
 ### 15.6 Memory

@@ -20,7 +20,7 @@
                                              # renamed (the suffix kept: "Drishti Bank plc, Singapore Branch"); in place, returned
     names.rewrite_line(line)                 # the same for one JSON line (unchanged text when nothing matches)
 
-Applied as the demo lakes are loaded (lake demo, build_demo_lakes.py) and as the packs' samples are written (packsamples.files), never
+Applied as the demo lakes are loaded (lake demo, lake demo-all) and as the packs' samples are written (packsamples.files), never
 to the committed test data. LEIs and BICs are identifiers and stay as they are.
 """
 from __future__ import annotations

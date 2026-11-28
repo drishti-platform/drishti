@@ -350,7 +350,7 @@ public class FormController {
     /** The first {@code enumScanRows} documents of the kind as the caller sees them (masks applied), each as a map; empty when none can be read. */
     private List<Map<String, Object>> firstDocuments(String kind, AsOf asOf, Principal principal) {
         try {
-            var hits = router.list(kind, "", enumScanRows, java.time.Duration.ofSeconds(10), asOf, new com.ash.drishti.engine.source.SourceFailures()).hits();
+            var hits = router.list(kind, "", enumScanRows, java.time.Duration.ofSeconds(10), asOf, new com.ash.rachana.bind.SourceFailures()).hits();
             List<com.ash.drishti.api.EntityRef> refs = hits.stream().map(h -> h.ref()).distinct().limit(enumScanRows).toList();
             List<Map<String, Object>> out = new ArrayList<>();
             router.fetchAll(refs, java.time.Duration.ofSeconds(10), asOf).values().forEach(d -> {

@@ -68,7 +68,7 @@ public final class PeerSources implements SourceRouter.Fallback {
      */
     @Override
     public List<com.ash.drishti.api.EntityHit> list(String kind, int limit, java.time.Duration budget, AsOf asOf,
-            com.ash.drishti.engine.source.SourceFailures failures) {
+            com.ash.rachana.bind.SourceFailures failures) {
         SearchScatter s = scatter;
         NetCaller.Caller c = NetCaller.current().orElse(null);
         if (s == null || c == null || c.principal() == null) {

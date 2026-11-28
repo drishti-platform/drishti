@@ -23,7 +23,7 @@ rebuilds what is derived from it (the reference samples, the README), so it need
 
 The documents follow Drishti's standard data pattern (tools/testdata/publicsnap.py): gzipped JSON Lines under
 data/testdata/funds/<kind>/, the fund kind in parts of about 1.2 MB, listed in data/testdata/testdata.yaml, built into the lake by
-tools/build_demo_lakes.py and served by the pack's Delta connector funds-store. The pack also reads the committed us-equities snapshot
+drishti.py lake demo-all and served by the pack's Delta connector funds-store. The pack also reads the committed us-equities snapshot
 (its companies and indexes): a holding links to its company, and the index tab weighs the index's members.
 """
 from __future__ import annotations

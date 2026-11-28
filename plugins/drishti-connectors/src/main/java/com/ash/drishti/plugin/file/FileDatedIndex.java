@@ -130,7 +130,7 @@ final class FileDatedIndex {
         Path dir = root.resolve(day.toString()).resolve(kind);
         if (Files.isDirectory(dir)) {
             try (Stream<Path> files = Files.list(dir)) {
-                files.map(f -> f.getFileName().toString()).filter(n -> n.endsWith(".json") || n.endsWith(".csv")).forEach(n -> {
+                files.map(f -> f.getFileName().toString()).filter(n -> n.endsWith(".json")).forEach(n -> {
                     String id = n.substring(0, n.lastIndexOf('.'));
                     out.add(new EntityHit(EntityRef.of(kind, id), id, subtitle));
                 });

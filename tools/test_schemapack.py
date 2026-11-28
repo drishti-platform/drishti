@@ -147,7 +147,7 @@ class WithJar(unittest.TestCase):
             out = pathlib.Path(t) / "o"
             code, so, err = run("pack", "make", "--schema", FIX, "--name", "sg-test", "--out", out, "--yes")
             self.assertEqual(code, 0, so + err)
-            for f in ("README.txt", "MANIFEST.json", "run-server.sh", "config/drishti-site.yaml", "bundle/sg-test-1.0.0.tar.gz", "bundle/sg-test-1.0.0.tar.gz.sha256",
+            for f in ("README.txt", "MANIFEST.json", "config/drishti-site.yaml", "bundle/sg-test-1.0.0.tar.gz", "bundle/sg-test-1.0.0.tar.gz.sha256",
                       "pack/sg-test/pack.yaml", "pack/sg-test/config/about.yaml", "pack/sg-test/sutras/instrument/instrument-bond.v1.sutra.yaml"):
                 self.assertTrue((out / f).exists(), f)
             man = json.loads((out / "MANIFEST.json").read_text())

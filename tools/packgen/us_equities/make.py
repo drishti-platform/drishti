@@ -21,7 +21,7 @@ With a cache, --check rebuilds every document from it. Without one (a fresh clon
 (data/testdata/us-equities/) and rebuilds what is derived from it (the reference samples, the README), so it needs no network.
 
 The documents follow Drishti's standard data pattern (tools/testdata/publicsnap.py): one gzipped JSON Lines snapshot per kind under
-data/testdata/us-equities/<kind>/, listed in data/testdata/testdata.yaml, built into the lake by tools/build_demo_lakes.py and served by
+data/testdata/us-equities/<kind>/, listed in data/testdata/testdata.yaml, built into the lake by drishti.py lake demo-all and served by
 the pack's Delta connector. samples/ keeps only a few reference documents for the README and docs; nothing is served from it.
 The pack's manifest, Sutras, fragments and help are hand-written; this writes the snapshot, samples/ and the README
 (the pack's story is a section of docs/guides/WORLD_DATA_GUIDE.md since i7k).

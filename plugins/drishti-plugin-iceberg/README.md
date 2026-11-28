@@ -211,7 +211,7 @@ Every `${…}` has a default, so the file starts as it is on a path-based lake; 
 `DRISHTI_ICEBERG_URI` and the credential. A connector file replaces the pack's template wholesale, so it repeats the promoted `layout`
 the pack declared. Ready-made files: [`config/connectors.examples/iceberg/`](../../config/connectors.examples/iceberg). Delta is the
 default lake format; a deployment reads a domain from Iceberg only when it says so (a `plugin: iceberg` file, `lake build --format
-iceberg`, `build_demo_lakes.py --store calypso=iceberg` or `--store risk=iceberg`, `deploy/aws/iceberg/`).
+iceberg`, `lake demo-all --store calypso=iceberg` or `--store risk=iceberg`, `deploy/aws/iceberg/`).
 
 **The lake-file form.** The lake itself (root, storage, catalog, each table's folder, promoted columns and vectors) can be described
 once in `config/lakes/<lake>.yaml` ([DATA_LAKE_GUIDE.md](../../docs/guides/DATA_LAKE_GUIDE.md)); the connector then keeps only reading
@@ -429,7 +429,7 @@ The connector answers what the Delta connector answers on the same rows (`Iceber
   safeguards (idle release, the `max-gb` cap, `ttl`, never a map in use or a date open in VaR or exposure) are the Delta connector's;
   Admin → Caches shows `idMapsMappedFromDisk`, `idMapsReadFromLake`, `docsOnDiskMB` and the drops by reason. Sizing:
   [OPERATIONS_GUIDE.md section 12.3](../../docs/guides/OPERATIONS_GUIDE.md#145-disk-caches-per-connector).
-- **VaR and exposure on an Iceberg risk lake** (`build_demo_lakes.py --store risk=iceberg`) give VaR, ES, contributions, limit letters,
+- **VaR and exposure on an Iceberg risk lake** (`lake demo-all --store risk=iceberg`) give VaR, ES, contributions, limit letters,
   EE, PFE and EPE equal to the cent to Delta; intraday batches and the Kafka PV stream are Iceberg appends.
 - **Official results in Iceberg**: `drishti.var.official.format: iceberg` (and `drishti.ccr.exposure.official.format`) write append-only
   official tables kept seven years, read back through this connector over `domain: risk-results`

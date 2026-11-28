@@ -395,7 +395,7 @@ public class DrishtiLiveTables {
             public Map<String, String> titles(String kind, AsOf at) {
                 Map<String, String> out = new HashMap<>();
                 for (var h : router.list(kind, "", LIST_MAX, budget, at == null ? AsOf.LATEST : at,
-                        new com.ash.drishti.engine.source.SourceFailures()).hits()) {
+                        new com.ash.rachana.bind.SourceFailures()).hits()) {
                     if (h.title() != null && !h.title().isBlank() && !h.title().equals(h.ref().id())) {
                         out.put(h.ref().id(), h.title());
                     }
@@ -449,8 +449,8 @@ public class DrishtiLiveTables {
                     return true;
                 }
                 // a day no source keeps whole (carried from an earlier day, as the search reads it): its records listed, then fetched
-                var hits = router.list(kind, "", LIST_MAX, budget, at, new com.ash.drishti.engine.source.SourceFailures()).hits();
-                router.fetchAll(hits.stream().map(h -> h.ref()).toList(), budget, at, new com.ash.drishti.engine.source.SourceFailures())
+                var hits = router.list(kind, "", LIST_MAX, budget, at, new com.ash.rachana.bind.SourceFailures()).hits();
+                router.fetchAll(hits.stream().map(h -> h.ref()).toList(), budget, at, new com.ash.rachana.bind.SourceFailures())
                         .values().forEach(sink);
                 return true;
             }

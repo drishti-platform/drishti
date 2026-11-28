@@ -2770,7 +2770,7 @@ The ordered migration list (the inventory of content kept on one node only, 2026
 5. **Collaboration:** done (section 5.10.3): threads, comments, revisions, mentions, follows, note links, shares and recipients, inbox,
    outbox, holds and seals. Still per node: the access log (`drishti_access`, who read what), next.
 6. **Alerts and monitors:** NOT copied, on purpose (each node evaluates its own).
-7. **Embed apps** (`drishti_embed_app`), **pack switches** (`drishti_pack_state`), **audit** (`drishti_audit` and `audit.jsonl`):
+7. **Embed apps** (`drishti_embed_app`), **audit** (`drishti_audit` and `audit.jsonl`):
    done (section 5.10.4).
 8. **Files:** governance proposals (`<data>/governance`): done (section 5.10.5); load history (`<data>/loads`): done (section 5.10.6).
    Next, in this order: report outputs (`<data>/reports`), designer bound files (`<data>/dev-sutras`), pack admin state (`<data>/packs/*`, `uninstalled`,
@@ -2904,7 +2904,7 @@ The revision chains keep their hashes, so `GET /admin/collab/verify` verifies th
 | Data | Switch | Key |
 |---|---|---|
 | Embed apps (`drishti_embed_app`) | `drishti.embed.store` (`content` / `jpa`) | `admin/embed-apps/<id>.json`; a save is a compare-and-set against the version read, so two administrators editing one application on two nodes get one `409 DRS-5057` |
-| Pack switches (`drishti_pack_state`) | `drishti.packs.state-store` (`content` / `jpa`) | `admin/pack-state.json` (every pack's state; nodes re-read it every refresh interval) |
+| Pack switches | none: the switches ledger (`drishti_switch`, spread by Drishti*net) | the ledger's `pack` entries |
 | Audit (`drishti_audit`, and `audit.jsonl` through the earlier import into it) | `drishti.audit.store` (`content` / `jpa`) | `audit/<yyyy-MM-dd>/<node>-<nnnn>.jsonl` and `audit-heads/<node>.json` |
 
 **Audit is append-only**, so no two nodes write one document: each node appends to its own per-day segments (a new segment past
@@ -3302,7 +3302,7 @@ column, so one table can never be described in several places that disagree.
 - **Where an entry comes from.** A pack ships recommended entries for its kinds (the `lake:` block of `pack.yaml`). When a pack is
   installed into a lake, or a writer first meets a kind the lake file lacks, the pack's entry is copied into the lake file and said so;
   from then on the lake file is the truth.
-- **The demo lake is a lake like any other** (`config/lakes/demo.yaml`): `lake demo`, `build_demo_lakes.py` and the stack's synthetic
+- **The demo lake is a lake like any other** (`config/lakes/demo.yaml`): `lake demo`, `lake demo-all` and the stack's synthetic
   lakes write through it.
 - **Append keeps the replace-safety.** `load-mode: append` adds rows to the dates a load holds; each load carries a batch id recorded in
   the table's commit, so a batch already committed is never appended twice (a repeated file, a crash and retry); two rows of one id on
@@ -3329,7 +3329,7 @@ forms are permanent.
 | Python | `tools/lake/lakeconfig.py` runs `LakesCli` (`dump`, `table`, `check`, `add-entry`) and reads its JSON | one reader, the Java one. The one exception is `tools/lake/memory_caps.py`, which sizes the JVM before any JVM runs and reads two keys (`root`, `memory.max-mb`) |
 | Several tables of one kind | an entry is `<domain>.<table>` with `kind:` (`trading.trade_endur`, `kind: trade`); connectors name entries with `lake-tables:`; the loader picks with `target.table` | the demo lake has three trade tables (ENDUR, CALYPSO, MUREX); a kind with several tables is never guessed |
 | Readers | `SourceRegistry.ownSettings` expands `lake:` into the settings the plugins already read (`root`, `domain`, `table.<kind>`, `layout.<kind>.columns`, `layout.<kind>.vectors`, `s3.<key>`, `catalog`, `uri`, `warehouse`) | one point every connector's settings pass, whatever file or template they came from; the plugins keep one way of reading. A connector that names a lake and also sets one of those keys is refused |
-| Writers | `LoadConfig` (`target.lake`), `LoaderProcess` (the inbox), `lake build --lake NAME [--lake-root DIR]`, `lake demo --lake-name demo`, `build_demo_lakes.py` | `--lake-root` lets a scratch or test lake take a lake's layout |
+| Writers | `LoadConfig` (`target.lake`), `LoaderProcess` (the inbox), `lake build --lake NAME [--lake-root DIR]`, `lake demo --lake-name demo`, `lake demo-all` | `--lake-root` lets a scratch or test lake take a lake's layout |
 | Append | `TableTarget.appended`; `DeltaTarget` (`withTransactionId(drishti-batch:<batch>:<date>, 1)`); `IcebergTarget` (`drishti.batch` in the snapshot summary) | the batch is per date, so a crash after some dates' commits retries only the rest. The batch rule exists once, in the Java loader: the Python writer refuses an append into a lake-file append table |
 | Memory stores | `MemoryLakeSettings.withLakeStores` | the engine file keeps the switch, the replenish jobs and the compaction policy (the engine's work); the lake file keeps the description |
 | Packs | every shipped pack's `lake:` block; its Delta templates `lake: demo` + `lake-tables`; `tools/packlake.py` (`lake_form` for the generators, `view` for the tools that read a template's layout); `PackEntry` | one transformation each way, so the generators and every reader of a template agree |

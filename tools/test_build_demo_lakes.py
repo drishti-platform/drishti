@@ -18,13 +18,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "tools" / "build_demo_lakes.py"
+SCRIPT = [str(ROOT / "tools" / "drishti.py"), "lake", "demo-all"]
 
 
 def run(*args, data_dir=None):
     """The script, dry. ``data_dir``: the test's own data folder, which wins over the process's DRISHTI_DATA_DIR (conftest gives each pytest process one)."""
     env = {**os.environ, "DRISHTI_DATA_DIR": str(data_dir)} if data_dir else None
-    return subprocess.run([sys.executable, str(SCRIPT), *args, "--dry-run"], capture_output=True, text=True, env=env)
+    return subprocess.run([sys.executable, *SCRIPT, *args, "--dry-run"], capture_output=True, text=True, env=env)
 
 
 def files(tmp_path, system="endur"):
@@ -194,7 +194,7 @@ def test_a_python_without_deltalake_is_told_which_python_to_use(tmp_path):
     stub.mkdir()
     (stub / "deltalake.py").write_text("raise ImportError('no deltalake here', name='deltalake')\n")
     env = {**os.environ, "PYTHONPATH": str(stub)}
-    r = subprocess.run([sys.executable, str(SCRIPT), "--dry-run"], capture_output=True, text=True, env=env)
+    r = subprocess.run([sys.executable, *SCRIPT, "--dry-run"], capture_output=True, text=True, env=env)
     assert r.returncode != 0 and "lacks deltalake" in r.stderr and "tools/drishti.py setup" in r.stderr
 
 

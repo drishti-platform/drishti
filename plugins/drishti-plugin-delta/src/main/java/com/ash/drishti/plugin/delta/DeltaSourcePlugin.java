@@ -15,6 +15,7 @@
  */
 package com.ash.drishti.plugin.delta;
 
+import com.ash.drishti.lakehost.MappedIdMap;
 import com.ash.drishti.lakehost.LakeReads;
 import com.ash.lake.read.ColumnAsk;
 import com.ash.lake.read.ColumnBlock;

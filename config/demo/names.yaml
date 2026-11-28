@@ -15,7 +15,7 @@
 # The bank's own names in the demo data (docs/guides/BANK_DATA_GUIDE.md section 9, "Your bank's names").
 #
 # The committed test data (data/testdata) and the packs' samples carry the defaults below. Change a name here, and the demo lakes built
-# from that data use your names: `drishti.py lake demo` and `tools/build_demo_lakes.py` (both take --names FILE, default this file)
+# from that data use your names: `drishti.py lake demo` and `drishti.py lake demo-all` (both take --names FILE, default this file)
 # rewrite every value of every kind that is exactly an old name, and every value that starts with an old name followed by a comma
 # (a branch: "Drishti Bank plc, Singapore Branch"), keeping the suffix. The committed data is never rewritten. LEIs and BICs stay as
 # they are (they are identifiers, derived from the default names). The packs' samples follow the file when their generators are run

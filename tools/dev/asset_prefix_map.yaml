@@ -301,7 +301,6 @@ files:
   js/phone.js: js/drishti_phone.js
   js/pivot-engine.js: js/drishti_pivot-engine.js
   js/pivot-functions.js: js/drishti_pivot-functions.js
-  js/pivot-grid.js: js/drishti_pivot-grid.js
   js/pivot-switches.js: js/drishti_pivot-switches.js
   js/pivot.js: js/drishti_pivot.js
   js/play-link.js: js/drishti_play-link.js

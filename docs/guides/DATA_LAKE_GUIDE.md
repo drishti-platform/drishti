@@ -1750,7 +1750,7 @@ the pack's entry is copied in once and said so; from then on the lake file is th
 storage from the publishers' settings (`drishti.var.official.*`, `drishti.ccr.exposure.official.*`), so BI's readers follow wherever the
 results are published.
 
-**An Iceberg copy of a demo store**: `tools/build_demo_lakes.py --store risk=iceberg` copies the tables into Iceberg with a lake file
+**An Iceberg copy of a demo store**: `drishti.py lake demo-all --store risk=iceberg` copies the tables into Iceberg with a lake file
 `demo-iceberg.yaml` and connectors naming it ([tutorial 16, Part E](../tutorials/23-the-risk-lake-on-iceberg.md)).
 
 **The local cluster** (`deploy/stack`): the stack's synthetic lakes are written through the demo lake's file with another root

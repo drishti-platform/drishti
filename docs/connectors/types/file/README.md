@@ -60,7 +60,7 @@ nightly export or reference data kept by hand; for a million entities a day kept
 `<root>/<domain>/<yyyy-MM-dd>/<kind>.jsonl` files (and undated `<root>/<domain>/<kind>.jsonl`, the same for every date), listed every
 `rescan-seconds` (30). The first read of a day indexes it (ids, line offsets and promoted fields); the newest day is indexed in the
 background, older days on first use, and a changed file is re-indexed when next read. Kinds are `snapshot` or `effective`
-(`mode.<kind>`). It also reads the older layout of one file per entity (`<root>/<kind>/<id>.json` or `.csv`, CSV deprecated: logged once per file and named in health, dated
+(`mode.<kind>`). It also reads the older layout of one file per entity (`<root>/<kind>/<id>.json`, dated
 `<root>/<yyyy-MM-dd>/<kind>/<id>.json`), as the public-data feeds use. No time travel: a *known at* read is refused with `DRS-1007`.
 It never writes; `python tools/drishti.py data load --store files` (`JsonlLoader`) does.
 
@@ -318,9 +318,7 @@ has it. `generation` is the file's modification time. Each read opens the file a
 catches up at the next rescan. An id with `/` or `..` that would leave the root is refused. The plugin also runs as itself under
 `drishti.sources.plugins.file` (source name `feed-file`, root `${DRISHTI_FEEDS:<data dir>/feeds}`).
 
-**CSV** (`<id>.csv`, a header row, read as `{"rows": [...]}` with numbers and booleans typed) is deprecated: each CSV file logs a warning
-and health says `UP (CSV input is deprecated: fixing/X.csv (convert to JSON Lines: drishti.py convert))`. `drishti.py convert
-fixing/X.csv --rows-document --out fixing.jsonl` writes the JSON Lines line that serves the same document
+CSV is not read: `drishti.py convert fixing/X.csv --rows-document --out fixing.jsonl` writes the JSON Lines line that serves the same document
 ([CLI_REFERENCE.md](../../../guides/CLI_REFERENCE.md#convert-csv-a-json-array-or-a-folder-of-json-files-into-json-lines)).
 
 ## See also

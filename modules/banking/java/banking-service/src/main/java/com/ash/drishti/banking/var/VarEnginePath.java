@@ -1106,12 +1106,12 @@ public class VarEnginePath {
             boolean cut) {
         if (res.node() == null && (res.trade() >= 0 || res.position() >= 0)) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the parts of a node or of an ad-hoc scope of positions for "
-                    + "now; the parts of " + res.canonical() + " are trades: ask it in-tree (path=in-tree)");
+                    + "now: ask it in-tree (path=in-tree); the parts of " + res.canonical() + " are trades");
         }
         VarService.Scoped s = svc.scoped(p, partScope(res), date, currency);
         if (res.node() == null && new VarSelection(svc).byTerms(p, s)) {   // an expression of two or more terms: its parts are the terms
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the parts of a node or of an ad-hoc scope of positions for "
-                    + "now; the parts of " + res.canonical() + " are its terms: ask it in-tree (path=in-tree)");
+                    + "now: ask it in-tree (path=in-tree); the parts of " + res.canonical() + " are its terms");
         }
         com.ash.drishti.banking.compute.var.VarBook b = s.date().book();
         if (!s.view().seesPositions(s.set())) {

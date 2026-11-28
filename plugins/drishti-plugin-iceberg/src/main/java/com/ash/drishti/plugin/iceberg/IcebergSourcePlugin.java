@@ -975,7 +975,7 @@ public final class IcebergSourcePlugin implements SourcePlugin {
 
     /**
      * BI's column scan from the promoted columns ({@link com.ash.drishti.api.ColumnScans}), as the Delta connector's: a table of a union
-     * whose source systems are stored part in Delta, part in Iceberg ({@code build_demo_lakes.py --store calypso=iceberg}) is read as columns,
+     * whose source systems are stored part in Delta, part in Iceberg ({@code lake demo-all --store calypso=iceberg}) is read as columns,
      * never document by document.
      */
     @Override

@@ -85,7 +85,7 @@ class ToolsAdoptionGuardTest {
 
     @Test
     void noJavaCodeRunsAPythonWorkbookWriter() throws IOException {
-        // the console's core/export.py and tools/sizing_planner.py write workbooks in Python (the owner keeps them); the server writes its own with tools-xlsx only
+        // the console's core/export.py and drishti.py admin capacity-workbook write workbooks in Python (the owner keeps them); the server writes its own with tools-xlsx only
         List<String> hits = new ArrayList<>();
         for (String needle : List.of("sizing_planner", "to_xlsx", "export_routes", "core/export.py")) {
             hits.addAll(find(true, needle, "CapacityWorkbook.java", "CapacityPlanner.java"));   // these two name the generator in a message only

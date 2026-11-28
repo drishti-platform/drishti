@@ -24,15 +24,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import javax.net.ssl.HttpsURLConnection;
 import org.apache.avro.Schema;
 
 /**
@@ -59,6 +56,7 @@ final class SchemaRegistryClient {
     private final TlsMaterial tls;
     private final com.ash.tools.net.ProxySettings proxy;
     private final int timeoutMs;
+    private final java.net.http.HttpClient client;
     private final Map<Integer, Registered> cache = new ConcurrentHashMap<>();
 
     SchemaRegistryClient(Map<String, String> settings) {
@@ -92,6 +90,8 @@ final class SchemaRegistryClient {
         if (tls == null && TlsSettings.anyGiven(settings, "schema-registry.tls.")) {
             throw new TlsException("schema-registry.tls.* is set but schema-registry.url is http://; use https://");
         }
+        this.client = DrishtiTools.httpBuilder(proxy, tls).connectTimeout(java.time.Duration.ofMillis(timeoutMs))
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER).build();
     }
 
     com.ash.tools.net.ProxySettings proxy() {
@@ -128,33 +128,21 @@ final class SchemaRegistryClient {
     }
 
     private JsonNode get(String path) throws IOException {
-        URL url = base.resolve(path).toURL();
-        boolean viaProxy = proxy.appliesTo(url.getHost());
-        HttpURLConnection c = (HttpURLConnection) (viaProxy ? url.openConnection(new java.net.Proxy(java.net.Proxy.Type.HTTP,
-                java.net.InetSocketAddress.createUnresolved(proxy.host(), proxy.port()))) : url.openConnection());
-        if (viaProxy && proxy.hasCredentials()) {
-            com.ash.tools.net.ProxySettings.allowBasicThroughTunnels();
-            c.setAuthenticator(proxy.authenticator());
+        java.net.http.HttpRequest.Builder req = java.net.http.HttpRequest.newBuilder(base.resolve(path))
+                .timeout(java.time.Duration.ofMillis(timeoutMs))
+                .header("Accept", "application/vnd.schemaregistry.v1+json, application/json").GET();
+        if (authorization != null) {
+            req.header("Authorization", authorization);
         }
+        java.net.http.HttpResponse<InputStream> response;
         try {
-            c.setConnectTimeout(timeoutMs);
-            c.setReadTimeout(timeoutMs);
-            c.setRequestProperty("Accept", "application/vnd.schemaregistry.v1+json, application/json");
-            if (authorization != null) {
-                c.setRequestProperty("Authorization", authorization);
-            }
-            if (c instanceof HttpsURLConnection https && tls != null) {
-                https.setSSLSocketFactory(new ParametersFactory(tls));
-                if (!tls.settings().verifyHostname()) {
-                    https.setHostnameVerifier((host, session) -> true);
-                }
-            }
-            int status;
-            try {
-                status = c.getResponseCode();
-            } catch (IOException e) {
-                throw proxy.explain(e);
-            }
+            response = proxy.send(client, req.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());   // the proxy's own refusals are explained in words
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("the call to the schema registry was interrupted", e);
+        }
+        int status = response.statusCode();
+        try (InputStream in = response.body()) {
             if (status == 407) {
                 throw new IOException("the proxy " + proxy.host() + ":" + proxy.port() + " refused the credentials (HTTP 407 Proxy Authentication Required): check proxy.username and proxy.password");
             }
@@ -167,11 +155,7 @@ final class SchemaRegistryClient {
             if (status >= 400) {
                 throw new IOException("the schema registry answered HTTP " + status + " for " + path);
             }
-            try (InputStream in = c.getInputStream()) {
-                return JSON.readTree(in);
-            }
-        } finally {
-            c.disconnect();
+            return JSON.readTree(in);
         }
     }
 }

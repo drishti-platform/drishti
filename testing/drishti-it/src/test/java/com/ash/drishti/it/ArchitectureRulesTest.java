@@ -306,6 +306,35 @@ class ArchitectureRulesTest {
                                             && (t.getName().equals("newBuilder") || t.getName().equals("newHttpClient")))))
             .because("a client built elsewhere ignores the site's proxy and TLS settings");
 
+    /** No class opens an {@code HttpURLConnection}: every outbound HTTP call is a JDK client built in {@code DrishtiTools.httpBuilder} (proxy and TLS in one place). */
+    @ArchTest
+    static final ArchRule noHttpUrlConnection = noClasses()
+            .that().resideInAPackage("com.ash.drishti..")
+            .should().callMethodWhere(com.tngtech.archunit.core.domain.JavaCall.Predicates.target(
+                    com.tngtech.archunit.base.DescribedPredicate.describe("is URL.openConnection",
+                            (com.tngtech.archunit.core.domain.AccessTarget.CodeUnitCallTarget t) ->
+                                    t.getOwner().isEquivalentTo(java.net.URL.class) && t.getName().equals("openConnection"))))
+            .allowEmptyShould(true)
+            .because("a connection opened with URL.openConnection ignores the site's proxy and TLS settings (docs/plans/ONE_WAY_AUDIT.md, F8)");
+
+    /** Number text with separators is {@code NumberText.grouped}; a named format of a Sutra is Rachana's {@code Formats}. */
+    @ArchTest
+    static final ArchRule decimalFormatOnlyInNumberText = noClasses()
+            .that().resideInAPackage("com.ash.drishti..")
+            .and().doNotHaveFullyQualifiedName("com.ash.drishti.common.NumberText")
+            .should().callConstructor(java.text.DecimalFormat.class, String.class, java.text.DecimalFormatSymbols.class)
+            .orShould().callConstructor(java.text.DecimalFormat.class, String.class)
+            .because("one grouped-number helper (docs/plans/ONE_WAY_AUDIT.md, F6)");
+
+    /** The jobs Rachana Core already does have no second class in Drishti. */
+    @ArchTest
+    static final ArchRule noCopyOfARachanaClass = noClasses()
+            .that().haveSimpleName("RelativeDates").or().haveSimpleName("SourceFailures")
+            .and().resideOutsideOfPackage("com.ash.drishti.server.bi.report")        // the BI report's own date words are a different class
+            .should().resideInAPackage("com.ash.drishti..")
+            .allowEmptyShould(true)
+            .because("Rachana Core's RelativeDates (com.ash.rachana.control) and SourceFailures (com.ash.rachana.bind) are the one copy (F6)");
+
     /** The shared jobs have one class each, in Drishti Tools: Drishti keeps no class of these names. */
     @ArchTest
     static final ArchRule noCopyOfAToolsClass = noClasses()

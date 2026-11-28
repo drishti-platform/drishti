@@ -26,8 +26,8 @@ designer's second mode): a source PACK, the shape of the six shipped ones (modul
    pack is added to that module's packs list, off by default): pack.yaml (extends the kind's pack, owns no kind; connectors: the read connector,
    the lake table its own or a shared one with where:, set: SOURCE_SYSTEM, map: ${pack.dir}/...; --live: a Kafka listener, off until the site
    turns it on; --write-back: its writes: block; dataload:, mappings:, an example role by SOURCE_SYSTEM), mappings/<sys>-<kind>.yaml,
-   dataload.yaml (the inbox rule), sutras/common/<kind>-<sys>.v1.fragment.yaml (the native fields with no canonical one, shown when
-   SOURCE_SYSTEM is the system's) and config/about.yaml (the README's intro: write it with tools/packgen/readme.py).
+   dataload.yaml (the inbox rule) and config/about.yaml (the README's intro: write it with tools/packgen/readme.py). The native fields with
+   no canonical one stay in the stored row (Raw JSON shows them); a pack has no page section of its own: add a Sutra to the pack to show them.
 3. Checks it (`pack check`) and bundles it (`pack bundle`: dist/<name>-<version>.tar.gz, deployable in Admin -> Packs).
 4. --load: the native records into the table, SOURCE_SYSTEM stamped (drishti.py data ingest --store delta); --deploy: the pack folder
    is copied to the site's packs folder (config/packs) and switched on in Admin -> Artifacts.
@@ -115,7 +115,7 @@ def say_map(m: dict, say=print) -> None:
         conf = f"{round(100 * r['confidence']):>3}%" if (r.get("from") or r.get("value") is not None) else "    "
         say(f"  {r['to']:<{w}} <- {src:<22} {conf}{flag}{vm}  {r['why'] if r.get('from') else ''}".rstrip())
     if m["unmapped"]:
-        say("  unmapped native fields (kept as they are; the pack's section of the page shows them): "
+        say("  unmapped native fields (kept as they are in the stored row; Raw JSON shows them): "
             + ", ".join(f"{u['field']} ({u['rows']:,})" for u in m["unmapped"]))
 
 
@@ -147,21 +147,6 @@ def connector_files(a, n: dict, m: dict) -> dict[str, dict]:
     return out
 
 
-def section(n: dict, m: dict) -> dict:
-    """The pack's section of the kind's page: the native fields with no canonical one, shown when SOURCE_SYSTEM is the system's."""
-    ref = lambda f: "$." + f if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", f) else f"$['{f}']"           # noqa: E731
-    cols = [{"label": u["field"], "bind": f"nonblank({ref(u['field'])}, '–')"} for u in m["unmapped"]] or \
-           [{"label": "Fields", "bind": "'every native field has a canonical one'"}]
-    frag = f"{n['kind']}-{n['low']}"
-    when = f"$.SOURCE_SYSTEM == '{n['system']}'"
-    return {"rachana": 1.2, "fragment": frag, "version": 1, "description": f"{n['system']}'s own fields on the {n['kind']} page",
-            "doc": {"summary": f"{n['system']}'s own fields on the {n['kind']} page", "description":
-                    f"The native fields of {n['system']} with no canonical {n['kind']} field, shown as they are when SOURCE_SYSTEM is {n['system']}. "
-                    f"Contributed by the pack {n['name']}, not written into the {n['pack']} pack; it goes when the pack is switched off.",
-                    "params": {}, "emits": [], "expects": [], "phone": "more", "examples": [{"use": f"{frag}@1"}], "since": "2.9.11"},
-            "panels": [{"id": f"{n['low']}-fields", "kind": "kv", "title": f"{n['system']} fields", "when": when, "columns": cols}]}
-
-
 def base_domain(n: dict) -> str:
     """The domain of the pack this one extends (the six shipped source packs say banking, as trading does)."""
     import yaml
@@ -176,12 +161,11 @@ def write_pack(a, n: dict, m: dict, pack: pathlib.Path, say=print) -> dict:
     conns = connector_files(a, n, m)
     (pack / n["map"]).parent.mkdir(parents=True, exist_ok=True)
     (pack / n["map"]).write_text(SM.map_yaml(m, HEADER), encoding="utf-8")
-    write_yaml(pack / "sutras" / "common" / f"{n['kind']}-{n['low']}.v1.fragment.yaml", section(n, m))
     rule = {"match": n["match"], "pack": n["name"], "kind": n["kind"], "connector": n["conn"], "date-from": "name"}
     write_yaml(pack / "dataload.yaml", {"dataload": {"rules": [rule]}})
     manifest = {"pack": n["name"], "domain": base_domain(n), "version": a.version, "title": n["title"],
                 "description": a.description or f"{n['system']} as a source of the canonical {n['kind']}: its connector, its field map, its inbox rule",
-                "extends": [n["pack"]], "kinds": [], "sutras": "sutras", "connectors": conns, "dataload": "dataload.yaml",
+                "extends": [n["pack"]], "kinds": [], "connectors": conns, "dataload": "dataload.yaml",
                 "mappings": {n["kind"]: n["map"]},
                 "roles": {(f"trader-{n['low']}" if n["kind"] == "trade" else f"{n['kind']}-{n['low']}"): {"kinds": [n["kind"]], "edit": True, "rows": {n["kind"]: f"SOURCE_SYSTEM = '{n['system']}'"},
                                                        "edit-systems": [n["system"]]}}}
@@ -191,7 +175,7 @@ def write_pack(a, n: dict, m: dict, pack: pathlib.Path, say=print) -> dict:
     if host is not None and pack.resolve().parent.parent == host.resolve():
         add_to_module(host, n["name"], say)
     say(f"\nwrote {pack}: pack.yaml (extends {n['pack']}, {len(conns)} connector(s), the map, the inbox rule, an example role), {n['map']}, "
-        f"dataload.yaml, the page section, config/about.yaml")
+        f"dataload.yaml, config/about.yaml")
     return manifest
 
 
@@ -214,7 +198,7 @@ def intro(a, n: dict, m: dict) -> str:
     return (f"{n['system']} as a source of the canonical `{n['kind']}`, made by `drishti.py pack new --source-for {n['kind']} --system {n['system']}` from "
             f"{m['rows']:,} rows, every row read. This pack owns no kind: it extends `{n['pack']}`, and its rows carry `SOURCE_SYSTEM = {n['system']}`. "
             f"Its connector `{n['conn']}` reads {layout} through `{n['map']}` ({m['mapped']} of {len(m['fields'])} canonical fields mapped); files named "
-            f"`{n['match']}` in `data/inbox` (with `.ready`) load into `{n['table']}`. Native fields kept as they are: {keep}. Switch the pack on or off in "
+            f"`{n['match']}` in `data/inbox` (with `.ready`) load into `{n['table']}`. Native fields kept as they are (Raw JSON shows them): {keep}. Switch the pack on or off in "
             f"Admin -> Artifacts: off takes {n['system']}'s rows out of every page and total, and its connectors, screens and inbox rule with them.")
 
 

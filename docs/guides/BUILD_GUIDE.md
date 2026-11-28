@@ -2382,17 +2382,15 @@ Data, **Map**, **Layout**, Finalize and Deploy.
 - **Layout.** *Its own table* (`trading.trade_<system>`): one table a trading system, always, as every shipped source module does; *a shared
   table + where* only reads a table a site already lands several systems in (`where: SOURCE_SYSTEM = '<SYS>'`); optionally a Kafka
   listener, off until the site sets its servers.
-- **Finalize.** The module `source-<system>` is written and checked: `module.yaml`, the connector, the map (`mappings/`), the inbox rule
-  (`dataload.yaml`: `<system>-*.jsonl*`, the date from the name) and the module's **section** of the kind's page (`sections:`). **Install** is
+- **Finalize.** The pack `<system>` is written, checked and bundled: `pack.yaml` (the connectors, `mappings:`, `dataload:`), the map (`mappings/`) and the inbox rule
+  (`dataload.yaml`: `<system>-*.jsonl*`, the date from the name). **Install** is
   step 6: the download.
 
-The module's `sections:` entry names a fragment (`sutras/trade-swapone.v1.fragment.yaml`) and the kind it joins. While the module runs, the
-fragment's panels are appended to every Sutra of that kind and shown when their own `when:` holds (here `$.SOURCE_SYSTEM == 'SWAPONE'`: the
-native fields with no canonical field); when the module is switched off or removed they leave the page. One implementation serves every module
-(`SutraBlocks.contribute`).
+The native fields no canonical field takes stay in the stored row, as the system sent them: Raw JSON shows them, and a Sutra added to the source pack can show them
+(a source pack has no page section of its own).
 
 The same on the command line: `drishti.py pack new --source-for trade --system SWAPONE <file>` (its own table, `trading.trade_swapone`) prints
-the map, `--map-edits` fixes it, `--deploy` installs the module. The whole path, from the file to the blotter and a row rule, is
+the map, `--map-edits` fixes it, `--deploy` copies the pack to the site's packs folder. The whole path, from the file to the blotter and a row rule, is
 [the source system tutorial](BUILD_GUIDE.md).
 
 ## 9. A deep trading JSON, from one file to a deployed pack
@@ -5146,18 +5144,17 @@ ICI). The page shows the connector it will write. **Finalize** makes the module 
 
 ```bash
 python3 tools/drishti.py pack new --source-for trade --system SWAPONE \
-    --lake-name swaplake --out modules/source-swapone --deploy --modules-dir modules drop/swapone-2026-07-08.jsonl.gz
+    --lake-name swaplake --deploy drop/swapone-2026-07-08.jsonl.gz
 ```
 
-**The YAML.** The module's parts, under one set of manifest keys:
+**The YAML.** The pack's parts, in one folder (a pack of the module `trading-systems`, as the six shipped systems are):
 
 ```text
-source-swapone/
-  module.yaml                              connectors, mappings, dataload, sections
-  connectors/source-swapone.yaml           the connector
+swapone/
+  pack.yaml                                extends trading; connectors: (inline), mappings:, dataload:, an example role
   mappings/swapone-trade.yaml              the field map
   dataload.yaml                            the inbox rule
-  sutras/trade-swapone.v1.fragment.yaml    its section of the trade page
+  config/about.yaml                        the README's intro
 ```
 
 ```yaml
@@ -5270,13 +5267,12 @@ You should see, signed in as that person, only `SW1-…` ids in `TRD`, and *not 
 
 ### Step 8 · Switch it off and on
 
-**In the UI.** **Admin → Modules**, `source-swapone`, **Disable**. The trades of SwapOne leave the trade kind, the section leaves the page, and nothing
-else changes. **Enable** brings them back.
+**In the UI.** **Admin → Artifacts**, the pack `swapone`, switch off. The trades of SwapOne leave the trade kind, its connectors, screens and inbox rule go with them, and nothing
+else changes. Switch on brings them back.
 
-**On the command line.** The switch is the file below and the server's API: `POST /api/v1/admin/modules` with `{"module": "source-swapone", "enabled": false, "reason": "..."}`
-writes it (an administrator; audited). A change takes effect at the next start.
+**On the command line.** The switch is the server's API: `PUT /api/v1/admin/packs/swapone` (an administrator; audited, kept in the identity database). A change takes effect at once, no restart.
 
-**The YAML.** `config/modules/source-swapone.yaml` holds `enabled: false` while it is off.
+**The YAML.** None: the pack's state is kept in the identity database; `drishti.packs.enabled` lists the packs on at start.
 
 You should see, while it is off, no `SW1-…` trade in `TRD` and no **SWAPONE fields** section; after **Enable**, both back.
 

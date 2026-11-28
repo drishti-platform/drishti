@@ -526,7 +526,7 @@ pack's folder, so a `map:` is relative to the pack), `mappings/<system>-trade.ya
 rule, which names its pack: a rule of a pack that is off is not matched) and `sutras/` (the system's deal screens). The system is the pack of its
 lower-case name: switched off, its connectors serve nothing, its rows leave every read, its live feed stops, and the files of its rule wait in the
 inbox. Who sees which system's trades is a row rule on `SOURCE_SYSTEM` (section 19.10); each pack ships an example role `trader-<system>` with
-`rows:` and `edit-systems:`. A site that adds a system of its own still adds a module (`pack new --source-for`).
+`rows:` and `edit-systems:`. A system of its own is added the same way: `pack new --source-for KIND --system SYS` writes a source pack of the kind's module (`modules/trading-systems/packs/<system>/`, listed in the module's `packs.list` and off by default), checks it and bundles it (`dist/<system>-<version>.tar.gz`, deployable in Admin → Packs); no module is made.
 
 **Upgrade.** The module ids `trading`, `source-endur`, `source-calypso`, `source-murex`, `source-wss`, `source-swapone` and `source-ici` are
 retired, as `economy` and `capitalmarkets` were: a site that holds `config/modules/<id>.yaml` or `drishti.modules.<id>.enabled` for one stops at

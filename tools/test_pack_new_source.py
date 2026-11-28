@@ -160,9 +160,7 @@ class ThePack(Fixture):
         self.assertEqual(live["settings"]["broker"], "default")          # the broker by name: [broker.default] in the settings file
         role = m["roles"]["trader-swapone"]
         self.assertEqual((role["rows"], role["edit-systems"]), ({"trade": "SOURCE_SYSTEM = 'SWAPONE'"}, ["SWAPONE"]))
-        section = yaml.safe_load((pack / "sutras" / "common" / "trade-swapone.v1.fragment.yaml").read_text())
-        self.assertEqual(section["panels"][0]["when"], "$.SOURCE_SYSTEM == 'SWAPONE'")
-        self.assertIn("CLEARING_HOUSE", [c["label"] for c in section["panels"][0]["columns"]])
+        self.assertFalse((pack / "sutras").exists(), "a pack has no page section of its own")
         self.assertIn("SWAPONE", yaml.safe_load((pack / "config" / "about.yaml").read_text())["intro"])
         self.assertFalse((pack / "module.yaml").exists(), "a source pack, not a module")
         own = SMOD.names(self.opts())

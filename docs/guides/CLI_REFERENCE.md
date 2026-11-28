@@ -4051,7 +4051,7 @@ guides are listed in [DATA_GUIDE.md section 8](../guides/DATA_GUIDE.md#8-connect
 | `tools/packgen/note_synth.py` | a synthetic structured note of another shape (camelCase keys; note, coupon periods, observations, fixings; a call schedule and a basket of underlyings), to show the pack generator is generic. Every value is invented. |
 | `tools/packgen/pack_from_jsonl.py` | the engine of `drishti.py pack new`: a complete pack from a folder of JSON Lines |
 | `tools/packs_to_modules.py` | the one-off that moved the first-party packs into their modules and rewrites every path naming them (idempotent: run again over later-added text) |
-| `tools/packgen/source_module.py` | `drishti.py pack new --source-for <kind> --system <SYSTEM>`: a source-system module (connectors, field map, inbox rule, section, docs) from a sample file |
+| `tools/packgen/source_module.py` | `drishti.py pack new --source-for <kind> --system <SYSTEM>`: a source-system pack of the kind's module (connectors, field map, inbox rule, an example role; checked and bundled) from a sample file |
 | `tools/packgen/sourcemap.py` | proposes the native-to-canonical field map of a source system from a sample file (used by `source_module.py`) |
 | `tools/packgen/swapone_synth.py` | a synthetic SwapOne-style trade file with invented names, to show and test `--source-for` |
 | `tools/packgen/module_from_jsonl.py` | `drishti.py pack new` as a content module: the plan, the binding, the load, the checked `.dmod`, `--deploy` |

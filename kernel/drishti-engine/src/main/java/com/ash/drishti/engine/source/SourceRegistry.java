@@ -316,7 +316,8 @@ public final class SourceRegistry implements AutoCloseable, com.ash.drishti.comm
                     LOG.info("source plugin started: {}", p.manifest().name());
                 } catch (Exception e) {
                     Throwable cause = e.getCause() == null ? e : e.getCause();
-                    if (cause instanceof com.ash.drishti.api.PluginNotConfigured) {
+                    if (notConfigured(cause)) {
+                        failures.remove(p.manifest().name());
                         LOG.info("source plugin {} is installed but not configured ({}); it stays idle", p.manifest().name(), cause.getMessage());
                         if (applied.containsKey(p.manifest().name())) {
                             statuses.put(p.manifest().name(), new ConnectorStatus("IDLE", String.valueOf(cause.getMessage()), java.time.Instant.now()));
@@ -409,6 +410,11 @@ public final class SourceRegistry implements AutoCloseable, com.ash.drishti.comm
         } catch (com.ash.drishti.api.PluginNotConfigured e) {
             retry.forget(name);
         } catch (Exception e) {
+            if (notConfigured(e)) {
+                failures.remove(name);
+                retry.forget(name);
+                return;
+            }
             failures.put(name, String.valueOf(e.getMessage()));
             retry.failed(name, String.valueOf(e.getMessage()), com.ash.drishti.common.RetryPolicy.looksPermanent(e));
         } finally {
@@ -711,7 +717,7 @@ public final class SourceRegistry implements AutoCloseable, com.ash.drishti.comm
             if (e instanceof com.ash.drishti.api.lifecycle.LifecycleRefused r) {
                 throw r;
             }
-            if (e instanceof com.ash.drishti.api.PluginNotConfigured) {
+            if (notConfigured(e)) {
                 failures.remove(name);
                 retry.forget(name);
                 return status(name, "IDLE", e.getMessage());
@@ -813,6 +819,15 @@ public final class SourceRegistry implements AutoCloseable, com.ash.drishti.comm
         NoPlugin(String message) {
             super(message);
         }
+    }
+
+    /**
+     * One rule for "installed but nothing to run with": a {@link com.ash.drishti.api.PluginNotConfigured}, or an optional class
+     * ({@link com.ash.drishti.api.OptionalAbsent}) still missing once the modules have loaded. Before that the class may yet come
+     * ({@link #waitsForModules}), so the connector waits.
+     */
+    private boolean notConfigured(Throwable e) {
+        return e instanceof com.ash.drishti.api.PluginNotConfigured || (modulesLoaded && e instanceof com.ash.drishti.api.OptionalAbsent);
     }
 
     /** True when {@code e} says a class is not found while the modules are still to load (a module's engine or type named early). */

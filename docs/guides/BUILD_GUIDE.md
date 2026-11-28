@@ -832,6 +832,8 @@ resolved from the environment when the server starts (`root: ${HELPDESK_FILES_RO
 | `connectors` | server | `[helpdesk-store]`, or `helpdesk-store: { plugin: file, … }` | The connectors the pack reads through: a list names site connectors; a mapping names them **and** suggests each one's definition | [4.8](#48-connectors-the-pack-names-them-the-site-owns-them) |
 | `connectors` (mapping) | server | `helpdesk-store: { plugin: file, … }` | The pack's connector names, each with its suggested definition | [4.8](#48-connectors-the-pack-names-them-the-site-owns-them) |
 | `routes` | server | `ticket: helpdesk-store` | Which connector answers a kind | [4.8](#48-connectors-the-pack-names-them-the-site-owns-them) |
+| `dataload` | server | `dataload.yaml` | The pack's own inbox routing rules (a file inside the pack's folder, the format of `config/dataload.yaml`); a rule that names no `pack:` belongs to this pack, so it is matched only while the pack is switched on, and its files wait in the inbox (with the reason in words) while it is off | [DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md) |
+| `mappings` | server | `trade: mappings/murex-trade.yaml` | A kind's map (native fields to canonical, files inside the pack's folder): the `map:` of a connector the pack declares with that one kind and no `map:` of its own; a connector may also write `map: ${pack.dir}/mappings/x.yaml`, `${pack.dir}` being the pack's folder | [4.8](#48-connectors-the-pack-names-them-the-site-owns-them) |
 | `ingest` | tooling | `trade: { key: TRADE_ID, date: BUSINESS_DATE, flatten: { NOTIONAL: LEGS[0].NOTIONAL } }` | The id and business date of each kind for `data ingest --pack`, `lake build --pack` and `pack check`; `flatten`: values inside lists written as plain fields and columns. Ignored by the server | [5.1](#51-large-kinds-the-lake-layout) |
 | `alerts` | server | `- { kind: ticket, name: …, when: "$.AGE_HOURS > 24" }` | Suggested alert rules | step 9 |
 | `sutras`, `formats`, `semantics`, `samples`, `about` | server | `sutras: sutras` | Where the pack's folders and files are | below |
@@ -5033,8 +5035,10 @@ without a restart, on *Admin → Packs* (`/admin/packs`):
 | **refused** | Could not be loaded, with the reason and the retry state | fix it, or **Retry now** |
 
 Switching off, at every user's next click: the pack's kinds cannot be opened (`DRS-5002`) and links to them show disabled; its mnemonics, suggestions,
-examples, guides, starter workspaces and monitors disappear; `GET /api/v1/packs` stops listing it. Its Sutras, connectors and routes stay loaded, so
-switching it back on is instant. **A pack that a switched-on pack builds on cannot be switched off** (*Needed by …: switch those off first*;
+examples, guides, starter workspaces and monitors disappear; `GET /api/v1/packs` stops listing it. Its Sutras are no longer offered for their kind
+(a source system's pack owns no kind, so its Sutras follow the pack, not a kind's owner), its connectors are stopped (the pack's own, not one another pack names),
+its inbox rules are not matched (the files wait in the inbox) and the Help pages that name it (`pack:` in a `help.yaml` page) leave Help. Everything stays loaded,
+so switching it back on is instant. **A pack that a switched-on pack builds on cannot be switched off** (*Needed by …: switch those off first*;
 `DRS-5001 'trading' is needed by [counterparty-risk, market-risk]; switch those off first`); **switching a pack on switches on everything it builds on**;
 a pack that is not loaded cannot be switched on. The choice is kept in the identity database (`drishti_pack_state`), survives restarts, reaches the
 other servers sharing that database within `drishti.identity.refresh-seconds`, and is audited (`pack-enabled`, `pack-disabled`). For programs:

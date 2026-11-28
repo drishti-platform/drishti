@@ -144,6 +144,61 @@ public final class ModuleTemplates {
     }
 
     /**
+     * The inbox rules the packs carry (pack.yaml {@code dataload:}, a rules file in the pack's own folder, same format as a module's): a rule
+     * that names no {@code pack:} belongs to the pack that carries it, so it follows that pack's switch like every rule ({@code DataLoadConfiguration}).
+     * The packs are those of the modules that are on ({@link PackResolver.Result#packs}). A file outside the pack's folder, or one that cannot
+     * be read, is a problem (DRS-1048) and its rules are not used. A {@code mappings:} file that is not in the pack's folder is a problem too.
+     */
+    public static List<Rule> packRules(Collection<PackResolver.Located> packs, Function<Path, Map<String, Object>> yaml, List<String> problems) {
+        List<Rule> out = new ArrayList<>();
+        for (PackResolver.Located lp : packs) {
+            Path manifest = lp.dir().resolve("pack.yaml");
+            if (!Files.isRegularFile(manifest)) {
+                continue;
+            }
+            Map<String, Object> m;
+            try {
+                m = yaml.apply(manifest);
+            } catch (RuntimeException e) {
+                continue;                                                // an unreadable pack.yaml is the pack loader's problem, said there
+            }
+            if (m.get("mappings") instanceof Map<?, ?> maps) {
+                maps.forEach((kind, file) -> {
+                    Path f = lp.dir().resolve(String.valueOf(file)).normalize();
+                    if (!f.startsWith(lp.dir()) || !Files.isRegularFile(f)) {
+                        problems.add("pack " + lp.name() + ": its map for kind " + kind + " (" + file + ") is not a file inside the pack's folder " + lp.dir());
+                    }
+                });
+            }
+            if (m.get("dataload") == null) {
+                continue;
+            }
+            Path rules = lp.dir().resolve(String.valueOf(m.get("dataload"))).normalize();
+            if (!rules.startsWith(lp.dir())) {
+                problems.add("pack " + lp.name() + ": its dataload file (" + m.get("dataload") + ") is outside the pack's folder " + lp.dir() + "; its rules are not used (DRS-1048)");
+                continue;
+            }
+            try {
+                Object d = yaml.apply(rules).get("dataload");
+                Object list = d instanceof Map<?, ?> dm ? dm.get("rules") : null;
+                if (list instanceof List<?> l) {
+                    for (Object r : l) {
+                        if (r instanceof Map<?, ?> rm) {
+                            Map<String, Object> one = new LinkedHashMap<>();
+                            rm.forEach((k, v) -> one.put(String.valueOf(k), v));
+                            one.putIfAbsent("pack", lp.name());
+                            out.add(new Rule(lp.module() != null ? lp.module() : "pack:" + lp.name(), rules, one));
+                        }
+                    }
+                }
+            } catch (RuntimeException e) {
+                problems.add("the inbox rules of pack " + lp.name() + " (" + rules + ") cannot be read: " + e.getMessage() + "; its files will not be matched (DRS-1048)");
+            }
+        }
+        return out;
+    }
+
+    /**
      * The modules that are on when there is no server to ask (the command line, the loader process): every module found, less those an
      * administrator switched off ({@code <switches>/<id>.yaml} {@code enabled: false}, or the setting {@code drishti.modules.<id>.enabled}),
      * less those whose required module is off. The licence is not evaluated here (section 18.1).

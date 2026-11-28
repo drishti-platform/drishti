@@ -68,10 +68,29 @@ def make_lake(root: Path) -> None:
     shutil.copytree(cached, root)
 
 
+def serve_tables(backend, root: Path) -> None:
+    """The server's answer of GET /api/v1/admin/lakes/tables for the lake at ``root``: its figures read here by the tools (the test's side;
+    the console itself opens no lake folder), each table as the lake file would name it."""
+    sys.path.insert(0, str(REPO / "tools" / "lake"))
+    import laketables
+    was = backend.admin
+
+    def tables():
+        return [{**t, "lake": "demo", "root": str(root), "name": f"{t['domain']}.{t['kind']}", "folder": t["kind"], "location": t["path"], "how": "configured"}
+                for t in laketables.tables(root)]
+
+    async def admin(method, path, ident, body=None, **params):
+        if path == "/lakes/tables":
+            return {"tables": tables()}
+        return await was(method, path, ident, body, **params)
+    backend.admin = admin
+
+
 @pytest.fixture
 def lake(client, backend, monkeypatch, tmp_path):
     root = tmp_path / "lake"
     make_lake(root)
+    serve_tables(backend, root)
     lk = Lakes(LakeSettings(roots=[root], tools_dir=REPO / "tools", data_dir=tmp_path / "data"))
     client.app.state.lakes = lk
     sent = []
@@ -82,6 +101,7 @@ def lake(client, backend, monkeypatch, tmp_path):
     monkeypatch.setattr(backend, "announce_load", announce_load, raising=False)
     yield root, tmp_path / "data", sent
     del client.app.state.lakes
+    del backend.admin
     client.app.state.__dict__.pop("lake_maint", None)
 
 

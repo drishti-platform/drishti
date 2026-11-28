@@ -26,6 +26,7 @@ external_lib: ${DRISHTI_EXTERNAL_LIB:}   # base of the external library folder (
 backend:
   url: ${DRISHTI_BACKEND_URL:http://127.0.0.1:18480}  # where the server is (one server; backend.urls for several)
   timeout_seconds: 15  # per call to the server; longer than the server's own read limit (drishti.sources.fetch-timeout, 10 s), so its answer comes through
+  require_compatible_api: ${DRISHTI_CONSOLE_REQUIRE_API:true}  # at start the console asks the server's API version (/api/v1/version) and refuses to start against one outside its supported range (core/api_compat.py); false: skip
   pool_size: 64  # pooled HTTP connections to the server (per server, when there are several)
   check_seconds: ${DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS:5}   # how often the console asks each server if it is there (0 = never); pages show a banner and recover when it returns
   # Several servers of one Drishti*net cluster (docs/guides/OPERATIONS_GUIDE.md, "The console and several servers"): one is enough, the console learns the
@@ -218,15 +219,8 @@ builder:                     # Build workbench, New (/build/new); docs/guides/RA
   pack_load_max_mb: 2048     # Admin -> Packs -> a pack -> Load data: the largest file the console streams on to the server (which has drishti.loads.upload-max-mb)
   tools_dir: ../tools        # the repository's tools/ folder (the Pack designer runs tools/packgen/designer_job.py from it); relative to drishti-console/
   studio_kind: sample        # the kind a new Design and "Open in Studio" preview a brought document as (a pasted document has no kind of its own)
-lakes:                       # Admin -> Data loads -> Lakes (/admin/lakes): a large JSON file into a Delta lake (docs/guides/CLI_REFERENCE.md)
-  roots: ${DRISHTI_LAKE_ROOTS:}   # the lake roots this console may write, comma-separated (the Delta connectors' root); empty: <data dir>/delta, as the server
-  max_upload_mb: 4096        # largest file uploaded (streamed to the console's temporary folder, never held in memory)
-  scan_docs: 20000           # documents read to suggest the id, date and classifiers (the build reads them all)
-  engine: auto               # auto (the parallel Java loader when lakes.jar or the server jar is found, else deltalake), java, deltalake
-  jar: ""                    # a drishti-server exec jar for the writer, for a one-off (--jar); empty: the newest one in <home>/lib (python tools/drishti.py build jar)
-  python: ""                 # the Python that runs tools/lake/build.py (default: the console's own)
-  keep_min: 240              # minutes an upload and a finished build are kept
-  jobs: 2                    # builds running at once on this console
+lakes:                       # Admin -> Data loads -> Lakes (/admin/lakes): the tables are the server's answers; these settings are lake maintenance's only (core/lake_maint.py)
+  roots: ${DRISHTI_LAKE_ROOTS:}   # lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated
   data_dir: ${DRISHTI_DATA_DIR:../data}   # <data>: Lakes -> Maintain keeps <data>/lakes/lake-maintenance.yaml (also lake maintain's default) and its history there
   maintenance_schedules: ${DRISHTI_LAKE_MAINTENANCE_SCHEDULES:true}   # run the lake-maintenance schedules in this console (false: run lake maintain --daemon instead)
 data_view:                   # Export data (EXPORT, /data; docs/guides/DATA_GUIDE.md "Export data"); switched by features.data

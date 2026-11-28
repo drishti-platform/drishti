@@ -89,6 +89,16 @@ is asked) for the date the request names with `X-Drishti-As-Of` or `?asOf=`, and
 holiday rolls back to the previous business day, and a future date or one before the history window is `400 DRS-4003`. Every read
 below follows it; the rules are in [Which day: the business date](INTEGRATION_GUIDE.md#35-which-day-the-business-date).
 
+**The API's version.** The routes under `/api/v1` carry one version, `major.minor`, reported by `GET /api/v1/version` (open, so it can be asked before
+any sign-in) and as `api` in `GET /public/about`. A **minor** step only adds (a route, a field, a code); a client written for an earlier minor of the same
+major keeps working. A **major** step may remove or change, and ships beside the older major's routes for as long as `minSupported` says. A client
+declares the range it supports and compares: the console does it at start (`core/api_compat.py`: it supports API 1.0 to 1.99) and **refuses to start
+against a server outside that range, with one line**, for example `[FAIL] the server at http://s:18480 speaks API 2.0, newer than this console
+supports (API 1.0 to 1.99): use the console of the server's release, or upgrade this console`; a server that is away is not a refusal (the console may
+start first), and the console's watch checks again at every probe (Admin → Health shows `api` and `apiProblem`; `GET /readyz` is `503`, so a load
+balancer sends no traffic to a console whose server it cannot speak to). A server that predates the versioned API answers no `api` and is refused
+the same way. `backend.require_compatible_api: false` (`DRISHTI_CONSOLE_REQUIRE_API=false`) skips the start check.
+
 ## 2. Entities, views, search and administration
 
 ### 2.1 Command line and type-ahead
@@ -784,6 +794,7 @@ curl -s $B/calc/settings
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/about` | `{product, version, built, java, uptimeSeconds, sutras, sources, securityEnabled, packs, copyright}` |
+| `GET` | `/version` | **Open (no sign-in).** The version of this API, which a client checks before it relies on a route: `{api, minSupported, product, version}`. `api` is `major.minor` (now `1.0`); `minSupported` the oldest API a client may have been written for and still be served; `product` and `version` the product's own (as `/about`). See *The API's version* in Conventions. No node, user, path or setting |
 | `GET` | `/packs` | every installed pack `{name, version, title, description, console, sample, origin, kinds, links, python, assigned, active}` (no folder: `origin` says where it came from in words, `site`, `module:<id>` or `kernel`) (assigned/active for the caller; `links` is the pack's `graph.fields`, `{FIELD: {kind, label}}`, what the Sutra designer offers as linked records) |
 | `GET` | `/trading/landing/role` | the person's trading role (`{role}`: `trader`, `desk-head` or empty) from `drishti.trading.people`, the lens's `trading.people` and their View as choice, without reading data: which Trading landing opens first. The trading module ([ADMIN_GUIDE.md › Drishti Trading](ADMIN_GUIDE.md#162-drishti-trading)) |
 | `GET` | `/trading/landing/{part}` | Drishti Trading's figures as the person, worked out by the trading module: `me` (`{scope: {kind, id, role, source, name, desk, deskName, head, books, canPick, problems}, admin, options?}`), `valuations`, `blotter` (with `page`, the live result set of the day's trades), `risk`, `limits`, `pnl-var`, `traders`; `?for=desk` a trader's desk. Every total is the pivot engine's; `available: false` with `reason` when a figure cannot be given. `Cache-Control: no-store` |
@@ -1260,6 +1271,9 @@ as an administrator's announcement.
 | `POST` | `/admin/dataload/run` | Load now: `{started: true, by}`; while a run still loads none starts: `{started: false, skipped: "skipped: run 20261103T150000Z-drishti-main still loading (12 min)"}` (recorded as a skipped cycle). `400 DRS-5001` the inbox is off here. Audited `dataload.run` |
 | `POST` | `/admin/dataload/retry` | body `{file}` (or `?file=`): a failed file and its `.ready` back into the inbox: `{file, from, to, next}`. `404 DRS-1001` no failed file of that name, `400 DRS-5001` a bad name or one in the inbox already. Audited `dataload.retry` |
 | `POST` | `/admin/dataload/undo` | body `{loadId}`: what undoing that load would do, nothing changed; `{loadId, confirm}` with `confirm` the same id: the load undone, its rows removed from every Delta and Iceberg table of the inbox's lake, one commit per table and date, a replace restored ([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md#55-undo-a-load) section 5.5): `{loadId, undone, lines: [{table, format, date, removed, restored, replaced}], text}`. `400 DRS-5001` no id, or the undo failed. Audited (`dataload.undo`). |
+| `GET` | `/admin/lakes/tables` | Every table of every lake file with its figures, read from the table's own log (no data file is opened): `{tables: [{lake, root, name, kind, location, format, how, domain, folder, rows, files, bytes, partitionBy, partitions, dates, firstDate, latestDate, version, lastBuild}]}`; a table that cannot be read (on an object store, held in memory, unreadable) carries `error` instead of the figures. Administrators. The console's Admin → Lakes reads it; the console opens no lake folder |
+| `GET` | `/admin/lakes/tables/detail?lake=&name=` | One table in full by its symbolic name in its lake file: the figures above and `byDate: [{date, rows, files, bytes, partitions: [[label, rows]]}]` (newest first), `columns: [{name, type, partition, promoted}]`, `partitionColumns`, `idColumn`, `loads: [{run, startedAt, status, mode, dates, rows, rejected, seconds, engine, error}]` (the lake build's run summaries under the lake root, newest 20). `404 DRS-1001` no such table. Administrators |
+| `GET` | `/admin/lakes/runs?limit=` | The newest lines (default 20, at most 500) of each lake root's run log: `{runs: [{lake, line}]}`. Administrators |
 | `GET` | `/admin/dataload/choices` | The Upload page's pickers ([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md#35-upload-a-file-and-build-its-ready-admin--data-loads--upload) section 3.5): `{on, node, maxGb, accepted, newTables, defaultLake, lakes, tables: [{table, kind, pack, connector, key, label}], packs, waiting}` |
 | `POST` | `/admin/dataload/upload?file=` | The data file as the raw body (`application/octet-stream`), streamed to `<dataload>/staging/`; `.jsonl`, `.gz`, `.zip`, `.tar`, `.tar.gz`. Refused: a name with a folder, `..` or a leading dot, another type (`400 DRS-5001`), over `upload.max-gb` or the disk floor (`413 DRS-5005`). `{id, file, source, state, size, sha256, rows, suggest, tar, folders}` |
 | `POST` | `/admin/dataload/upload/part?file=&id=&last=` | One part of an upload relayed by another node of the cluster |

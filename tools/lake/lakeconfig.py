@@ -137,6 +137,14 @@ def data_dir() -> pathlib.Path:
 _OVERRIDE: str = ""
 
 
+def loader_work_dir() -> pathlib.Path:
+    """The folder a loader stages in: <data>/tmp/loaders (made on demand), never the system temp folder (often memory-backed and
+    outside the data folder)."""
+    d = data_dir() / "tmp" / "loaders"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def data_named() -> bool:
     """Whether a data folder was named at all (--data-dir, the settings file or DRISHTI_DATA_DIR) rather than this checkout's default."""
     import javacmd
@@ -195,6 +203,31 @@ def root(name: str = "demo", folder: pathlib.Path | None = None) -> str:
         if (folder or lakes_dir()).joinpath(f"{name}.yaml").is_file() or name == "demo":
             return str(default_root(name))
         raise
+
+
+def entry(lake: str, name: str, folder: pathlib.Path | None = None) -> dict:
+    """The lake file's entry of table ``name`` (``<domain>.<table>``, the symbolic name) in lake ``lake``, as the one reader describes it:
+    ``location``, ``format``, ``contract``, ``how`` (configured or fallback), partition-columns, promote, vectors, id, load-mode."""
+    for lk in dump(folder).get("lakes") or []:
+        if lk.get("lake") == lake:
+            for t in lk.get("tables") or []:
+                if t.get("name") == name:
+                    return t
+            raise LakeConfigError(f"lake {lake} has no table {name} ({', '.join(t['name'] for t in lk.get('tables') or [])})")
+    raise LakeConfigError(f"no lake named {lake} in {folder or lakes_dir()}")
+
+
+def bind(lake: str, name: str, folder: pathlib.Path | None = None) -> dict:
+    """A table by its symbolic name for a reader or writer that wants ``(root, domain, table)``: the entry plus the three, its location cut at
+    its last two folders (as the server's connectors read it), wherever the table is and whatever its depth."""
+    e = dict(entry(lake, name, folder))
+    loc = str(e["location"]).rstrip("/")
+    head, _, table = loc.rpartition("/")
+    root, _, domain = head.rpartition("/")
+    if not (root and domain and table):
+        raise LakeConfigError(f"table {name}: location {loc} needs a folder and a parent folder (s3://bucket/area/table)")
+    e.update({"root": root, "domain": domain, "table": table})
+    return e
 
 
 def demo_root() -> pathlib.Path:
@@ -270,3 +303,14 @@ def register(sub, add) -> None:
     c.add_argument("--dir", help="the lake folder (default LAKE_LAKES_DIR, else config/lakes)")
     c.add_argument("--connectors-dir", help="the connector files (default DRISHTI_CONNECTORS_DIR, else config/connectors)")
     c.add_argument("--json", action="store_true")
+    e = add(sub, "entries", lambda a, extra: _entries(a), "lake entries: write every table of the lake files as an explicit entry (uri, format, contract) "
+            "from where the lake's layout puts it today; a bank then edits each uri to the real location", [],
+            "example:\n  drishti.py lake entries --write\nWithout --write it lists what it would add. Guide: docs/admin/TABLE_CATALOGUE.md")
+    e.add_argument("--dir", help="the lake folder (default LAKE_LAKES_DIR, else config/lakes)")
+    e.add_argument("--write", action="store_true")
+
+
+def _entries(a) -> int:
+    import catalogue_entries
+    argv = ["--lakes-dir", str(a.dir or lakes_dir())] + (["--write"] if a.write else [])
+    return catalogue_entries.main(argv)

@@ -70,6 +70,28 @@ class SutraRegistryTest {
     }
 
     @Test
+    void aSutraOfAPackThatIsSwitchedOffIsNotOffered() throws Exception {
+        Path murex = Files.createDirectories(dir.resolve("packs/murex/sutras"));
+        Path trading = Files.createDirectories(dir.resolve("packs/trading/sutras"));
+        Path site = Files.createDirectories(dir.resolve("site"));
+        Files.writeString(murex.resolve("m.v1.sutra.yaml"), sutra("murex-trade", 1, "trade"));
+        Files.writeString(trading.resolve("t.v1.sutra.yaml"), sutra("trade-card", 1, "trade"));
+        Files.writeString(site.resolve("s.v1.sutra.yaml"), sutra("site-trade", 1, "trade"));
+        RachanaProperties props = new RachanaProperties(List.of(site.toString()), false, Duration.ofMillis(50), null, null, null,
+                List.of(trading.toString(), murex.toString()), null, null, null);
+        try (SutraRegistry r = new SutraRegistry(props, com.ash.drishti.rachana.LiveCompiler.of(new com.ash.rachana.el.ElCompiler()))) {
+            assertThat(r.forKind("trade")).extracting(s -> s.name()).containsExactlyInAnyOrder("murex-trade", "trade-card", "site-trade");
+            assertThat(r.packOf(r.fileOf("murex-trade@1").orElseThrow())).contains("murex");
+            assertThat(r.packOf(r.fileOf("site-trade@1").orElseThrow())).isEmpty();
+            r.packSwitch(p -> !p.equals("murex"));                                  // an administrator switches the source system's pack off
+            assertThat(r.forKind("trade")).extracting(s -> s.name()).containsExactlyInAnyOrder("trade-card", "site-trade");
+            assertThat(r.latest("murex-trade")).as("still loaded, only not offered").isPresent();
+            r.packSwitch(p -> true);                                                // and on again
+            assertThat(r.forKind("trade")).hasSize(3);
+        }
+    }
+
+    @Test
     void hotReloadPicksUpNewFiles() throws Exception {
         try (SutraRegistry r = registry(true)) {
             List<Set<String>> changes = new CopyOnWriteArrayList<>();

@@ -47,7 +47,8 @@ import java.util.Optional;
  * canonical row lacks. The record a store holds is unchanged: Raw JSON shows it before {@code map} ({@link ConnectorInstance#fetchNative}).
  * The map file ({@code format: 1}; {@code fields:} native name to a canonical name or {@code {to, cast}}, casts {@code text}, {@code number},
  * {@code integer}, {@code boolean}, {@code date}; {@code keep: false} drops native fields the map does not name) is read relative to the
- * connector's module ({@code module-dir}), else the connectors' folder. A predicate or a map that cannot be used refuses the connector at
+ * connector's module ({@code module-dir}), else the connectors' folder; a pack's own connector may anchor it to its pack as
+ * {@code ${pack.dir}/mappings/x.yaml} (the pack gives the token the absolute folder it came from, so the map arrives absolute). A predicate or a map that cannot be used refuses the connector at
  * load with {@code DRS-5034}, shown on Admin → Connectors. Immutable.
  */
 public final class SourceShape {

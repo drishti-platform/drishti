@@ -725,6 +725,38 @@ many users. A stop closes open live streams after `server.shutdown_seconds` (5);
 Consoles on several hosts relay to each other (`DRISHTI_CONSOLE_RELAY_ACROSS_HOSTS=true`, one `DRISHTI_CONSOLE_RELAY_KEY`, ports 17490 to
 17493 open between them), so a load balancer needs no sticky sessions ([CLUSTER_GUIDE.md](CLUSTER_GUIDE.md)).
 
+### 5.7 The console as its own deployable
+
+The console (`drishti-console`, Python) is a program of its own: it holds its templates, its static files and its own configuration, and it reaches the
+server **only by the server's published API** (`/api/v1`, `/public`). It reads no folder of the server (its config, lakes, identity database,
+modules or data folder), so it runs on a **separate host** that holds nothing of the server, or as **several instances behind a load balancer**. A guard test
+(`drishti-console/tests/test_console_boundary_guard.py`) keeps it so.
+
+**What a console host needs**
+
+| Need | What |
+|---|---|
+| Python | 3.13 you prepared yourself (Drishti installs nothing); the libraries of `drishti-console/requirements.txt`, from the wheel pack (§2.3) |
+| Files | the `drishti-console/` folder, and the `docs/` folder beside it (the pages Help renders); the binary package carries both, and `python tools/drishti.py start console` runs from it |
+| Settings | the console's own: `backend.url` (`DRISHTI_BACKEND_URL`), or `backend.urls` for a cluster (`DRISHTI_BACKEND_URLS`), `server.port`, `server.workers`, `auth.token_secret` (the server's `drishti.security.secret`), `DRISHTI_SESSION_SECRET`; a site file `config/application.local.yaml` for the rest ([CONFIGURATION.md](../admin/CONFIGURATION.md)) |
+| State | its own folder `<data dir>/console` (the server list it learned, user stamps, the hosted module parts it fetched) and its temp folder; both can be lost, nothing is kept there that the server does not hold |
+| Start | `python3.13 tools/drishti.py start console --server https://drishti-a:18480` (or `drishti-console/run_drishti_web.py`) |
+
+**Start-up handshake.** Before the console opens its port it asks the server's API version (`GET /api/v1/version`). A server outside the console's
+supported range stops the start with one line (`[FAIL] the server at … speaks API 2.0, newer than this console supports …`); a server that is not up yet
+is not a refusal (start order does not matter). See [API_REFERENCE.md](API_REFERENCE.md#1-conventions), *The API's version*. Upgrade the servers and the
+consoles of one release together; a console may be older or newer by minor versions inside its range.
+
+**Several instances.** Nothing a request needs lives in one process only (nothing per person in the process: the session is a signed cookie the server
+verifies, every per-person cache is rebuilt from the server and dropped when the server's stamp changes). So any instance may take any request:
+
+- the same `DRISHTI_SESSION_SECRET`, `auth.token_secret` and `DRISHTI_CONSOLE_RELAY_KEY` on every instance (from the secret store);
+- **sticky sessions are not needed** when the instances relay to each other: `DRISHTI_CONSOLE_RELAY_ACROSS_HOSTS=true`, ports 17490 to 17493 open between
+  the console hosts only (a live page's stream is held by one worker; its later calls are passed on, [CLUSTER_GUIDE.md](CLUSTER_GUIDE.md#74-no-sticky-sessions-the-console-relay));
+- **without the relay across hosts, the balancer must be sticky** (by source address or a cookie of its own) for the live pages and the pack wizard's job calls
+  only; every other page needs no stickiness;
+- the balancer probes `GET /readyz` (`200` when the server is reachable and speaks a compatible API, else `503`) and `GET /healthz`.
+
 ## 6. Configure
 
 Every setting of every kind, with its type, default, environment variable, meaning and whether a change needs a restart, is in one
@@ -2547,11 +2579,11 @@ the same way (16.3). The examples use a small lake with two trade tables built b
 
 ### 16.2 Maintain from the page or the command line
 
-**The tables.** **Admin → Data loads → Lakes** (`/admin/lakes`; the lake roots are `lakes.roots`, `DRISHTI_LAKE_ROOTS`, default `<data>/delta`) lists
+**The tables.** **Admin → Data loads → Lakes** (`/admin/lakes`; the tables are the lake files' and the server answers for them; the roots this console may maintain are those of the local tables the server lists and `lakes.roots`, `DRISHTI_LAKE_ROOTS`) lists
 every table with its rows, files, size, partitions, business dates, last build and **Maintenance** (its settings, or *Maintained by its publisher: not
 built by drishti.py lake build: read only here*, with its box disabled). Tick tables, **Select all**, or **Select a domain**; the line under the table
 shows the equivalent command with **Copy**. A table's name opens its page, read from its Delta log alone (it opens at once on millions of rows):
-summary, the connectors that read it, business dates with rows and partitions, columns and their roles, the newest 30 commits, its `lake build` runs,
+summary, the connectors that read it, business dates with rows and partitions, columns and their roles, its `lake build` runs,
 maintenance and table properties.
 
 ![The lakes with Maintain: a table another system published is read only](../admin/img/lake-maintenance/lake-maintain-tables.png)
@@ -2680,24 +2712,15 @@ Throughput, memory and the 2.3M-position sizing of the loader are measured in [B
 - **Memory does not grow with the file**: reading holds one document at a time; writing holds one batch plus its Parquet encoding for any number of documents.
 - **Disk**: the lake takes about 10% of the pretty-printed input. 300,000 such deals: a 4.2 GB export, about 400 MB of lake per date.
 - **Partitions**: each date times each classifier value is a folder; keep classifiers to a few dozen values (`lake scan` shows the counts) and compact.
-- **The console's Lakes page** streams an upload to its temporary folder (room for the file) and runs the same builder; `lakes.jobs` (2) bounds the
-  builds at once, so plan memory for two batches.
 - **Millions of documents**: the parallel lake loader (`--engine java`) parses and writes on every core with
   memory set by `memory.budget-mb` ([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md), [CLUSTER_GUIDE.md](CLUSTER_GUIDE.md)).
 
-**Loading a file from the browser**: Admin → Data loads (`/admin/loads`, what each pack expects and what landed) → **Load a file into a lake** opens the
-Lakes page, the browser form of `lake build`. 1. **The file**: a `.json` array, `.jsonl`, `.ndjson` or `.gz`, streamed to the console's temporary folder
-as it uploads (up to `lakes.max_upload_mb`, 4,096 MB). 2. **Id, business date and classifiers**: the console scans the first `lakes.scan_docs` (20,000)
-documents and lists every field with how often it is present and its values; the business date comes from the file's name (`book.2026-10-16.json`), else
-business today, never a row's field ([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md#5-routing-business-dates-modes-repeats-and-undo)); tick **Classifier** for
-partition columns and **Promote** for real columns. 3. **Where it goes**: a new lake (a root, a domain, a kind) or an existing table; what to do when a
-date is there; the pack whose connector should read it; **Bind** writes the connector's file (validated, atomic, audited, history kept); **Tell the
-server** announces each date. 4. **Build**: a separate process running Drishti Lake's loader with the same lock and summary; the page shows progress,
-the rows per date and classifier, the rejects by reason and a link to one record. The process never holds a token: binding and announcing are done by
-the console as the administrator. The build, lake maintenance and a table's own page run beside the lakes, with the lake engine of the install's
-`tools/` (`builder.tools_dir`): a console on another machine (one that holds only its own folder and the documents shipped with it) shows the Lakes page
-and a table's page with *This console is not on the server's machine*, offers no form, and still lists the lake files as the server reads them; open
-the page on a console on the server's machine.
+**Loading a file from the browser**: Admin → Data loads → **Upload** (`/admin/loads/upload`) is the one way a file reaches a table: the console streams it to
+the server's data inbox (`POST /api/v1/admin/dataload/upload`) and the server loads it, for the browser and for `drishti.py dataload ready` alike
+([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md#35-upload-a-file-and-build-its-ready-admin--data-loads--upload)). The console opens no lake folder: **Admin → Data loads →
+Lakes** (`/admin/lakes`) lists the lakes and each table's figures as the server answers (`GET /api/v1/admin/lakes/tables`, a table's page `…/tables/detail`, the run
+logs `…/runs`; [API_REFERENCE.md](API_REFERENCE.md)), so it shows the same on a console on another machine. Lake maintenance (Lakes → Maintain) still runs the
+install's `tools/` beside the lakes (`builder.tools_dir`) and is offered only on a console that has them.
 
 ### 16.5 Scheduling the jobs
 

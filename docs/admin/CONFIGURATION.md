@@ -773,6 +773,7 @@ From `drishti-console/config/application.yaml`, resolved from environment variab
 | `DRISHTI_BACKEND_DISCOVER` | `backend.discover` | `true` | With `backend.urls`: pull the member list from the server in use every `discover_every` and keep it. |
 | `DRISHTI_CONSOLE_DATA_DIR` | `backend.data_dir` | empty | What the console keeps between runs (`net/servers.json`); empty: `<data dir>/console`. |
 | `DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS` | `backend.check_seconds` | `5` | How often the console asks each server if it is there (`0` = never). Pages show a banner and recover by themselves when it returns. |
+| `DRISHTI_CONSOLE_REQUIRE_API` | `backend.require_compatible_api` | `true` | At start the console asks the server's API version (`GET /api/v1/version`) and refuses to start against a server outside the range it supports, with one line. `false` skips the check. |
 | `DRISHTI_CONSOLE_TMP_DIR` | `tmp_dir` | empty | Base of the console's temp folder `drishti-console-<pid>` (empty: `DRISHTI_TMP_DIR`, then `<data dir>/tmp/console` when started by `run_drishti_web.py`), one per worker process, removed on exit; left-over ones of dead processes are listed on Health, never deleted automatically. |
 | `DRISHTI_EXTERNAL_LIB` | `external_lib` | empty | Base of the external library folder (empty: `external_lib` in the repository root); `<base>/python` is importable. The server reads the same variable for `<base>/java`. |
 | `DRISHTI_PRODUCT` | `ui.product` | `Drishti` | The product name shown in pages. |
@@ -809,14 +810,13 @@ From `drishti-console/config/application.yaml`, resolved from environment variab
 | `DRISHTI_PACKS_DIR` | `packs.dir` | `../config/packs` | The packs directory (a relative path resolves from `drishti-console/`). |
 | `DRISHTI_PACKS_EXTRA_DIRS` | `packs.extra_dirs` | empty | Further pack folders, comma-separated, as on the server (relative paths resolve from `drishti-console/`, so `../examples/packs`). |
 | `DRISHTI_PACKS_INSTALLED` | `packs.installed_dir` | empty | The server's installed packs (registry and Deploy archive); empty: `<data dir>/packs/installed`. Read only for the distribution's command words; a pack's guides, examples and workspaces come from the server's answers. |
-| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | Admin → Data loads → Lakes ([CLI_REFERENCE.md](../guides/CLI_REFERENCE.md#7-lake-a-large-json-export-into-a-delta-lake)): the lake roots this console may write, comma-separated (relative paths resolve from `drishti-console/`); empty: `<data dir>/delta`, the server's own root. The page offers no other folder. |
+| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | Admin → Data loads → Lakes → Maintain ([OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#16-lake-maintenance-and-scheduling)): lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated (relative paths resolve from `drishti-console/`). The lakes' tables themselves are the server's answers; the console opens no lake folder. |
 | `DRISHTI_DATA_DIR` | `lakes.data_dir` | `../data` | Admin → Lakes → Maintain ([OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#16-lake-maintenance-and-scheduling)): the data folder whose `lakes/lake-maintenance.yaml` (the file `lake maintain` reads by default) and `lakes/maintenance-history.jsonl` the page uses (relative paths resolve from `drishti-console/`). |
 | `DRISHTI_LAKE_MAINTENANCE_SCHEDULES` | `lakes.maintenance_schedules` | `true` | Run the lake-maintenance schedules in this console; `false` when `lake maintain --daemon` runs them instead (run them in one place). |
 
 In `lake-maintenance.yaml`: a lake's `format` is `delta` (the default), `iceberg`, or `auto` (Iceberg tables under a local root
 found beside Delta ones); `orphan-hours` is retired and refused at start (the vacuum window, `vacuum-hours`, also removes the files no snapshot names; Lake keeps a 72-hour floor); `iceberg-settings` (a mapping) names an Iceberg lake's catalog; a lake behind a REST catalog (AWS Glue) is refused by maintenance with a clear message (Lake 0.9.2 adds it). Retention is today and the `keep-business-days` business days before it, through Lake's `lake maintain`. [OPERATIONS_GUIDE.md › Lake maintenance: Admin → Lakes → Maintain and `lake maintain`, section 8](../guides/OPERATIONS_GUIDE.md#163-iceberg-lakes). `lake build --format delta|iceberg` (default
 `delta`) and `--iceberg-set KEY=VALUE` choose and configure the format of a build ([CLI_REFERENCE.md](../guides/CLI_REFERENCE.md)).
-| (no variable) | `lakes.max_upload_mb`, `scan_docs`, `engine`, `python`, `keep_min`, `jobs` | `4096`, `20000`, `auto`, the console's Python, `240`, `2` | Largest upload (streamed to the console's temp folder); documents read to suggest the id, date and classifiers; `auto`, `drishti` or `deltalake`; the Python that runs `tools/lake/build.py`; minutes an upload and a finished build are kept; builds at once. |
 | `DRISHTI_AI_ENABLED` | `ai.enabled` | `false` | Turn on the console's own LLM provider layer (the recommended provider is `type: server`, which delegates to the server so keys stay there). |
 | `DRISHTI_AI_DIR` | `ai.dir` | `<config>/ai` | The folder of provider files (the same format and, if you share the folder, the same files as the server). |
 | `DRISHTI_AI_DEFAULT_MODEL` | `ai.default_model` | empty | The model used when a call names none (`provider/model`). |
@@ -2785,6 +2785,7 @@ You should see uvicorn report `Uvicorn running on http://127.0.0.1:17481`.
 | `backend.timeout_seconds` | `15` | Per call to the server. Longer than the server's own read limit (`drishti.sources.fetch-timeout`, 10 s), so the server's answer, including a timed-out read's `DRS-1004`, comes through. |
 | `backend.name` | the product name (`ui.product`) | The name of the single server when `servers` is not set; the picker and the top bar show it. |
 | `backend.check_seconds` | `5` (`DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS`) | How often the console's background watch asks each server (the default and every one of `servers`) whether it is reachable, with a 2 s timeout. It keeps reachable / since / last error / version, logs each change once, and answers `GET /healthz/backend`, which every page's banner polls. Shown on Admin > Health (Console watch). `0` turns the watch off. |
+| `backend.require_compatible_api` | `true` (`DRISHTI_CONSOLE_REQUIRE_API`) | Whether the console checks the server's API version before it opens its port (`GET /api/v1/version`, then `/public/about`). A server whose API is outside the console's supported range (or that reports none) stops the start with one line; a server that is away is not a refusal. The watch records `api` and `apiProblem` for each server (Admin > Health) and `GET /readyz` answers `503` while the problem stands. [API_REFERENCE.md](../guides/API_REFERENCE.md#1-conventions) |
 | `backend.urls` | empty (`DRISHTI_BACKEND_URLS`) | Several servers of one Drishti*net cluster ([The console and several servers](#the-console-and-several-servers-drishtinet)). |
 | `backend.discover` | `true` (`DRISHTI_BACKEND_DISCOVER`) | Pull the cluster's member list from the server in use and keep it. |
 | `backend.discover_every` | `60s` | How often the member list is pulled again. |
@@ -2988,16 +2989,16 @@ compose files in `deploy/` show these variables in use; see [OPERATIONS_GUIDE.md
 
 ## Every setting
 
-Every key of every kind: 2,249 settings in 21 areas, and 367 environment variables. Each row has the same shape: the key, its type, its default (*none*: no default, the setting is off or unset until given; *empty*: an empty value), the environment variable that sets it, what it applies to, its meaning, whether a change needs a restart or is picked up live, and the release that added it (blank: before 2.6). Generated by `tools/settings_catalogue.py` from the files themselves, each meaning the file's own comment; `--check` fails the drill when a key has no meaning or the page is out of date. The console shows this page searchable at Help → Configuration (`/help/configuration`), with the values in effect for an administrator.
+Every key of every kind: 2,242 settings in 21 areas, and 367 environment variables. Each row has the same shape: the key, its type, its default (*none*: no default, the setting is off or unset until given; *empty*: an empty value), the environment variable that sets it, what it applies to, its meaning, whether a change needs a restart or is picked up live, and the release that added it (blank: before 2.6). Generated by `tools/settings_catalogue.py` from the files themselves, each meaning the file's own comment; `--check` fails the drill when a key has no meaning or the page is out of date. The console shows this page searchable at Help → Configuration (`/help/configuration`), with the values in effect for an administrator.
 
-Every setting has a **tier** (the last column; Admin → Configuration shows them by tier): **everyday** 18, **admin** 1,824, **expert** 407. *Everyday* is what a business lead changes (the lenses, the VaR and exposure confidences, the scenario window, the feature switches); *admin* is what an operator sets; *expert* is performance and internals. The tiers are kept in `tools/settings_schemas.yaml` (`tiers`), one place.
+Every setting has a **tier** (the last column; Admin → Configuration shows them by tier): **everyday** 18, **admin** 1,818, **expert** 406. *Everyday* is what a business lead changes (the lenses, the VaR and exposure confidences, the scenario window, the feature switches); *admin* is what an operator sets; *expert* is performance and internals. The tiers are kept in `tools/settings_schemas.yaml` (`tiers`), one place.
 
 | Area | Settings |
 |---|---|
 | [The server: `application.yaml`](#the-server-applicationyaml) | 588 |
 | [Compute engines: `config/engines/*.yaml`](#compute-engines-configenginesyaml) | 364 |
 | [Modules: `config/modules/*.yaml`](#modules-configmodulesyaml) | 5 |
-| [The console: `application.yaml`](#the-console-applicationyaml) | 157 |
+| [The console: `application.yaml`](#the-console-applicationyaml) | 151 |
 | [The console's other files](#the-consoles-other-files) | 107 |
 | [Connectors: every plugin's settings](#connectors-every-plugins-settings) | 533 |
 | [Packs: `pack.yaml`](#packs-packyaml) | 137 |
@@ -4674,6 +4675,7 @@ One file per module (banking, capitalmarkets, economy), `config/modules/<module>
 |---|---|---|---|---|---|---|---|---|
 | `backend.url` | string | `http://127.0.0.1:18480` | `DRISHTI_BACKEND_URL` | console | where the server is (one server; backend.urls for several) | restart |  | admin |
 | `backend.timeout_seconds` | integer | `15` |  | console | per call to the server; longer than the server's own read limit (drishti.sources.fetch-timeout, 10 s), so its answer comes through | restart |  | expert |
+| `backend.require_compatible_api` | boolean | `true` | `DRISHTI_CONSOLE_REQUIRE_API` | console | at start the console asks the server's API version (/api/v1/version) and refuses to start against one outside its supported range (core/api\_compat.py); false: skip | restart |  | admin |
 | `backend.pool_size` | integer | `64` |  | console | pooled HTTP connections to the server (per server, when there are several) | restart |  | expert |
 | `backend.check_seconds` | integer | `5` | `DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS` | console | how often the console asks each server if it is there (0 = never); pages show a banner and recover when it returns | restart |  | admin |
 | `backend.urls` | string | empty | `DRISHTI_BACKEND_URLS` | console | Several servers of one Drishti\*net cluster (docs/guides/OPERATIONS\_GUIDE.md, "The console and several servers"): one is enough, the console learns the rest. Empty: backend.url, as before. Each session keeps to one server while it answers and falls over to the next when it does not. e.g. https://drishti-a:8480,https://drishti-b:8480 | restart |  | admin |
@@ -4835,14 +4837,7 @@ One file per module (banking, capitalmarkets, economy), `config/modules/<module>
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `lakes.roots` | string | empty | `DRISHTI_LAKE_ROOTS` | console | the lake roots this console may write, comma-separated (the Delta connectors' root); empty: &lt;data dir&gt;/delta, as the server | restart |  | admin |
-| `lakes.max_upload_mb` | integer | `4096` |  | console | largest file uploaded (streamed to the console's temporary folder, never held in memory) | restart |  | expert |
-| `lakes.scan_docs` | integer | `20000` |  | console | documents read to suggest the id, date and classifiers (the build reads them all) | restart |  | admin |
-| `lakes.engine` | string | `auto` |  | console | auto (the parallel Java loader when lakes.jar or the server jar is found, else deltalake), java, deltalake | restart |  | admin |
-| `lakes.jar` | string | `""` |  | console | a drishti-server exec jar for the writer, for a one-off (--jar); empty: the newest one in &lt;home&gt;/lib (python tools/drishti.py build jar) | restart |  | admin |
-| `lakes.python` | string | `""` |  | console | the Python that runs tools/lake/build.py (default: the console's own) | restart |  | admin |
-| `lakes.keep_min` | integer | `240` |  | console | minutes an upload and a finished build are kept | restart |  | admin |
-| `lakes.jobs` | integer | `2` |  | console | builds running at once on this console | restart |  | admin |
+| `lakes.roots` | string | empty | `DRISHTI_LAKE_ROOTS` | console | lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated | restart |  | admin |
 | `lakes.data_dir` | string | `../data` | `DRISHTI_DATA_DIR` | console | &lt;data&gt;: Lakes -&gt; Maintain keeps &lt;data&gt;/lakes/lake-maintenance.yaml (also lake maintain's default) and its history there | restart |  | admin |
 | `lakes.maintenance_schedules` | boolean | `true` | `DRISHTI_LAKE_MAINTENANCE_SCHEDULES` | console | run the lake-maintenance schedules in this console (false: run lake maintain --daemon instead) | restart |  | admin |
 
@@ -6576,6 +6571,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_CONSOLE_RELAY_KEY` | the live-channel relay key | none | console | Signs the relay messages between the console's workers and, with live.relay.across\_hosts, between consoles: the same secret on every console (the launcher makes one for its own workers when it is not set; CLUSTER\_GUIDE.md section 9.4) |
 | `DRISHTI_CONSOLE_RELAY_KEY_MADE` | (set by the launcher) | none | console | Set by run\_drishti\_web.py when it made the relay key itself: the relay then stays on this host |
 | `DRISHTI_CONSOLE_RELAY_PORT` | `live.relay.port` | `17490` | console | across hosts, worker n listens on port + n (port .. port + server.workers - 1): open these between the consoles; 0 = any free port |
+| `DRISHTI_CONSOLE_REQUIRE_API` | `backend.require_compatible_api` | `true` | console | at start the console asks the server's API version (/api/v1/version) and refuses to start against one outside its supported range (core/api\_compat.py); false: skip |
 | `DRISHTI_CONSOLE_SHUTDOWN_SECONDS` | `server.shutdown_seconds` | `5` | console | on a stop, how long open streams (live pages) may stay before they are closed; the browser then reconnects |
 | `DRISHTI_CONSOLE_TMP_DIR` | `tmp_dir` | empty | console | base of the console's temp folder drishti-console-&lt;pid&gt; (blank: DRISHTI\_TMP\_DIR, then &lt;data dir&gt;/tmp/console when started by run\_drishti\_web.py); removed on exit; left-over ones are listed on Health, never deleted automatically |
 | `DRISHTI_CONSOLE_URL` | `drishti.embed.audiences`, `drishti.collab.console-url` | `[""]` | server | the consoles that may accept embed tokens (their public URLs); the first is the default |
@@ -6687,7 +6683,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_LAKE_MAINTENANCE_SCHEDULES` | `lakes.maintenance_schedules` | `true` | console | run the lake-maintenance schedules in this console (false: run lake maintain --daemon instead) |
 | `DRISHTI_LAKE_MEMORY_` | one store's cap for the launchers | empty | tools | Prefix: DRISHTI\_LAKE\_MEMORY\_&lt;STORE&gt;\_MAX\_MB overrides one in-memory lake store's max-mb when the launchers compute the direct-memory limit (tools/lake/memory\_caps.py) |
 | `DRISHTI_LAKE_MEMORY_MB` | the launchers' -XX:MaxDirectMemorySize | empty | tools | The in-memory lake stores' caps in MB, summed; when set, the launchers raise the JVM's direct-memory limit by it instead of reading the stores from the configuration (tools/lake/memory\_caps.py) |
-| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | console | the lake roots this console may write, comma-separated (the Delta connectors' root); empty: &lt;data dir&gt;/delta, as the server |
+| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | console | lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated |
 | `DRISHTI_LAYOUTS_ENABLED` | `drishti.layouts.enabled`, `layouts.enabled` | `true` | console, server | also needs a role with layout (every role but viewer, unless configured) |
 | `DRISHTI_LENSES` | `drishti.lenses` | `default` | server | Lenses (LENSES.md): workspaces a person may open ("Open Drishti Risk"), for their own session: each arranges Home and the menus for a role and never hides anything (what exists is the distribution's). default: every lens of the modules that are on (a lens file under config/lenses not marked offered-by-default: false); a list names them (it may hold the word default); DRISHTI\_LENSES= (empty) offers none. A lens named that cannot be offered is left out, with an ERROR in the log and a red line on Admin -&gt; Health; the start goes on. |
 | `DRISHTI_LIB_PATH` | `drishti.lib.path` | `<home>/lib/ext` | server | the SITE's jars (JDBC drivers, connector plugins, a company's own libraries), kept on an upgrade; &lt;home&gt;/lib itself holds Drishti's own jar; seen by connectors and modules, never replacing a kernel class; a change needs a restart; jars in &lt;data&gt;/lib (the previous default) are moved here once |

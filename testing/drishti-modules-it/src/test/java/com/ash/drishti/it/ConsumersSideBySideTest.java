@@ -141,7 +141,7 @@ class ConsumersSideBySideTest {
                 for (String id : kind.startsWith("system") || kind.equals("position") ? seeded(kind) : ids(kind)) {
                     JsonNode v;
                     try {
-                        v = server.get("/api/v1/views/" + kind + "/" + id + "?asOf=2026-09-30");
+                        v = settled(server, "/api/v1/views/" + kind + "/" + id + "?asOf=2026-09-30");
                         strip(v, work.toString());
                     } catch (IllegalStateException e) {
                         v = PackagedServer.JSON.readTree("{\"refused\":" + PackagedServer.JSON.writeValueAsString(e.getMessage()) + "}");
@@ -184,6 +184,38 @@ class ConsumersSideBySideTest {
         } finally {
             server.close();
         }
+    }
+
+    /**
+     * A view once its links have settled: a page answers within its link budget and marks a link it has not fetched yet {@code pending}
+     * (the console fills it in later); under load that differs from run to run, so a page with a pending link is asked again (a poll
+     * interval) until none is pending, within 60 s. The figures are not touched: the page is the same page, asked again.
+     */
+    private static JsonNode settled(PackagedServer server, String url) throws IOException, InterruptedException {
+        long end = System.currentTimeMillis() + 60_000;
+        JsonNode v = server.get(url);
+        while (pendingLinks(v) && System.currentTimeMillis() < end) {
+            Thread.sleep(500);                                        // a poll interval, not a wait for something to happen
+            v = server.get(url);
+        }
+        return v;
+    }
+
+    /** True when a links panel of the view holds a link still {@code pending}. */
+    static boolean pendingLinks(JsonNode n) {
+        if (n.isObject() && n.path("links").isArray()) {
+            for (JsonNode l : n.path("links")) {
+                if ("pending".equals(l.path("status").asText())) {
+                    return true;
+                }
+            }
+        }
+        for (JsonNode x : n) {
+            if (pendingLinks(x)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** The ids of a kind's records of the date in the lake's test data (core/desk, core/legal-entity). */

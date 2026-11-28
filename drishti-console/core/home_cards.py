@@ -304,10 +304,6 @@ def _rows(card: Card, rows: list[dict]) -> list[dict]:
     return rows
 
 
-def _tone_use(use: float | None) -> str:
-    return "" if use is None else "bad" if use >= 0.95 else "warn" if use >= 0.8 else "ok"
-
-
 def panel(card: Card, rows: list[dict], *, pinned: bool, first: bool, last: bool) -> dict | None:
     """One card as a panel (``None``: nothing to show and the card is not ``always``). The panel's actions are the person's own: pin, move,
     hide, and the card's Open and Explain."""
@@ -343,12 +339,12 @@ def panel(card: Card, rows: list[dict], *, pinned: bool, first: bool, last: bool
                                 for r in pts], "groups": groups, "xLabel": "", "yLabel": "", "sized": False}
     elif card.kind == "bars":
         bars = []
-        for r in rows[:card.limit_rows]:
-            v, lim = r.get(card.value), r.get(card.limit)
-            use = v / lim if isinstance(v, (int, float)) and isinstance(lim, (int, float)) and lim else None
-            text = fmt(v, card.fmt) + (f" of {fmt(lim, card.fmt)} ({use * 100:.0f}%)" if use is not None else "")
+        for r in rows[:card.limit_rows]:                       # USE and TONE are the server's (the server computes risk; drawn here only)
+            v, lim, use = r.get(card.value), r.get(card.limit), r.get("USE")
+            use = use if isinstance(use, (int, float)) else None
+            text = fmt(v, card.fmt) + (f" of {fmt(lim, card.fmt)} ({use * 100:.0f}%)" if use is not None and isinstance(lim, (int, float)) else "")
             bars.append({"label": str(r.get(card.name)), "value": use if use is not None else (v if isinstance(v, (int, float)) else 0), "text": text,
-                         "tone": _tone_use(use) or None})
+                         "tone": r.get("TONE") or None})
         p["data"] = {"bars": bars}
     else:
         cols = card.columns or tuple({"label": k, "col": k, "fmt": ""} for k in (rows[0].keys() if rows else ()))

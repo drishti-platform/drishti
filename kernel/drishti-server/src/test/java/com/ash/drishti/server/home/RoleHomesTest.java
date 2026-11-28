@@ -206,7 +206,12 @@ class RoleHomesTest {
         var.yesterday = 4_000_000.0;
         assertEquals(1_000_000.0, (Double) t.rows("home_kpis", p, d).orElseThrow().get(0).get("DELTA"));
 
-        assertEquals("DESK-A", t.rows("home_desk_limits", p, d).orElseThrow().get(0).get("DESK"), "the nearest to its limit first");
+        List<Map<String, Object>> limits = t.rows("home_desk_limits", p, d).orElseThrow();
+        assertEquals("DESK-A", limits.get(0).get("DESK"), "the nearest to its limit first");
+        assertEquals(0.97, (Double) limits.get(0).get("USE"), 1e-9, "the server computes the use (the console only draws it)");
+        assertEquals("bad", limits.get(0).get("TONE"));
+        assertEquals(null, limits.get(1).get("USE"), "no limit: no use, no tone");
+        assertEquals(null, limits.get(1).get("TONE"));
         assertTrue(t.rows("home_changes", p, d).orElseThrow().isEmpty(), "no changes engine is hosted yet: no rows, said by /status");
         assertEquals("yesterday 17:00", t.rows("home_meta", p, d).orElseThrow().get(0).get("SINCE"));
         assertTrue(t.rows("home_nonsense", p, d).isEmpty());

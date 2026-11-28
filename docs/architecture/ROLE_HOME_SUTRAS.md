@@ -58,7 +58,7 @@ results of the engines and the change detection (4). Contract names are `home/<n
 | `home_kpi_history` | LABEL, DATE, VALUE | the same figures for each of the last N days, each asked of the engine as the person (never a stored firm figure) |
 | `home_exceptions` | SEVERITY, MESSAGE, SUBJECT, COMMAND | the `exceptions:` rules over the figures, load results and feed status |
 | `home_changes` | SUBJECT, MEASURE, KIND, THEN, NOW, CHANGE, WHY, COMMAND | the `changes` engine (4.3) |
-| `home_desk_limits`, `home_exposure` | name, value, LIMIT, CHANGE | the VaR and exposure engines against the limits store |
+| `home_desk_limits`, `home_exposure` | name, value, LIMIT, CHANGE, USE, TONE | the VaR and exposure engines against the limits store; USE (value / limit) and TONE (`bad` from 95 %, `warn` from 80 %, else `ok`; none without a limit) are the server's, the console only draws them |
 | `home_stress` | SCENARIO, PNL, LIMIT | the stress results (computed, never stored: computed-risk-measures rule) |
 | `home_positions`, `home_pnl_days`, `home_market_tiles` | as the fragments' columns | the position and P&L results; market data |
 | `home_mnemonics`, `home_calendar`, `home_news` | MNEMONIC, ABOUT / DATE, TIME, TITLE, KIND, COMMAND / AT, HEADLINE, SOURCE, LINK | the person's most used mnemonics (settings), the calendar, the headline feeds |

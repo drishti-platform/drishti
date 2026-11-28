@@ -183,15 +183,20 @@ public final class HomeTables {
         List<Map<String, Object>> out = new ArrayList<>();
         for (HomeData.LimitRow r : s.limits(c.person(), measure, kind, c.today())) {
             Double w = was.get(r.name());
-            out.add(row(nameCol, r.name(), valueCol, r.value(), "LIMIT", r.limit(), "CHANGE", w == null ? null : r.value() - w));
+            Double use = r.limit() == null || r.limit() == 0 ? null : r.value() / r.limit();
+            out.add(row(nameCol, r.name(), valueCol, r.value(), "LIMIT", r.limit(), "CHANGE", w == null ? null : r.value() - w, "USE", use, "TONE", tone(use)));
         }
-        out.sort(Comparator.comparingDouble((Map<String, Object> m) -> use(m)).reversed());
+        out.sort(Comparator.comparingDouble((Map<String, Object> m) -> m.get("USE") instanceof Double u ? u : 0).reversed());
         return out;
     }
 
-    private static double use(Map<String, Object> m) {
-        Object v = m.values().stream().skip(1).findFirst().orElse(0), l = m.get("LIMIT");
-        return v instanceof Number a && l instanceof Number b && b.doubleValue() != 0 ? a.doubleValue() / b.doubleValue() : 0;
+    /** Use of a limit at or above this is {@code bad}, at or above {@link #USE_WARN} {@code warn}, below it {@code ok}. */
+    static final double USE_BAD = 0.95;
+    static final double USE_WARN = 0.8;
+
+    /** A use-bar's tone, decided here so the console only draws it (the server computes risk): none when there is no limit. */
+    static String tone(Double use) {
+        return use == null ? null : use >= USE_BAD ? "bad" : use >= USE_WARN ? "warn" : "ok";
     }
 
     // ----------------------------------------------------------------------------------------------------------- exceptions

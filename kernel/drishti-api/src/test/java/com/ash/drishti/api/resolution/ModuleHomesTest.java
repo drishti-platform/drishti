@@ -33,7 +33,7 @@ class ModuleHomesTest {
         ModuleHomes h = ModuleHomes.of(List.of(home("trading", A), home("banking", B)));
 
         assertThat(h.homes().keySet()).containsExactly("banking", "trading");
-        assertThat(h.dir("trading")).contains(Path.of("/cache/trading"));
+        assertThat(h.dir("trading")).contains(Path.of("/cache/trading").toAbsolutePath());
         assertThat(h.home("absent")).isEmpty();
         assertThat(h.home("banking").orElseThrow().contentHash16()).isEqualTo("b".repeat(16));
     }

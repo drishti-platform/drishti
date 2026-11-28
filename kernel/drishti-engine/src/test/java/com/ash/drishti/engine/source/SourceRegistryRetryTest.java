@@ -236,4 +236,35 @@ class SourceRegistryRetryTest {
             unload.run();
         }
     }
+
+    /** A connector whose optional engine class belongs to a module that is not installed. */
+    public static final class OptionalEngine implements SourcePlugin {
+        public PluginManifest manifest() {
+            return new PluginManifest("optional-engine", "t", Set.of("beta"), SourceCapabilities.FETCH_ONLY);
+        }
+
+        public void start(SourceContext c) {
+            throw new com.ash.drishti.api.OptionalAbsent("optional engine x.Y is not installed", new ClassNotFoundException("x.Y"));
+        }
+
+        public Optional<EntityDocument> fetch(EntityRef ref) {
+            return Optional.empty();
+        }
+    }
+
+    @Test
+    void anOptionalClassMissingAfterTheModulesLoadedLeavesTheConnectorIdleNotFailed() throws Exception {
+        var props = new SourcesProperties(Map.of(), null, Map.of("optional-engine", new SourcesProperties.PluginSettings(false, Map.of())),
+                Duration.ofSeconds(1), null, Map.of("beta", new SourcesProperties.ConnectorSettings("optional-engine", true, List.of("beta"), Map.of())),
+                null, "off", null, Duration.ZERO);
+        RetryPolicy fast = new RetryPolicy(true, Duration.ofMillis(100), 2.0, Duration.ofMillis(400), 0, 3);
+        try (SourceRegistry r = new SourceRegistry(List.of(new OptionalEngine()), props, new JsonCodec(), fast)) {
+            assertThat(r.connectorStatuses().get("beta").state()).isEqualTo(SourceRegistry.WAITING);   // the module may still come
+            r.modulesLoaded();
+            assertThat(r.connectorStatuses().get("beta").state()).isEqualTo("IDLE");
+            assertThat(r.connectorStatuses().get("beta").problem()).contains("not installed");
+            assertThat(r.failures()).doesNotContainKey("beta");
+            assertThat(r.retryStatus("beta")).isEmpty();
+        }
+    }
 }

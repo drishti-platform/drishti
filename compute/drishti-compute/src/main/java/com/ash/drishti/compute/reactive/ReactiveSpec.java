@@ -98,8 +98,10 @@ public record ReactiveSpec(Map<String, KindSpec> kinds, List<ReadSpec> reads, En
      * @param chunkRows rows per chunk when split (0: the site's {@code compute.fan-out.chunk-rows})
      * @param version the engine's version as the file pins it (part of every key and stamp)
      * @param reduce how the chunks' answers become one (with {@code split}), or null
+     * @param optional true: the engine's code belongs to a module that may not be installed; once the modules have loaded without it the
+     *        connector stays idle (an INFO line), it does not fail
      */
-    public record EngineSpec(String type, String entry, String pool, String split, int chunkRows, String version, Reduce reduce) {}
+    public record EngineSpec(String type, String entry, String pool, String split, int chunkRows, String version, Reduce reduce, boolean optional) {}
 
     /**
      * When results are recomputed without being asked (section 7).
@@ -238,7 +240,7 @@ public record ReactiveSpec(Map<String, KindSpec> kinds, List<ReadSpec> reads, En
             throw new IllegalArgumentException(where + ": engine.pool names the compute pool of config/compute/compute.yaml that runs it");
         }
         EngineSpec engine = new EngineSpec(type, entry, pool, e.text("split", null), e.integer("chunk-rows", 0, 0, 10_000_000), e.text("version", "1"),
-                Reduce.parse(e.section("reduce")));
+                Reduce.parse(e.section("reduce")), e.flag("optional", false));
         List<TriggerSpec> triggers = new ArrayList<>();
         Object ts = c.raw("triggers");
         if (ts instanceof List<?> l) {

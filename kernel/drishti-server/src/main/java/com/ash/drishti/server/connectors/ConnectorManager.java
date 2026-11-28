@@ -470,12 +470,8 @@ public final class ConnectorManager {
 
     /** A pack's suggested definition of a connector. */
     public record Template(String pack, Map<String, Object> definition) {
-        /** Where the template comes from: {@code pack trading}, or {@code pack endur} for a source system's connector. */
+        /** Where the template comes from: {@code pack trading}, or {@code module source-endur} for a source module's connector. */
         public String owner() {
-            Object sp = definition.get("from-pack");
-            if (sp != null) {
-                return "pack " + sp;
-            }
             Object m = definition.get(com.ash.lake.config.ModuleConnectors.FROM_MODULE);
             return m == null ? "pack " + pack : "module " + m;
         }

@@ -440,21 +440,14 @@ from its own setting or from one anchor, the install folder:
 |---|---|---|
 | install folder (the anchor) | `drishti.home` (`DRISHTI_HOME`) | none: `drishti.py start server` and `start cluster`, the images and the systemd unit pass it |
 | data | `drishti.data.dir` (`DRISHTI_DATA_DIR`) | `<home>/data`, and only if it already holds an identity database (a new data folder is made only when it is named) |
-| configuration (the release's shipped defaults) | `drishti.config.dir` (`DRISHTI_CONFIG_DIR`) | `<home>/config` |
-| **site folder** (every site file and every Admin change) | `drishti.site.dir` (`DRISHTI_SITE_DIR`) | `<config>`: the developer and demo layout, one folder holds both. In production it is named (`/etc/drishti`) and the release folder is never written; a write that would land in the release is refused (`DRS-1038`) |
+| configuration | `drishti.config.dir` (`DRISHTI_CONFIG_DIR`) | `<home>/config` |
 | site packs, kernel packs | `drishti.packs.site-dir`/`drishti.packs.dir` (`DRISHTI_PACKS_DIR`), `drishti.kernel.packs-dir` | `<config>/packs`, `<packs>/core` |
 | JDK of the Python tools | `drishti.java.home` (`DRISHTI_JAVA_HOME`) | `JAVA_HOME`, then `java` on the PATH. The JDK the Python tools run Java from (lake demo, lake build --engine java, start); the server in the IDE uses the project's JDK. The key beats the variable |
 | modules | `drishti.modules.home` (`DRISHTI_MODULES_HOME`) | `<home>/modules`; required (`none`: a server with no shipped module folders) |
-| module switches, access | `drishti.modules.dir`, `drishti.access.dir` | `<site>/modules`, `<site>/access` (the release's shipped `<config>/modules` are read first) |
-| lakes, connectors | `lake.lakes.dir`, `drishti.sources.connectors-dir` (`DRISHTI_CONNECTORS_DIR`) | `<site>/lakes`, `<site>/connectors` |
-| engine switches, AI and MCP providers, BI files | `drishti.engines.dir` (`DRISHTI_ENGINES_DIR`), `drishti.ai.dir`, `drishti.mcp.dir`, `drishti.bi.dir` | `<site>/engines` (the jar's file first), `<site>/ai`, `<site>/mcp`, `<site>/bi` (the release's `<config>/bi` read first) |
-| server and console local settings | (none: follows the site folder) | `<site>/application.local.yaml`, `<site>/console/application.local.yaml`; with no site folder named, `<home>/application.local.yaml` and `drishti-console/config/application.local.yaml` |
+| module switches, access | `drishti.modules.dir`, `drishti.access.dir` | `<config>/modules`, `<config>/access` |
+| lakes, connectors | `lake.lakes.dir`, `drishti.sources.connectors-dir` (`DRISHTI_CONNECTORS_DIR`) | `<config>/lakes`, `<config>/connectors` |
 | inbox | `drishti.dataload.dir` | `<data>/dataload` |
 | extra pack folders | `drishti.packs.extra-dirs` | none; each named one must exist |
-
-The order of every site file is the same and is the one resolver (`com.ash.drishti.api.Roots`, Python `core.config.local_file`): the release's
-defaults (templates, shipped module switches, the jars' engine files, shipped BI files), then the site's files over them, then secrets in
-memory; the server never rewrites a connector file. [PRODUCTION_STANDARD.md, Site configuration](PRODUCTION_STANDARD.md#2-site-configuration).
 
 A relative value is taken under the install folder, never the working directory. The server logs one block at start,
 `resolved paths:`, naming every root, its absolute path and where it came from. It refuses to start, with one message naming the
@@ -780,6 +773,7 @@ From `drishti-console/config/application.yaml`, resolved from environment variab
 | `DRISHTI_BACKEND_DISCOVER` | `backend.discover` | `true` | With `backend.urls`: pull the member list from the server in use every `discover_every` and keep it. |
 | `DRISHTI_CONSOLE_DATA_DIR` | `backend.data_dir` | empty | What the console keeps between runs (`net/servers.json`); empty: `<data dir>/console`. |
 | `DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS` | `backend.check_seconds` | `5` | How often the console asks each server if it is there (`0` = never). Pages show a banner and recover by themselves when it returns. |
+| `DRISHTI_CONSOLE_REQUIRE_API` | `backend.require_compatible_api` | `true` | At start the console asks the server's API version (`GET /api/v1/version`) and refuses to start against a server outside the range it supports, with one line. `false` skips the check. |
 | `DRISHTI_CONSOLE_TMP_DIR` | `tmp_dir` | empty | Base of the console's temp folder `drishti-console-<pid>` (empty: `DRISHTI_TMP_DIR`, then `<data dir>/tmp/console` when started by `run_drishti_web.py`), one per worker process, removed on exit; left-over ones of dead processes are listed on Health, never deleted automatically. |
 | `DRISHTI_EXTERNAL_LIB` | `external_lib` | empty | Base of the external library folder (empty: `external_lib` in the repository root); `<base>/python` is importable. The server reads the same variable for `<base>/java`. |
 | `DRISHTI_PRODUCT` | `ui.product` | `Drishti` | The product name shown in pages. |
@@ -816,14 +810,13 @@ From `drishti-console/config/application.yaml`, resolved from environment variab
 | `DRISHTI_PACKS_DIR` | `packs.dir` | `../config/packs` | The packs directory (a relative path resolves from `drishti-console/`). |
 | `DRISHTI_PACKS_EXTRA_DIRS` | `packs.extra_dirs` | empty | Further pack folders, comma-separated, as on the server (relative paths resolve from `drishti-console/`, so `../examples/packs`). |
 | `DRISHTI_PACKS_INSTALLED` | `packs.installed_dir` | empty | The server's installed packs (registry and Deploy archive); empty: `<data dir>/packs/installed`. Read only for the distribution's command words; a pack's guides, examples and workspaces come from the server's answers. |
-| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | Admin → Data loads → Lakes ([CLI_REFERENCE.md](../guides/CLI_REFERENCE.md#7-lake-a-large-json-export-into-a-delta-lake)): the lake roots this console may write, comma-separated (relative paths resolve from `drishti-console/`); empty: `<data dir>/delta`, the server's own root. The page offers no other folder. |
+| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | Admin → Data loads → Lakes → Maintain ([OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#16-lake-maintenance-and-scheduling)): lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated (relative paths resolve from `drishti-console/`). The lakes' tables themselves are the server's answers; the console opens no lake folder. |
 | `DRISHTI_DATA_DIR` | `lakes.data_dir` | `../data` | Admin → Lakes → Maintain ([OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#16-lake-maintenance-and-scheduling)): the data folder whose `lakes/lake-maintenance.yaml` (the file `lake maintain` reads by default) and `lakes/maintenance-history.jsonl` the page uses (relative paths resolve from `drishti-console/`). |
 | `DRISHTI_LAKE_MAINTENANCE_SCHEDULES` | `lakes.maintenance_schedules` | `true` | Run the lake-maintenance schedules in this console; `false` when `lake maintain --daemon` runs them instead (run them in one place). |
 
 In `lake-maintenance.yaml`: a lake's `format` is `delta` (the default), `iceberg`, or `auto` (Iceberg tables under a local root
 found beside Delta ones); `orphan-hours` is retired and refused at start (the vacuum window, `vacuum-hours`, also removes the files no snapshot names; Lake keeps a 72-hour floor); `iceberg-settings` (a mapping) names an Iceberg lake's catalog; a lake behind a REST catalog (AWS Glue) is refused by maintenance with a clear message (Lake 0.9.2 adds it). Retention is today and the `keep-business-days` business days before it, through Lake's `lake maintain`. [OPERATIONS_GUIDE.md › Lake maintenance: Admin → Lakes → Maintain and `lake maintain`, section 8](../guides/OPERATIONS_GUIDE.md#163-iceberg-lakes). `lake build --format delta|iceberg` (default
 `delta`) and `--iceberg-set KEY=VALUE` choose and configure the format of a build ([CLI_REFERENCE.md](../guides/CLI_REFERENCE.md)).
-| (no variable) | `lakes.max_upload_mb`, `scan_docs`, `engine`, `python`, `keep_min`, `jobs` | `4096`, `20000`, `auto`, the console's Python, `240`, `2` | Largest upload (streamed to the console's temp folder); documents read to suggest the id, date and classifiers; `auto`, `drishti` or `deltalake`; the Python that runs `tools/lake/build.py`; minutes an upload and a finished build are kept; builds at once. |
 | `DRISHTI_AI_ENABLED` | `ai.enabled` | `false` | Turn on the console's own LLM provider layer (the recommended provider is `type: server`, which delegates to the server so keys stay there). |
 | `DRISHTI_AI_DIR` | `ai.dir` | `<config>/ai` | The folder of provider files (the same format and, if you share the folder, the same files as the server). |
 | `DRISHTI_AI_DEFAULT_MODEL` | `ai.default_model` | empty | The model used when a call names none (`provider/model`). |
@@ -2792,6 +2785,7 @@ You should see uvicorn report `Uvicorn running on http://127.0.0.1:17481`.
 | `backend.timeout_seconds` | `15` | Per call to the server. Longer than the server's own read limit (`drishti.sources.fetch-timeout`, 10 s), so the server's answer, including a timed-out read's `DRS-1004`, comes through. |
 | `backend.name` | the product name (`ui.product`) | The name of the single server when `servers` is not set; the picker and the top bar show it. |
 | `backend.check_seconds` | `5` (`DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS`) | How often the console's background watch asks each server (the default and every one of `servers`) whether it is reachable, with a 2 s timeout. It keeps reachable / since / last error / version, logs each change once, and answers `GET /healthz/backend`, which every page's banner polls. Shown on Admin > Health (Console watch). `0` turns the watch off. |
+| `backend.require_compatible_api` | `true` (`DRISHTI_CONSOLE_REQUIRE_API`) | Whether the console checks the server's API version before it opens its port (`GET /api/v1/version`, then `/public/about`). A server whose API is outside the console's supported range (or that reports none) stops the start with one line; a server that is away is not a refusal. The watch records `api` and `apiProblem` for each server (Admin > Health) and `GET /readyz` answers `503` while the problem stands. [API_REFERENCE.md](../guides/API_REFERENCE.md#1-conventions) |
 | `backend.urls` | empty (`DRISHTI_BACKEND_URLS`) | Several servers of one Drishti*net cluster ([The console and several servers](#the-console-and-several-servers-drishtinet)). |
 | `backend.discover` | `true` (`DRISHTI_BACKEND_DISCOVER`) | Pull the cluster's member list from the server in use and keep it. |
 | `backend.discover_every` | `60s` | How often the member list is pulled again. |
@@ -2995,16 +2989,16 @@ compose files in `deploy/` show these variables in use; see [OPERATIONS_GUIDE.md
 
 ## Every setting
 
-Every key of every kind: 2,256 settings in 21 areas, and 372 environment variables. Each row has the same shape: the key, its type, its default (*none*: no default, the setting is off or unset until given; *empty*: an empty value), the environment variable that sets it, what it applies to, its meaning, whether a change needs a restart or is picked up live, and the release that added it (blank: before 2.6). Generated by `tools/settings_catalogue.py` from the files themselves, each meaning the file's own comment; `--check` fails the drill when a key has no meaning or the page is out of date. The console shows this page searchable at Help → Configuration (`/help/configuration`), with the values in effect for an administrator.
+Every key of every kind: 2,242 settings in 21 areas, and 367 environment variables. Each row has the same shape: the key, its type, its default (*none*: no default, the setting is off or unset until given; *empty*: an empty value), the environment variable that sets it, what it applies to, its meaning, whether a change needs a restart or is picked up live, and the release that added it (blank: before 2.6). Generated by `tools/settings_catalogue.py` from the files themselves, each meaning the file's own comment; `--check` fails the drill when a key has no meaning or the page is out of date. The console shows this page searchable at Help → Configuration (`/help/configuration`), with the values in effect for an administrator.
 
-Every setting has a **tier** (the last column; Admin → Configuration shows them by tier): **everyday** 18, **admin** 1,831, **expert** 407. *Everyday* is what a business lead changes (the lenses, the VaR and exposure confidences, the scenario window, the feature switches); *admin* is what an operator sets; *expert* is performance and internals. The tiers are kept in `tools/settings_schemas.yaml` (`tiers`), one place.
+Every setting has a **tier** (the last column; Admin → Configuration shows them by tier): **everyday** 18, **admin** 1,818, **expert** 406. *Everyday* is what a business lead changes (the lenses, the VaR and exposure confidences, the scenario window, the feature switches); *admin* is what an operator sets; *expert* is performance and internals. The tiers are kept in `tools/settings_schemas.yaml` (`tiers`), one place.
 
 | Area | Settings |
 |---|---|
-| [The server: `application.yaml`](#the-server-applicationyaml) | 592 |
+| [The server: `application.yaml`](#the-server-applicationyaml) | 588 |
 | [Compute engines: `config/engines/*.yaml`](#compute-engines-configenginesyaml) | 364 |
 | [Modules: `config/modules/*.yaml`](#modules-configmodulesyaml) | 5 |
-| [The console: `application.yaml`](#the-console-applicationyaml) | 160 |
+| [The console: `application.yaml`](#the-console-applicationyaml) | 151 |
 | [The console's other files](#the-consoles-other-files) | 107 |
 | [Connectors: every plugin's settings](#connectors-every-plugins-settings) | 533 |
 | [Packs: `pack.yaml`](#packs-packyaml) | 137 |
@@ -3022,7 +3016,7 @@ Every setting has a **tier** (the last column; Admin → Configuration shows the
 | [The data inbox's routing rules: `config/dataload.yaml`](#the-data-inboxs-routing-rules-configdataloadyaml) | 2 |
 | [The UI kit: `config/ui-kit/brand.yaml`](#the-ui-kit-configui-kitbrandyaml) | 19 |
 | [AI providers and MCP servers: `config/ai/`, `config/mcp/`](#ai-providers-and-mcp-servers-configai-configmcp) | 37 |
-| [Environment variable index](#environment-variable-index) | 372 |
+| [Environment variable index](#environment-variable-index) | 367 |
 
 Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.governance.*` and `drishti.ui-kit.*`, the console's `views.refresh_min_seconds`) are rows of the server and console tables below; the Sutra grammar itself is [RACHANA_REFERENCE.md](../guides/RACHANA_REFERENCE.md).
 
@@ -3081,17 +3075,10 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `drishti.profile` | string | empty | `DRISHTI_PROFILE` | server | The profile (docs/admin/PRODUCTION\_STANDARD.md): production (safe defaults; the start is refused while anything unsafe is set), demo (the development administrator and three demo users, never on a shared server), or blank: development, today's open defaults. | restart |  | admin |
 | `drishti.distribution` | string | empty | `DRISHTI_DISTRIBUTION` | server | The distribution (docs/architecture/KERNEL\_AND\_MODULES.md): risk, finance, genomics or all, or the path of a site's own file; it names config/distributions/drishti.&lt;name&gt;.yaml (brand, theme, modules, lenses, Home, Help) and is the one way to make the product. Blank: Drishti All, exactly as before. Also --distribution=&lt;name&gt; on the command line (drishti.py start server --distribution &lt;name&gt;). | restart |  | admin |
 | `drishti.distributions-dir` | string | `<config>/distributions` | `DRISHTI_DISTRIBUTIONS_DIR` | server | the distribution files and kernel.yaml (the kernel's packs and words) | restart |  | admin |
 | `drishti.lenses` | string | `default` | `DRISHTI_LENSES` | server | Lenses (LENSES.md): workspaces a person may open ("Open Drishti Risk"), for their own session: each arranges Home and the menus for a role and never hides anything (what exists is the distribution's). default: every lens of the modules that are on (a lens file under config/lenses not marked offered-by-default: false); a list names them (it may hold the word default); DRISHTI\_LENSES= (empty) offers none. A lens named that cannot be offered is left out, with an ERROR in the log and a red line on Admin -&gt; Health; the start goes on. | restart |  | everyday |
 | `drishti.python` | string | empty | `DRISHTI_PYTHON` | server | the ONE Python (the console, the tools and the server's Python work: yours, Drishti makes no virtual environment), as an absolute path (tools/drishti.py setup writes the Python it ran with into the settings file; a value naming a missing file is replaced): used where the work's own setting (drishti.feeds.python, compute.python) is blank; DRISHTI\_PYTHON beats every setting; blank: the work's own default (python3, python on Windows) | restart |  | admin |
-
-#### `drishti.production`
-
-| Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
-|---|---|---|---|---|---|---|---|---|
-| `drishti.production.tls` | string | empty | `DRISHTI_PRODUCTION_TLS` | server | production only: proxy (a proxy in front ends TLS) or blank with server.ssl enabled; plain HTTP stated nowhere is refused | restart |  | admin |
 
 #### `drishti.data`
 
@@ -3167,7 +3154,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `drishti.engines.dir` | string | `<site>/engines` | `DRISHTI_ENGINES_DIR` | server | the folder of the engines' files Admin -&gt; Engines writes (the imports above name the same folder) | restart |  | admin |
+| `drishti.engines.dir` | string | `<config>/engines` | `DRISHTI_ENGINES_DIR` | server | the folder of the engines' files Admin -&gt; Engines writes (the imports above name the same folder) | restart |  | admin |
 | `drishti.engines.drain` | duration | `30s` |  | server | an engine turned off live: requests in flight finish within this, then are cancelled | restart |  | admin |
 | `drishti.engines.watch-seconds` | integer | `5` |  | server | how often the engine files are compared with what was read (an edit by hand takes effect as from the page) | restart |  | admin |
 
@@ -3175,7 +3162,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `drishti.modules.dir` | string | `<site>/modules` | `DRISHTI_MODULES_DIR` | server | the folder of the modules' switches (config/modules/&lt;id&gt;.yaml: enabled), written by POST /api/v1/admin/modules; drishti.modules.&lt;id&gt;.enabled (DRISHTI\_MODULES\_&lt;ID&gt;\_ENABLED) wins over a file | restart |  | admin |
+| `drishti.modules.dir` | string | `<config>/modules` | `DRISHTI_MODULES_DIR` | server | the folder of the modules' switches (config/modules/&lt;id&gt;.yaml: enabled), written by POST /api/v1/admin/modules; drishti.modules.&lt;id&gt;.enabled (DRISHTI\_MODULES\_&lt;ID&gt;\_ENABLED) wins over a file | restart |  | admin |
 | `drishti.modules.watch-seconds` | integer | `5` |  | server | how often the module and access files are compared with what was read (a change to a module takes effect at the next start; lenses and the licence at once) | restart |  | admin |
 | `drishti.modules.dev` | boolean | `false` | `DRISHTI_MODULES_DEV` | server | development mode: the module source folders of the modules folder (drishti.modules.home) load without a .dmod, unverified; refused in a cluster and under the prod or production profile | restart |  | admin |
 
@@ -3197,7 +3184,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 |---|---|---|---|---|---|---|---|---|
 | `drishti.engine-lib.path` | string | `<home>/lib/engines` | `DRISHTI_ENGINE_LIB_PATH` | server | the engine lib folder, kept on an upgrade; adding, replacing or removing a JAR takes effect at the next start; an engine JAR in lib/ext is not loaded from there | restart |  | admin |
 | `drishti.engine-lib.trust` | string | `folder` | `DRISHTI_ENGINE_LIB_TRUST` | server | folder (a JAR in the folder may run) or pinned (also engine.version and engine.sha384 in its engine file and the kit's certificate beside the JAR) | restart |  | admin |
-| `drishti.engine-lib.licence` | string | `<site>/licence.yaml` | `DRISHTI_ENGINE_LIB_LICENCE` | server | the products this installation may run (licence.products); no file: every product (development); an engine whose product is not listed is blocked (ENG-1014) | restart |  | admin |
+| `drishti.engine-lib.licence` | string | `<config>/licence.yaml` | `DRISHTI_ENGINE_LIB_LICENCE` | server | the products this installation may run (licence.products); no file: every product (development); an engine whose product is not listed is blocked (ENG-1014) | restart |  | admin |
 | `drishti.engine-lib.poll-seconds` | integer | `10` |  | server | how often the engines' health and stats are polled and their inputs' data versions looked at | restart |  | expert |
 | `drishti.engine-lib.read-seconds` | integer | `60` |  | server | the longest one input read through the router may take | restart |  | admin |
 | `drishti.engine-lib.store-format` | string | `delta` |  | server | the lake format a stored output (outputs.&lt;name&gt;.store) is written in: delta or iceberg | restart |  | admin |
@@ -3212,7 +3199,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `drishti.access.dir` | string | `<site>/access` | `DRISHTI_ACCESS_DIR` | server | licence.yaml (none: the development licence, every module), lenses.yaml, roles.yaml, assignments.yaml; none is needed | restart |  | admin |
+| `drishti.access.dir` | string | `<config>/access` | `DRISHTI_ACCESS_DIR` | server | licence.yaml (none: the development licence, every module), lenses.yaml, roles.yaml, assignments.yaml; none is needed | restart |  | admin |
 
 #### `drishti.metrics`
 
@@ -3286,7 +3273,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `drishti.net.dir` | string | `<site>/net` | `DRISHTI_NET_DIR` | server | created on first write; ready-made files in config/net.examples/ | restart |  | admin |
+| `drishti.net.dir` | string | `<config>/net` | `DRISHTI_NET_DIR` | server | created on first write; ready-made files in config/net.examples/ | restart |  | admin |
 | `drishti.net.watch` | string | `auto` | `DRISHTI_NET_WATCH` | server | auto (file events, polling as a fallback) \| poll \| off | restart |  | admin |
 | `drishti.net.poll` | duration | `5s` |  | server | how often the folder is looked at when polling (and, with file events, at least this often anyway) | restart |  | expert |
 
@@ -3309,7 +3296,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | `drishti.sources.fetch-timeout` | duration | `10s` |  | server | Longest a single source read may take before the view shows the entity as unavailable (DRS-1004), and a panel's own source (another pack's data, for example) before the panel shows that it failed. 10 s: the first read of a business date on a large table loads that date's id index first (300K trades: a few seconds), and a slow source is not reported as missing. | restart |  | expert |
 | `drishti.sources.default-route` | string | `demo` |  | server | kind -&gt; plugin. Kinds without a route try default-route first, then any plugin that serves them. | restart |  | admin |
 | `drishti.sources.routes` | map | `{}` |  | server | kind -&gt; plugin or connector that serves it (packs add theirs: trade: trade-endur) | restart |  | admin |
-| `drishti.sources.connectors-dir` | string | `<site>/connectors` | `DRISHTI_CONNECTORS_DIR` | server | Named connectors: several instances of a plugin, each with its own settings. They live in FILES, one per connector: &lt;connectors-dir&gt;/&lt;name&gt;.yaml the file name is the connector's logical name; packs refer to it by that name. The folder is watched: a changed file restarts only that connector, a new file starts one, a deleted file stops it. See docs/guides/DATA\_GUIDE.md section 9 and Admin -&gt; Connectors. Ready-made files: config/connectors.examples/. created on first write | live |  | admin |
+| `drishti.sources.connectors-dir` | string | `<config>/connectors` | `DRISHTI_CONNECTORS_DIR` | server | Named connectors: several instances of a plugin, each with its own settings. They live in FILES, one per connector: &lt;connectors-dir&gt;/&lt;name&gt;.yaml the file name is the connector's logical name; packs refer to it by that name. The folder is watched: a changed file restarts only that connector, a new file starts one, a deleted file stops it. See docs/guides/DATA\_GUIDE.md section 9 and Admin -&gt; Connectors. Ready-made files: config/connectors.examples/. created on first write | live |  | admin |
 | `drishti.sources.connectors-watch` | string | `auto` |  | server | auto (file events, polling as a fallback) \| poll \| off | restart |  | admin |
 | `drishti.sources.connectors-poll` | duration | `5s` |  | server | how often the files are looked at (also the safety net beside file events) | restart |  | expert |
 | `drishti.sources.connectors-drain` | duration | `3s` |  | server | a connector being restarted or stopped stays open this long so reads in flight finish | restart |  | admin |
@@ -3447,7 +3434,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
 | `drishti.ai.enabled` | boolean | `false` | `DRISHTI_AI_ENABLED` | server | turn on the LLM provider layer: provider files in drishti.ai.dir are read and models become callable | restart |  | admin |
-| `drishti.ai.dir` | string | `<site>/ai` | `DRISHTI_AI_DIR` | server | one YAML per provider: type, base-url, api-key as ${ENV}, models with logical names | restart |  | admin |
+| `drishti.ai.dir` | string | `<config>/ai` | `DRISHTI_AI_DIR` | server | one YAML per provider: type, base-url, api-key as ${ENV}, models with logical names | restart |  | admin |
 | `drishti.ai.watch` | string | `auto` |  | server | auto \| poll \| off: how edits to the folder are noticed (live reload, like connectors) | restart |  | admin |
 | `drishti.ai.poll-ms` | integer | `5000` |  | server | how often the folder is looked at, in milliseconds (polling, and the safety net beside file events) | restart |  | expert |
 | `drishti.ai.default-model` | string | empty | `DRISHTI_AI_DEFAULT_MODEL` | server | provider/model, or a model name only one provider has; used when a call names none | restart |  | admin |
@@ -3464,7 +3451,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
 | `drishti.mcp.enabled` | boolean | `false` | `DRISHTI_MCP_ENABLED` | server | turn on the MCP client (also needs drishti.ai.enabled): server files in drishti.mcp.dir are read and their tools become callable | restart |  | admin |
-| `drishti.mcp.dir` | string | `<site>/mcp` | `DRISHTI_MCP_DIR` | server | one YAML per MCP server: transport, url, headers as ${ENV}, allowed-tools | restart |  | admin |
+| `drishti.mcp.dir` | string | `<config>/mcp` | `DRISHTI_MCP_DIR` | server | one YAML per MCP server: transport, url, headers as ${ENV}, allowed-tools | restart |  | admin |
 | `drishti.mcp.watch` | string | `auto` |  | server | auto \| poll \| off: how edits to the folder are noticed (live reload) | restart |  | admin |
 | `drishti.mcp.poll-ms` | integer | `5000` |  | server | how often the folder is looked at, in milliseconds | restart |  | expert |
 | `drishti.mcp.audit` | boolean | `true` |  | server | one access-log row per tool call | restart |  | admin |
@@ -3656,7 +3643,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
 | `drishti.bi.enabled` | boolean | `true` |  | server | Rupaka phase 1 (shell and catalogue): false answers DRS-9006 and the console hides the BI menu | restart |  | admin |
-| `drishti.bi.dir` | string | `<site>/bi` | `DRISHTI_BI_DIR` | server | Rupaka files: datasets/, reports/, boards/, notebooks/, python/ (config/bi/README.md); never inside a pack | restart |  | admin |
+| `drishti.bi.dir` | string | `<config>/bi` | `DRISHTI_BI_DIR` | server | Rupaka files: datasets/, reports/, boards/, notebooks/, python/ (config/bi/README.md); never inside a pack | restart |  | admin |
 | `drishti.bi.watch` | string | `auto` |  | server | watch the BI folder: auto (file events + polling), poll, off. Files added, changed or deleted are picked up live; a bad file keeps its last good version | restart |  | admin |
 | `drishti.bi.folder-refresh` | duration | `5s` |  | server | the polling interval (with watch: off, how long a read is reused) | restart |  | admin |
 | `drishti.bi.workspace-creation` | string | `authors` |  | server | who creates shared workspaces: authors (bi-author), stewards (bi-steward), admins (bi-admin); Admin, BI settings changes it at run time | restart |  | admin |
@@ -3795,7 +3782,6 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | `drishti.homes.roles.operations` | list | `[operations]` |  | server | the operations Home | restart |  | admin |
 | `drishti.homes.roles.quant` | list | `[quant]` |  | server | the quant's Home | restart |  | admin |
 | `drishti.homes.roles.analyst` | list | `[quant]` |  | server | an analyst opens the quant's Home | restart |  | admin |
-| `drishti.homes.roles.risk-trading` | list | `[risk-manager, trader]` |  | server | the demo user drishti-dev-risk (demo profile): the risk manager's Home first, the trader's second | restart |  | admin |
 | `drishti.homes.roles.economist` | list | `[economist]` |  | server | the economist's Home | restart |  | admin |
 | `drishti.homes.roles.genomicist` | list | `[genomicist]` |  | server | the genomicist's Home (the genomics module) | restart |  | admin |
 | `drishti.homes.roles.geneticist` | list | `[genomicist]` |  | server | a geneticist opens the genomicist's Home | restart |  | admin |
@@ -3866,7 +3852,6 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | `drishti.identity.seed-admin` | boolean | `true` | `DRISHTI_SEED_ADMIN` | server | On first start with no users, create a development admin. Change its password at once; the console warns until you do. Turn off (DRISHTI\_SEED\_ADMIN=false) for production. | restart |  | admin |
 | `drishti.identity.seed-username` | string | `drishti-dev-admin` | `DRISHTI_SEED_USERNAME` | server | With DRISHTI\_SEED\_USERNAME / DRISHTI\_SEED\_PASSWORD set (deploy/docker/compose.yaml requires both) it is the first administrator you chose, not the development admin. | restart |  | admin |
 | `drishti.identity.seed-password` | string | `drishti-dev-admin123` | `DRISHTI_SEED_PASSWORD` | server | the first administrator's password; only this built-in default shows the default password warning (secret) | restart |  | admin |
-| `drishti.identity.seed-demo-users` | string | empty | `DRISHTI_SEED_DEMO_USERS` | server | Under the demo profile three demo users (drishti-dev-risk, drishti-dev-genomics, drishti-dev-market) are created beside the development admin, with the same empty-store rule and the same default-password warning. true: also outside the demo profile; false: not even there. Never in production. | restart |  | admin |
 | `drishti.identity.seed-roles` | list | `[admin]` |  | server | the first administrator's roles | restart |  | admin |
 | `drishti.identity.seed-display-name` | string | `Drishti dev admin` |  | server | the name shown for the first administrator | restart |  | admin |
 
@@ -4652,7 +4637,7 @@ One file per compute engine (VaR, exposure, sensitivities, FRTB-SA, SIMM, SA-CCR
 
 ### Modules: `config/modules/*.yaml`
 
-One file per module (banking, external-data, news-and-events), `config/modules/<module>.yaml` (`DRISHTI_MODULES_DIR`): the administrator's switch, and for a module in a jar of its own (banking) its name, so a server without the jar knows it and leaves it off as not installed; the module's manifest ships in its jar and the access registry reads both ([KERNEL_AND_MODULES.md](../architecture/KERNEL_AND_MODULES.md), [OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#65-engines-modules-and-editions)). `drishti.modules.<module>.enabled` (`DRISHTI_MODULES_<MODULE>_ENABLED`) wins over the file. A module is on when installed, licensed and enabled; a change takes effect at the next start.
+One file per module (banking, capitalmarkets, economy), `config/modules/<module>.yaml` (`DRISHTI_MODULES_DIR`): the administrator's switch, and for a module in a jar of its own (banking) its name, so a server without the jar knows it and leaves it off as not installed; the module's manifest ships in its jar and the access registry reads both ([KERNEL_AND_MODULES.md](../architecture/KERNEL_AND_MODULES.md), [OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#65-engines-modules-and-editions)). `drishti.modules.<module>.enabled` (`DRISHTI_MODULES_<MODULE>_ENABLED`) wins over the file. A module is on when installed, licensed and enabled; a change takes effect at the next start.
 
 #### A module's switch: `config/modules/<module>.yaml` (docs/architecture/KERNEL_AND_MODULES.md)
 
@@ -4668,19 +4653,6 @@ One file per module (banking, external-data, news-and-events), `config/modules/<
 
 `drishti-console/config/application.yaml`. Override a key in `config/application.local.yaml`, with the variable named, with `DRISHTI_CONSOLE__SECTION__KEY` or a `--section.key=value` argument.
 
-| Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
-|---|---|---|---|---|---|---|---|---|
-| `profile` | string | empty | `DRISHTI_PROFILE` | console | Drishti console configuration. Precedence (low -&gt; high): this file, config/application.local.yaml (git-ignored), environment variables (DRISHTI\_CONSOLE\_\_SERVER\_\_PORT=17481), --server.port=17481 arguments. The profile (docs/admin/PRODUCTION\_STANDARD.md): production refuses to start with sign-in off, a weak secret, an insecure cookie or the console on the network without a proxy that ends TLS; demo and blank (development) are never refused. The server reads the same name (drishti.profile). | restart |  | admin |
-| `tmp_dir` | string | empty | `DRISHTI_CONSOLE_TMP_DIR` | console | base of the console's temp folder drishti-console-&lt;pid&gt; (blank: DRISHTI\_TMP\_DIR, then &lt;data dir&gt;/tmp/console when started by run\_drishti\_web.py); removed on exit; left-over ones are listed on Health, never deleted automatically | restart |  | admin |
-| `external_lib` | string | empty | `DRISHTI_EXTERNAL_LIB` | console | base of the external library folder (blank: external\_lib in the repository root); &lt;base&gt;/python is importable, &lt;base&gt;/java is the server's | restart |  | admin |
-| `distribution` | string | empty | `DRISHTI_DISTRIBUTION` | console | The distribution this console shows (docs/architecture/KERNEL\_AND\_MODULES.md): risk, finance, genomics, all, or a path to a site's own file. Blank: the server's (learned from its about answer), else Drishti All, exactly as before distributions. drishti.py start console --distribution &lt;name&gt; sets it; a stack file's consoles: list gives each console its own (Risk on 17480, Finance on 17481). | restart |  | admin |
-
-#### `production`
-
-| Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
-|---|---|---|---|---|---|---|---|---|
-| `production.tls` | string | empty | `DRISHTI_PRODUCTION_TLS` | console | production only: proxy = a reverse proxy ends TLS in front of this console (needed to bind beyond 127.0.0.1) | restart |  | admin |
-
 #### `server`
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
@@ -4690,6 +4662,12 @@ One file per module (banking, external-data, news-and-events), `config/modules/<
 | `server.workers` | integer | `4` | `DRISHTI_CONSOLE_WORKERS` | console | processes serving pages (one Python process uses one core: ~40 pages/s measured); 1 = one process | restart |  | expert |
 | `server.shutdown_seconds` | integer | `5` | `DRISHTI_CONSOLE_SHUTDOWN_SECONDS` | console | on a stop, how long open streams (live pages) may stay before they are closed; the browser then reconnects | restart |  | admin |
 | `server.base_path` | string | empty | `DRISHTI_CONSOLE_BASE_PATH` | console | the URL sub-path behind a reverse proxy, e.g. /drishti for https://host/drishti/ (blank: served at /); the proxy may keep or strip it | restart |  | admin |
+
+| Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
+|---|---|---|---|---|---|---|---|---|
+| `tmp_dir` | string | empty | `DRISHTI_CONSOLE_TMP_DIR` | console | base of the console's temp folder drishti-console-&lt;pid&gt; (blank: DRISHTI\_TMP\_DIR, then &lt;data dir&gt;/tmp/console when started by run\_drishti\_web.py); removed on exit; left-over ones are listed on Health, never deleted automatically | restart |  | admin |
+| `external_lib` | string | empty | `DRISHTI_EXTERNAL_LIB` | console | base of the external library folder (blank: external\_lib in the repository root); &lt;base&gt;/python is importable, &lt;base&gt;/java is the server's | restart |  | admin |
+| `distribution` | string | empty | `DRISHTI_DISTRIBUTION` | console | The distribution this console shows (docs/architecture/KERNEL\_AND\_MODULES.md): risk, finance, genomics, all, or a path to a site's own file. Blank: the server's (learned from its about answer), else Drishti All, exactly as before distributions. drishti.py start console --distribution &lt;name&gt; sets it; a stack file's consoles: list gives each console its own (Risk on 17480, Finance on 17481). | restart |  | admin |
 
 #### `backend`
 
@@ -4859,14 +4837,7 @@ One file per module (banking, external-data, news-and-events), `config/modules/<
 
 | Key | Type | Default | Env var | Applies to | Meaning | Restart or live | Since | Tier |
 |---|---|---|---|---|---|---|---|---|
-| `lakes.roots` | string | empty | `DRISHTI_LAKE_ROOTS` | console | the lake roots this console may write, comma-separated (the Delta connectors' root); empty: &lt;data dir&gt;/delta, as the server | restart |  | admin |
-| `lakes.max_upload_mb` | integer | `4096` |  | console | largest file uploaded (streamed to the console's temporary folder, never held in memory) | restart |  | expert |
-| `lakes.scan_docs` | integer | `20000` |  | console | documents read to suggest the id, date and classifiers (the build reads them all) | restart |  | admin |
-| `lakes.engine` | string | `auto` |  | console | auto (the parallel Java loader when lakes.jar or the server jar is found, else deltalake), java, deltalake | restart |  | admin |
-| `lakes.jar` | string | `""` |  | console | a drishti-server exec jar for the writer, for a one-off (--jar); empty: the newest one in &lt;home&gt;/lib (python tools/drishti.py build jar) | restart |  | admin |
-| `lakes.python` | string | `""` |  | console | the Python that runs tools/lake/build.py (default: the console's own) | restart |  | admin |
-| `lakes.keep_min` | integer | `240` |  | console | minutes an upload and a finished build are kept | restart |  | admin |
-| `lakes.jobs` | integer | `2` |  | console | builds running at once on this console | restart |  | admin |
+| `lakes.roots` | string | empty | `DRISHTI_LAKE_ROOTS` | console | lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated | restart |  | admin |
 | `lakes.data_dir` | string | `../data` | `DRISHTI_DATA_DIR` | console | &lt;data&gt;: Lakes -&gt; Maintain keeps &lt;data&gt;/lakes/lake-maintenance.yaml (also lake maintain's default) and its history there | restart |  | admin |
 | `lakes.maintenance_schedules` | boolean | `true` | `DRISHTI_LAKE_MAINTENANCE_SCHEDULES` | console | run the lake-maintenance schedules in this console (false: run lake maintain --daemon instead) | restart |  | admin |
 
@@ -4983,7 +4954,7 @@ The console's content files under `drishti-console/config/`: menus, the help cen
 | `menus[].id` | string | none |  | console | The menu's id (what an edition's menus.&lt;id&gt; names) | live |  | admin |
 | `menus[].label` | string | none |  | console | Its name in the top bar | live |  | admin |
 | `menus[].icon` | string | none |  | console | Its Bootstrap icon name | live |  | admin |
-| `menus[].domain` | string | `core` |  | console | The domain module the menu belongs to (banking, external-data; core when not said): the domain split moves its entries | live |  | admin |
+| `menus[].domain` | string | `core` |  | console | The domain module the menu belongs to (banking, economy; core when not said): the domain split moves its entries | live |  | admin |
 | `menus[].also` | list | `[]` |  | console | Items listed in other menus that this menu's strip also draws, by id (the Admin tabs' BI settings and My account, the BI rail's Pivot and Build home), without listing them twice | live |  | admin |
 | `menus[].personal` | boolean | `false` |  | console | The person's own menu (My account): never drawn as a top menu | live |  | admin |
 | `menus[].subject` | boolean | `false` |  | console | A lens's subject menu (Curves, Economies ...): drawn only where an edition's menus.top names it | live |  | admin |
@@ -5056,7 +5027,7 @@ The console's content files under `drishti-console/config/`: menus, the help cen
 | `sections[].groups[].guides[].children[].doc` | string | none |  | console | A repository document under docs/ rendered as it is | live |  | admin |
 | `sections[].groups[].guides[].children[].icon` | string | none |  | console | Its icon | live |  | admin |
 | `sections[].groups[].guides[].children[].summary` | string | none |  | console | The row's summary, also searched | live |  | admin |
-| `sections[].groups[].guides[].domain` | string | `core` |  | console | The domain module the page belongs to (core, banking, external-data, news-and-events, reference-data): while it is off for the person the page is not listed, searched or served | live |  | admin |
+| `sections[].groups[].guides[].domain` | string | `core` |  | console | The domain module the page belongs to (core, banking, capitalmarkets, economy): while it is off for the person the page is not listed, searched or served | live |  | admin |
 | `sections[].groups[].guides[].lenses` | list | `none` |  | console | The lenses that show the page (none: every lens; the full product shows every page) | live |  | admin |
 | `knowledge` | map | `shipped` |  | console | "What does this mean?" beside a data page: screen or kind -&gt; the Knowledge page or glossary entry that explains it | live |  | admin |
 | `knowledge.<name>` | string | none |  | console | One screen or kind and its Knowledge target | live |  | admin |
@@ -5775,7 +5746,7 @@ A connector's settings go under `settings:` in its file, `config/connectors/<nam
 | `pack` | string | none |  | the pack | Required: the pack's name, equal to its folder's name (else the pack is refused) | live |  | admin |
 | `version` | string | `0` |  | the pack | X.Y.Z, shown in About, Admin -&gt; Health and Admin -&gt; Packs and checked by deploys and the registry | live |  | admin |
 | `code` | string | `none` |  | the pack | The pack's short code: typed alone it opens the pack's overview (/p/&lt;pack&gt;); must not equal a mnemonic | live |  | admin |
-| `domain` | string | `core` |  | the pack | The domain it serves (core, banking, external-data, news-and-events, reference-data): a pack of a domain loads only while a module of that domain is on (docs/architecture/KERNEL\_AND\_MODULES.md) | live |  | admin |
+| `domain` | string | `core` |  | the pack | The domain it serves (core, banking, economy, capitalmarkets): a pack of a domain loads only while a module of that domain is on (docs/architecture/KERNEL\_AND\_MODULES.md) | live |  | admin |
 | `title` | string | `the pack's name` |  | the pack | Its name in menus, help and admin pages | live |  | admin |
 | `description` | string | empty |  | the pack | One paragraph for About and the help centre | live |  | admin |
 | `sample` | boolean | `false` |  | the pack | A demonstration pack: drishti.packs.samples can hide it from business users | live |  | admin |
@@ -6358,7 +6329,7 @@ One file per data feed: the source, its datasets and the lake they load, the sch
 | `history.first-run-days` | integer | `30` |  | drishti.py feed (each run) | the first run without data/datafeeds/&lt;feed&gt;/state.json pulls this many days (--since overrides) | live |  | admin |
 | `datasets.<dataset>` | map | `{pack: gleif, kind: lei-entity, key: LEI, description: "one legal entity: nam...` |  | drishti.py feed (each run) | one dataset: pack and kind (required), table (default the kind), key (the id field), dated (run or source), description | live |  | admin |
 | `options.args` | list | `[]` |  | drishti.py feed (each run) | arguments given to the source before the command line's (e.g. \[--scope, "NAME:allianz,CAP:200"]) | live |  | admin |
-| `snapshot.note` | string | `refreshes modules/reference-data/packs/gleif (samples, guide) and data/testda...` |  | drishti.py feed (each run) | a line for the docs | live |  | admin |
+| `snapshot.note` | string | `refreshes config/packs/core/gleif (samples, guide) and data/testdata/gleif, a...` |  | drishti.py feed (each run) | a line for the docs | live |  | admin |
 
 ### Report definitions: `config/reports/banking/`
 
@@ -6542,14 +6513,14 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `COHERE_API_KEY` | `api-key` (AI) | none | AI | COHERE\_API\_KEY or CO\_API\_KEY is also read when this line is left out |
 | `DRISHTI_ABOUT_DIR` | pack generators | none | tools | Where the pack generators write the About files |
 | `DRISHTI_ABOUT_PREFETCH` | `ui.about_prefetch` | `true` | console | About this page: fetch the page's explanation once the page is idle, so labels with a glossary entry are underlined before the drawer opens. Costs the server one explain (a re-run of the view, cached for drishti.explain.cache-ttl) per page view; set false on a busy installation and the labels are underlined when the drawer is first opened. |
-| `DRISHTI_ACCESS_DIR` | `drishti.access.dir` | `<site>/access` | server | licence.yaml (none: the development licence, every module), lenses.yaml, roles.yaml, assignments.yaml; none is needed |
+| `DRISHTI_ACCESS_DIR` | `drishti.access.dir` | `<config>/access` | server | licence.yaml (none: the development licence, every module), lenses.yaml, roles.yaml, assignments.yaml; none is needed |
 | `DRISHTI_ACCESS_LOG` | `drishti.access-log.enabled` | `true` | server | record who looked at what (Admin -&gt; Access) |
 | `DRISHTI_ACTIVEMQ_ENABLED` | `drishti.sources.plugins.activemq.enabled` | `false` | server | run the activemq source as itself |
 | `DRISHTI_ADMISSION_ENABLED` | `drishti.admission.enabled` | `true` | server | false: nothing waits (Admin -&gt; Health still shows the readings) |
 | `DRISHTI_AEROSPIKE_HOSTS` | aerospike connector file | `localhost:3000` | packs | The aerospike connector file's hosts |
 | `DRISHTI_AEROSPIKE_NAMESPACE` | aerospike connector file | `test` | packs | Its namespace |
 | `DRISHTI_AI_DEFAULT_MODEL` | `drishti.ai.default-model` | empty | server | provider/model, or a model name only one provider has; used when a call names none |
-| `DRISHTI_AI_DIR` | `drishti.ai.dir` | `<site>/ai` | server | one YAML per provider: type, base-url, api-key as ${ENV}, models with logical names |
+| `DRISHTI_AI_DIR` | `drishti.ai.dir` | `<config>/ai` | server | one YAML per provider: type, base-url, api-key as ${ENV}, models with logical names |
 | `DRISHTI_AI_ENABLED` | `drishti.ai.enabled` | `false` | server | turn on the LLM provider layer: provider files in drishti.ai.dir are read and models become callable |
 | `DRISHTI_ALERTS_ENABLED` | `drishti.metrics.alerts.enabled` | `true` | server | evaluate the platform alert rules (Admin -&gt; Health; the alert engine lists them: Alerts, GET /api/v1/admin/alerts) |
 | `DRISHTI_ALERTS_FILE` | `drishti.metrics.alerts.file` | `<config>/alerts/platform-alerts.yaml` | server | the rules: metric, threshold, how long, severity (a missing file: no rules, and Health says so) |
@@ -6570,7 +6541,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_BACKEND_URLS` | `backend.urls` | empty | console | Several servers of one Drishti\*net cluster (docs/guides/OPERATIONS\_GUIDE.md, "The console and several servers"): one is enough, the console learns the rest. Empty: backend.url, as before. Each session keeps to one server while it answers and falls over to the next when it does not. e.g. https://drishti-a:8480,https://drishti-b:8480 |
 | `DRISHTI_BINDINGS_FILE` | `drishti.bindings.file` | empty | server | where config/bindings.yaml is; empty: bindings.yaml beside the connectors' folder |
 | `DRISHTI_BI_BOARD_ROTATE_SECONDS` | `bi.board.rotate_seconds` | `30` | console | a board in kiosk mode turns to its next page after this long, unless the board sets rotate:; 3 to 3600 |
-| `DRISHTI_BI_DIR` | `drishti.bi.dir` | `<site>/bi` | server | Rupaka files: datasets/, reports/, boards/, notebooks/, python/ (config/bi/README.md); never inside a pack |
+| `DRISHTI_BI_DIR` | `drishti.bi.dir` | `<config>/bi` | server | Rupaka files: datasets/, reports/, boards/, notebooks/, python/ (config/bi/README.md); never inside a pack |
 | `DRISHTI_BI_ENABLED` | `bi.enabled` | `true` | console | false: no BI top-bar menu, no /bi pages (the server's drishti.bi.enabled is separate) |
 | `DRISHTI_BI_LIVE_MIN_INTERVAL_MS` | `bi.live.min_interval_ms` | `250` | console | a report redraws its live visuals at most this often (a burst of ticks becomes one redraw); 100 to 5000 |
 | `DRISHTI_BI_LIVE_STALE_SECONDS` | `bi.live.stale_seconds` | `30` | console | no tick or status from the server for this long: the report says "Stale"; 5 to 600 |
@@ -6588,7 +6559,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_COLLAB_ENABLED` | `drishti.collab.enabled` | `true` | server | share with a note, the directory and the inbox (docs/architecture/ARCHITECTURE.md §31) |
 | `DRISHTI_COMPUTE_ENABLED` | `compute.enabled` (compute) | `false` | compute | run compute workers; false (as shipped) starts none |
 | `DRISHTI_COMPUTE_SAMPLE_WORKERS` | `compute.pools.<pool>.workers.max` (compute) | `4` | compute | as many as this node should run: configuration only, no limit in the code |
-| `DRISHTI_CONNECTORS_DIR` | `drishti.sources.connectors-dir` | `<site>/connectors` | server | Named connectors: several instances of a plugin, each with its own settings. They live in FILES, one per connector: &lt;connectors-dir&gt;/&lt;name&gt;.yaml the file name is the connector's logical name; packs refer to it by that name. The folder is watched: a changed file restarts only that connector, a new file starts one, a deleted file stops it. See docs/guides/DATA\_GUIDE.md section 9 and Admin -&gt; Connectors. Ready-made files: config/connectors.examples/. created on first write |
+| `DRISHTI_CONNECTORS_DIR` | `drishti.sources.connectors-dir` | `<config>/connectors` | server | Named connectors: several instances of a plugin, each with its own settings. They live in FILES, one per connector: &lt;connectors-dir&gt;/&lt;name&gt;.yaml the file name is the connector's logical name; packs refer to it by that name. The folder is watched: a changed file restarts only that connector, a new file starts one, a deleted file stops it. See docs/guides/DATA\_GUIDE.md section 9 and Admin -&gt; Connectors. Ready-made files: config/connectors.examples/. created on first write |
 | `DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS` | `backend.check_seconds` | `5` | console | how often the console asks each server if it is there (0 = never); pages show a banner and recover when it returns |
 | `DRISHTI_CONSOLE_BASE_PATH` | `server.base_path` | empty | console | the URL sub-path behind a reverse proxy, e.g. /drishti for https://host/drishti/ (blank: served at /); the proxy may keep or strip it |
 | `DRISHTI_CONSOLE_DATA_DIR` | `backend.data_dir` | empty | console | what the console keeps between runs (net/servers.json); blank: &lt;data dir&gt;/console |
@@ -6632,9 +6603,9 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_EMBED_KEY_FILE` | `drishti.embed.signing-key` | empty | server | PEM with a PKCS#8 EC PRIVATE KEY and a PUBLIC KEY block (ES256); empty = generated at start |
 | `DRISHTI_EMBED_SIGN_IN` | `embed.sign_in.enabled` | `true` | console | needs auth.oidc.enabled; off: the window answers DRS-8003 and pages keep the token exchange |
 | `DRISHTI_EMBED_SIGN_IN_WINDOW` | `drishti.embed.sign-in-window` | `true` | server | the renderer's auth: 'popup' (INTEGRATION\_GUIDE.md 10.1): a registered host's page signs its user in |
-| `DRISHTI_ENGINES_DIR` | `drishti.engines.dir` | `<site>/engines` | server | the folder of the engines' files Admin -&gt; Engines writes (the imports above name the same folder) |
+| `DRISHTI_ENGINES_DIR` | `drishti.engines.dir` | `<config>/engines` | server | the folder of the engines' files Admin -&gt; Engines writes (the imports above name the same folder) |
 | `DRISHTI_ENGINE_JAR` | the sample engine's JAR the drop-in drill uses | `(none)` | tools | A built sample engine JAR for the drop-in drill (tools/drillkit/dropin.py); unset: drishti-engine is cloned at the pinned ref and built |
-| `DRISHTI_ENGINE_LIB_LICENCE` | `drishti.engine-lib.licence` | `<site>/licence.yaml` | server | the products this installation may run (licence.products); no file: every product (development); an engine whose product is not listed is blocked (ENG-1014) |
+| `DRISHTI_ENGINE_LIB_LICENCE` | `drishti.engine-lib.licence` | `<config>/licence.yaml` | server | the products this installation may run (licence.products); no file: every product (development); an engine whose product is not listed is blocked (ENG-1014) |
 | `DRISHTI_ENGINE_LIB_PATH` | `drishti.engine-lib.path` | `<home>/lib/engines` | server | the engine lib folder, kept on an upgrade; adding, replacing or removing a JAR takes effect at the next start; an engine JAR in lib/ext is not loaded from there |
 | `DRISHTI_ENGINE_LIB_TRUST` | `drishti.engine-lib.trust` | `folder` | server | folder (a JAR in the folder may run) or pinned (also engine.version and engine.sha384 in its engine file and the kit's certificate beside the JAR) |
 | `DRISHTI_ENGINE_REPO` | where the drop-in drill reads drishti-engine | `the pinned engine repository` | tools | A local clone of drishti-engine the drop-in drill reads instead of GitHub (tools/drillkit/dropin.py) |
@@ -6712,7 +6683,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_LAKE_MAINTENANCE_SCHEDULES` | `lakes.maintenance_schedules` | `true` | console | run the lake-maintenance schedules in this console (false: run lake maintain --daemon instead) |
 | `DRISHTI_LAKE_MEMORY_` | one store's cap for the launchers | empty | tools | Prefix: DRISHTI\_LAKE\_MEMORY\_&lt;STORE&gt;\_MAX\_MB overrides one in-memory lake store's max-mb when the launchers compute the direct-memory limit (tools/lake/memory\_caps.py) |
 | `DRISHTI_LAKE_MEMORY_MB` | the launchers' -XX:MaxDirectMemorySize | empty | tools | The in-memory lake stores' caps in MB, summed; when set, the launchers raise the JVM's direct-memory limit by it instead of reading the stores from the configuration (tools/lake/memory\_caps.py) |
-| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | console | the lake roots this console may write, comma-separated (the Delta connectors' root); empty: &lt;data dir&gt;/delta, as the server |
+| `DRISHTI_LAKE_ROOTS` | `lakes.roots` | empty | console | lake roots this console may maintain beside the roots of the local tables the server lists, comma-separated |
 | `DRISHTI_LAYOUTS_ENABLED` | `drishti.layouts.enabled`, `layouts.enabled` | `true` | console, server | also needs a role with layout (every role but viewer, unless configured) |
 | `DRISHTI_LENSES` | `drishti.lenses` | `default` | server | Lenses (LENSES.md): workspaces a person may open ("Open Drishti Risk"), for their own session: each arranges Home and the menus for a role and never hides anything (what exists is the distribution's). default: every lens of the modules that are on (a lens file under config/lenses not marked offered-by-default: false); a list names them (it may hold the word default); DRISHTI\_LENSES= (empty) offers none. A lens named that cannot be offered is left out, with an ERROR in the log and a red line on Admin -&gt; Health; the start goes on. |
 | `DRISHTI_LIB_PATH` | `drishti.lib.path` | `<home>/lib/ext` | server | the SITE's jars (JDBC drivers, connector plugins, a company's own libraries), kept on an upgrade; &lt;home&gt;/lib itself holds Drishti's own jar; seen by connectors and modules, never replacing a kernel class; a change needs a restart; jars in &lt;data&gt;/lib (the previous default) are moved here once |
@@ -6725,7 +6696,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_MAIL_FROM` | `drishti.collab.email.from` | `drishti@localhost` | server | the From address of collaboration email |
 | `DRISHTI_MASK_COPIES` | `drishti.security.mask-copies` | `false` | server | Opt-in: also replace exact copies of a masked field's value found in the OTHER text of the same document (best effort: exact, case-sensitive; text of at least min-length characters, numbers of 4+ digits). Documents over max-nodes are not scanned. |
 | `DRISHTI_MAX_SWALLOW` | `server.tomcat.max-swallow-size` | `64MB` | server | After a 413 for an oversized body, Tomcat drains up to this much of the rest so the client reads the answer, not a reset. |
-| `DRISHTI_MCP_DIR` | `drishti.mcp.dir` | `<site>/mcp` | server | one YAML per MCP server: transport, url, headers as ${ENV}, allowed-tools |
+| `DRISHTI_MCP_DIR` | `drishti.mcp.dir` | `<config>/mcp` | server | one YAML per MCP server: transport, url, headers as ${ENV}, allowed-tools |
 | `DRISHTI_MCP_ENABLED` | `drishti.mcp.enabled` | `false` | server | turn on the MCP client (also needs drishti.ai.enabled): server files in drishti.mcp.dir are read and their tools become callable |
 | `DRISHTI_MEMORY_LAKE_ENABLED` | `drishti.engines.memory-lake.enabled` (engine) | `false` | engine | run the in-memory lake on this node; off as shipped: turning it on needs a restart (the stores' caps set the direct-memory limit at start) |
 | `DRISHTI_METRICS_ENABLED` | `drishti.metrics.enabled` | `true` | server | export the platform gauges (caches, memory budget, disk, sources, feeds, loads) on /actuator/prometheus and evaluate the alert rules |
@@ -6734,7 +6705,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_MINIO_SHA256` | S3 simulator tests | none | tools | Its expected SHA-256 |
 | `DRISHTI_MINIO_URL` | S3 simulator tests | none | tools | Where that binary is downloaded from |
 | `DRISHTI_MODULES_DEV` | `drishti.modules.dev` | `false` | server | development mode: the module source folders of the modules folder (drishti.modules.home) load without a .dmod, unverified; refused in a cluster and under the prod or production profile |
-| `DRISHTI_MODULES_DIR` | `drishti.modules.dir` | `<site>/modules` | server | the folder of the modules' switches (config/modules/&lt;id&gt;.yaml: enabled), written by POST /api/v1/admin/modules; drishti.modules.&lt;id&gt;.enabled (DRISHTI\_MODULES\_&lt;ID&gt;\_ENABLED) wins over a file |
+| `DRISHTI_MODULES_DIR` | `drishti.modules.dir` | `<config>/modules` | server | the folder of the modules' switches (config/modules/&lt;id&gt;.yaml: enabled), written by POST /api/v1/admin/modules; drishti.modules.&lt;id&gt;.enabled (DRISHTI\_MODULES\_&lt;ID&gt;\_ENABLED) wins over a file |
 | `DRISHTI_MODULES_HOME` | the modules folder (drishti.modules.home) | `<the install folder>/modules` | tools | The server's modules folder: the .dmod files it boots at start. drishti.py module list and pack new --deploy read it; the server takes drishti.modules.home |
 | `DRISHTI_MONGODB_DATABASE` | mongodb connector file | `drishti` | packs | Its database |
 | `DRISHTI_MONGODB_URI` | mongodb connector file | `mongodb://localhost:27017` | packs | The mongodb connector file's server |
@@ -6742,7 +6713,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_MR_DERIVED_ENABLED` | market-risk's derived connector | `true` | packs | The market-risk pack's derived kinds on or off |
 | `DRISHTI_NATIVE_BLAS_MODE` | `drishti.native.blas.mode` | `auto` | server | auto: the bundled OpenBLAS (Linux and Windows x86-64), else the Java kernels with a warning, an alert and Health DEGRADED; java: the Java kernels, chosen (no warning) |
 | `DRISHTI_NATIVE_CACHE_DIR` | `drishti.native.cache-dir` | `<data>/native-cache` | server | where the bundled native libraries are unpacked (JavaCPP's cache), under the data folder |
-| `DRISHTI_NET_DIR` | `drishti.net.dir` | `<site>/net` | server | created on first write; ready-made files in config/net.examples/ |
+| `DRISHTI_NET_DIR` | `drishti.net.dir` | `<config>/net` | server | created on first write; ready-made files in config/net.examples/ |
 | `DRISHTI_NET_SECRET` | `secret` (net) | none | net | the cluster key: an environment reference only, at least 32 bytes, the same on every node |
 | `DRISHTI_NET_WATCH` | `drishti.net.watch` | `auto` | server | auto (file events, polling as a fallback) \| poll \| off |
 | `DRISHTI_NEWS_ENABLED` | news connector enabled | `false` | packs | The news-and-markets pack's news connector on (names leave the network) |
@@ -6776,8 +6747,6 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_PIVOT_ENGINE_ENABLED` | `drishti.engines.pivot.enabled` (engine) | `true` | engine | run the pivot engine on this node: /api/v1/pivot, PIVOT, Views -&gt; Pivot, drishti.py pivot (live) |
 | `DRISHTI_PLACEMENT_FILE` | `drishti.placement.file` | empty | server | where config/placement.yaml is; empty: placement.yaml beside the connectors' folder |
 | `DRISHTI_PORT` | `server.port` | `18480` | server | the server's HTTP port |
-| `DRISHTI_PRODUCTION_TLS` | `drishti.production.tls`, `production.tls` | empty | console, server | production only: proxy (a proxy in front ends TLS) or blank with server.ssl enabled; plain HTTP stated nowhere is refused |
-| `DRISHTI_PROFILE` | `drishti.profile`, `profile` | empty | console, server | The profile (docs/admin/PRODUCTION\_STANDARD.md): production (safe defaults; the start is refused while anything unsafe is set), demo (the development administrator and three demo users, never on a shared server), or blank: development, today's open defaults. |
 | `DRISHTI_PUBLIC_URL` | `drishti.embed.issuer` | empty | server | the iss of embed tokens: this server's public URL |
 | `DRISHTI_PYTHON` | `drishti.python`, `compute.python` (compute) | empty | compute, server | the ONE Python (the console, the tools and the server's Python work: yours, Drishti makes no virtual environment), as an absolute path (tools/drishti.py setup writes the Python it ran with into the settings file; a value naming a missing file is replaced): used where the work's own setting (drishti.feeds.python, compute.python) is blank; DRISHTI\_PYTHON beats every setting; blank: the work's own default (python3, python on Windows) |
 | `DRISHTI_RABBITMQ_ENABLED` | `drishti.sources.plugins.rabbitmq.enabled` | `false` | server | run the rabbitmq source as itself |
@@ -6794,7 +6763,6 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_SECURE_COOKIE` | `auth.secure_cookie` | `true` | console | mark cookies Secure (false only for plain-HTTP development with sign-in on) |
 | `DRISHTI_SECURITY_ENABLED` | `drishti.security.enabled` | `false` | server | Off for local development. Production: enabled: true and DRISHTI\_TOKEN\_SECRET (&gt;= 32 bytes, shared with the console). |
 | `DRISHTI_SEED_ADMIN` | `drishti.identity.seed-admin` | `true` | server | On first start with no users, create a development admin. Change its password at once; the console warns until you do. Turn off (DRISHTI\_SEED\_ADMIN=false) for production. |
-| `DRISHTI_SEED_DEMO_USERS` | `drishti.identity.seed-demo-users` | empty | server | Under the demo profile three demo users (drishti-dev-risk, drishti-dev-genomics, drishti-dev-market) are created beside the development admin, with the same empty-store rule and the same default-password warning. true: also outside the demo profile; false: not even there. Never in production. |
 | `DRISHTI_SEED_PASSWORD` | `drishti.identity.seed-password` | `drishti-dev-admin123` | server | the first administrator's password; only this built-in default shows the default password warning |
 | `DRISHTI_SEED_USERNAME` | `drishti.identity.seed-username` | `drishti-dev-admin` | server | With DRISHTI\_SEED\_USERNAME / DRISHTI\_SEED\_PASSWORD set (deploy/docker/compose.yaml requires both) it is the first administrator you chose, not the development admin. |
 | `DRISHTI_SENSITIVITIES_ENABLED` | `drishti.engines.sensitivities.enabled` (engine) | `true` | engine | run position sensitivities on this node: /api/v1/sensitivities, /api/v1/risk-factors; FRTB-SA and SIMM need it (live) |
@@ -6814,7 +6782,6 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_SHOTS_WORK` | screenshot tools | none | tools | The screenshot tools' working folder |
 | `DRISHTI_SIMM_ENABLED` | `drishti.engines.simm.enabled` (engine) | `true` | engine | run SIMM on this node: /api/v1/simm, SIMM, PLAY SIMM; needs sensitivities (live) |
 | `DRISHTI_SIMM_PARAMETERS` | `drishti.module.banking.simm.parameters-dir` (engine) | `<config>/simm` | engine | the bank's licensed parameter files, one YAML a SIMM version (none ships: ISDA's numbers are licensed) |
-| `DRISHTI_SITE_DIR` | the site folder (drishti.site.dir) | `<config> (the developer layout)` | console | The folder of every site file and every Admin change (production: /etc/drishti); the release folder is never written. The console reads its own approved settings from &lt;site&gt;/console/application.local.yaml (core/config.py local\_file); unset: drishti-console/config/application.local.yaml. Set by the settings file key drishti.site.dir, which the console shares with the server |
 | `DRISHTI_STOP_KEY` | `drishti.launcher.stop-key` | empty | server | the key `drishti.py start server` makes and keeps in the pid file; `stop server` sends it straight from this machine (loopback, no proxy header) to stop gracefully on every OS; empty: every call refused (403); never logged |
 | `DRISHTI_STORE_ACCESS_KEY` | `s3.access-key` (store) | empty | store | empty: the AWS default credentials chain |
 | `DRISHTI_STORE_FILE` | `drishti.store.file` | `<config>/store/store.yaml` | server | The content store (docs/architecture/DATA\_ARCHITECTURE.md): user content every node of a cluster can reach. Its settings are in their own file. |

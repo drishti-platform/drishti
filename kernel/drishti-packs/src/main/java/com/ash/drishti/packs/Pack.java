@@ -72,18 +72,37 @@ public record Pack(String name, String version, String title, String description
     public Map<String, Map<String, Object>> connectorTemplates() {
         Map<String, Map<String, Object>> out = new java.util.LinkedHashMap<>();
         if (manifest.get("connectors") instanceof Map<?, ?> m) {
-            m.forEach((k, v) -> out.put(String.valueOf(k), v instanceof Map<?, ?> d ? (Map<String, Object>) d : Map.of()));
+            m.forEach((k, v) -> out.put(String.valueOf(k), v instanceof Map<?, ?> d ? anchored((Map<String, Object>) d) : Map.of()));
         }
         return out;
     }
 
-    /** The source pack a template of this pack came from ({@code modules/trading-systems/packs/<system>/connectors/}), or empty. */
-    public java.util.Optional<String> packOfConnector(String name) {
-        Object m = connectorTemplates().getOrDefault(name, Map.of()).get("from-pack");
-        return m == null ? java.util.Optional.empty() : java.util.Optional.of(String.valueOf(m));
+    /** The anchor of a file in the pack's own folder, in a connector's settings (the owner's rule: paths anchor to a named root). */
+    public static final String PACK_DIR = "${pack.dir}";
+
+    /**
+     * A connector the pack declares, with {@code ${pack.dir}} in its settings (a {@code map:} above all) replaced by the pack's absolute folder;
+     * where the connector says no {@code map:} and has exactly one kind that the pack's {@code mappings:} names, that map is its {@code map:}.
+     * A connector that came from a source module keeps its own anchor ({@code module-dir}).
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> anchored(Map<String, Object> def) {
+        if (dir == null || !(def.get("settings") instanceof Map<?, ?> sm) || def.containsKey(com.ash.lake.config.ModuleConnectors.FROM_MODULE)) {
+            return def;
+        }
+        String here = dir.toAbsolutePath().normalize().toString();
+        Map<String, Object> settings = new java.util.LinkedHashMap<>();
+        ((Map<String, Object>) sm).forEach((k, v) -> settings.put(k, v instanceof String t && t.contains(PACK_DIR) ? t.replace(PACK_DIR, here) : v));
+        if (settings.get("map") == null && manifest.get("mappings") instanceof Map<?, ?> maps && def.get("kinds") instanceof java.util.List<?> kinds
+                && kinds.size() == 1 && maps.get(String.valueOf(kinds.get(0))) != null) {
+            settings.put("map", dir.toAbsolutePath().normalize().resolve(String.valueOf(maps.get(String.valueOf(kinds.get(0))))).normalize().toString());
+        }
+        Map<String, Object> out = new java.util.LinkedHashMap<>(def);
+        out.put("settings", settings);
+        return out;
     }
 
-    /** The module a template of this pack came from ({@code modules/<module>/connectors/}), or empty for the pack's own. */
+    /** The source module a template of this pack came from ({@code modules/source-<system>/connectors/}), or empty for the pack's own. */
     public java.util.Optional<String> moduleOfConnector(String name) {
         Object m = connectorTemplates().getOrDefault(name, Map.of()).get(com.ash.lake.config.ModuleConnectors.FROM_MODULE);
         return m == null ? java.util.Optional.empty() : java.util.Optional.of(String.valueOf(m));

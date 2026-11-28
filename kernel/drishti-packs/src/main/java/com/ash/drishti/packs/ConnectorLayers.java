@@ -62,7 +62,7 @@ public final class ConnectorLayers {
      */
     public record Effective(ConnectorFiles.Definition definition, String layer, Map<String, String> origins, boolean superseded) {}
 
-    /** A template and where it comes from ({@code pack trading}, {@code pack endur} of a source system, {@code module x} of a module's own template). */
+    /** A template and where it comes from ({@code pack trading}, {@code module source-endur}). */
     public record Template(String name, String owner, Map<String, Object> definition) {}
 
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
@@ -81,7 +81,7 @@ public final class ConnectorLayers {
         for (String packName : PackLoader.lineage(packs).order()) {
             packs.stream().filter(p -> p.name().equals(packName)).findFirst().ifPresent(p -> p.connectorTemplates().forEach((n, t) -> {
                 if (!out.containsKey(n)) {
-                    out.put(n, new Template(n, p.packOfConnector(n).map(x -> "pack " + x).or(() -> p.moduleOfConnector(n).map(m -> "module " + m)).orElse("pack " + p.name()),
+                    out.put(n, new Template(n, p.moduleOfConnector(n).map(m -> "module " + m).orElse("pack " + p.name()),
                             adjust.apply(packBound(p.name(), t))));
                 }
             }));

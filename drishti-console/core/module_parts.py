@@ -181,7 +181,7 @@ def _help(module: str, title: str, folder: Path, manifest: dict) -> dict:
             if folder.resolve() not in f.parents or not f.is_file():
                 continue
             guides.append({"slug": f"{sid}-{i + 1}", "doc": str(f), "title": str(p.get("title") or f.stem), "domain": module,
-                           "icon": "puzzle", "summary": str(p.get("summary") or "")})
+                           "icon": "puzzle", "summary": str(p.get("summary") or ""), "pack": str(p.get("pack") or "")})
         if not guides:
             continue                                            # pages the package does not carry (a module run from its sources)
         heads.append({"id": sid, "name": str(s.get("title") or title), "icon": "puzzle", "blurb": f"The {title} module", "domain": module})

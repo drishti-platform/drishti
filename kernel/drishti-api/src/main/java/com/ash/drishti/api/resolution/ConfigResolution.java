@@ -53,7 +53,8 @@ public record ConfigResolution(ResolutionSettings settings, Predicate<String> ac
         PackResolver.Result packs = PackResolver.resolve(settings.layout(), active, yaml);
         List<String> problems = new ArrayList<>(packs.problems());
         Map<String, ModuleTemplates.Template> templates = ModuleTemplates.of(packs.modules().values(), active, yaml, problems);
-        List<ModuleTemplates.Rule> rules = ModuleTemplates.rules(packs.modules().values(), active, yaml, problems);
+        List<ModuleTemplates.Rule> rules = new ArrayList<>(ModuleTemplates.rules(packs.modules().values(), active, yaml, problems));
+        rules.addAll(ModuleTemplates.packRules(packs.packs().values(), yaml, problems));          // a pack's own rules (pack.yaml dataload:), after its module's
         long v = Objects.hash(packs.packs().keySet(), packs.packs().values().stream().map(PackResolver.Located::dir).toList(), packs.off(),
                 templates.keySet(), templates.values().stream().map(t -> t.definition().toString()).toList(), rules.size(), problems);
         return new ConfigResolution(settings, active, packs, templates, rules, List.copyOf(problems), v);

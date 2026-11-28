@@ -109,10 +109,39 @@ public final class SutraRegistry implements AutoCloseable {
         return snapshot.byName().values().stream().map(v -> v.lastEntry().getValue()).toList();
     }
 
-    /** Latest versions whose match kind is {@code kind}, highest priority first. */
+    /** Whether a pack is on (the Admin switch); every pack until the server wires it. */
+    private volatile java.util.function.Predicate<String> packOn = p -> true;
+
+    /**
+     * Wires the pack switch: a Sutra that a pack contributes follows the pack, not the kind's owner, so the Sutras of a pack that is switched
+     * off are not offered for their kind ({@link #forKind}); a source system's pack owns no kind and its Sutras go with it. A Sutra of the
+     * site's own folders belongs to no pack and is always offered.
+     */
+    public void packSwitch(java.util.function.Predicate<String> on) {
+        this.packOn = on == null ? p -> true : on;
+    }
+
+    /** The pack whose Sutra folder holds {@code f} (the folder is {@code <pack>/sutras}), or empty for a site folder. */
+    public Optional<String> packOf(Path f) {
+        List<String> dirs = props.packDirs();
+        for (int i = dirs.size() - 1; i >= 0; i--) {
+            Path d = Path.of(dirs.get(i)).toAbsolutePath().normalize();
+            if (f.startsWith(d)) {
+                Path pack = d.getFileName() != null && d.getFileName().toString().equals("sutras") && d.getParent() != null ? d.getParent() : d;
+                return pack.getFileName() == null ? Optional.empty() : Optional.of(pack.getFileName().toString());
+            }
+        }
+        return Optional.empty();
+    }
+
+    private boolean offered(Sutra s) {
+        return fileOf(s.id()).flatMap(this::packOf).map(packOn::test).orElse(true);
+    }
+
+    /** Latest versions whose match kind is {@code kind}, highest priority first, of the packs that are on. */
     public List<Sutra> forKind(String kind) {
         return all().stream()
-                .filter(s -> s.match().kind().equals(kind))
+                .filter(s -> s.match().kind().equals(kind) && offered(s))
                 .sorted(Comparator.comparingInt((Sutra s) -> -s.match().priority()).thenComparing(Sutra::name))
                 .toList();
     }

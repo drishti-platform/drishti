@@ -104,6 +104,11 @@ public class MemoryLakeConfiguration {
         return new MemoryLakeController(lake, retention, entitlements, audit.getIfAvailable());
     }
 
+    @Bean
+    public LakeTablesController lakeTablesController(com.ash.drishti.server.security.Entitlements entitlements) {
+        return new LakeTablesController(entitlements);
+    }
+
     /** When the server is ready: the joins to the memory budget and busy protection, then the warm-up. */
     @EventListener(ApplicationReadyEvent.class)
     public void start(ApplicationReadyEvent e) {

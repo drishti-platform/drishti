@@ -134,6 +134,7 @@ class Guide:
     path: Path
     listed: bool = True
     packs: tuple = ()                 # the packs the guide is about (a pack's own guide; help.yaml packs:), for an edition's help filter
+    pack: str = ""                    # help.yaml pack:, the one pack whose Admin switch the page follows: shown only while the server has it on
     roles: tuple = ()                 # help.yaml roles: only people with one of these roles (or an administrator) see the guide; empty = everyone
     engine: str = ""                  # help.yaml engine: the compute engine the guide is about; hidden while it runs nowhere (ADMIN_GUIDE.md)
     pair: str = ""                    # help.yaml pair: the tutorial drawn beside this guide on its section's page
@@ -188,7 +189,7 @@ class Library:
                                               roles=tuple(str(r) for r in (g.get("roles") or ())), engine=str(g.get("engine") or ""), group=str(grp.get("title") or ""),
                                               domain=str(c.get("domain") or g.get("domain") or ""), parent=g["slug"]))
                     guide = Guide(g["slug"], g["title"], g.get("summary", "").replace("{tutorials}", tutorial_count_word(docs_dir)), g.get("icon", "journal-text"),
-                                  g.get("kind", "reference" if src else "guide"), sec["id"], path, packs=tuple(g.get("packs") or ()),
+                                  g.get("kind", "reference" if src else "guide"), sec["id"], path, packs=tuple(g.get("packs") or ()), pack=str(g.get("pack") or ""),
                                   roles=tuple(str(r) for r in (g.get("roles") or ())), engine=str(g.get("engine") or ""),
                                   pair=str(g.get("pair") or ""), group=str(grp.get("title") or ""), domain=str(g.get("domain") or ""), children=tuple(kids),
                                   section=str(g.get("section") or ""))

@@ -33,7 +33,6 @@ ALLOWED = {
     "test_admin_lakes.py": "Admin -> Lakes builds a lake: under the test's tmp_path only (owner 2026-11-22)",
     "test_admin_lake_maintain.py": "maintenance compacts a copy of its own small lake: under tmp_path and the cache's own folder only",
     "trade_grain_stack.py": "the trade-grain copy of the shared lake, built once per source hash in the cache's own folder",
-    "test_admin_lakes_browser.py": "a file becomes a lake: under the test's mktemp folder only",
     "test_admin_lake_maintain_browser.py": "maintenance of a small lake of its own: under the test's mktemp folder only",
     "test_public_sector_browser.py": "the recorded feeds loaded into lakes of its own: under the test's mktemp folder only",
     "test_bi_multi_dataset_browser.py": "the BI sample lake (bi_report_stack.make_lake): under the test's mktemp folder only",

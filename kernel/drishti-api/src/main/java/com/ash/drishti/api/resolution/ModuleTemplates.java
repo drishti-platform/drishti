@@ -39,8 +39,6 @@ public final class ModuleTemplates {
 
     /** The template key that names the module a template came from (never a connector setting). */
     public static final String FROM_MODULE = "from-module";
-    /** The template key that names the pack a template came from, when the pack of a module brought it (its {@code connectors/} folder). */
-    public static final String FROM_PACK = "from-pack";
     /**
      * The setting that names the module's folder, which a template's relative files (its {@code map:}) are read from: the kernel sets it on
      * every module template (SourceShape reads it first), as it does for a module's connector extension.
@@ -56,26 +54,6 @@ public final class ModuleTemplates {
      * @param definition the file's content without {@code name:}, with {@link #FROM_MODULE} and the setting {@link #MODULE_DIR}
      */
     public record Template(String name, String module, Path file, Map<String, Object> definition) {}
-
-    /** One folder of templates: the module's own, or a pack's of that module (a pack's relative files are read from the pack's folder). */
-    private record Source(Path connectors, Path home, String pack) {}
-
-    /** The template folders of a module: its own {@code connectors}, then each pack's {@code connectors/} folder (a source system's pack). */
-    private static List<Source> sources(PackResolver.Module m) {
-        List<Source> out = new ArrayList<>();
-        if (m.connectors() != null && Files.isDirectory(m.connectors())) {
-            out.add(new Source(m.connectors(), m.home(), null));
-        }
-        if (m.folder() != null) {
-            for (String p : m.packs()) {
-                Path dir = m.folder().resolve(p).normalize();
-                if (dir.startsWith(m.folder()) && Files.isDirectory(dir.resolve("connectors"))) {
-                    out.add(new Source(dir.resolve("connectors"), dir, p));
-                }
-            }
-        }
-        return out;
-    }
 
     /**
      * One inbox rule of a module.
@@ -95,39 +73,34 @@ public final class ModuleTemplates {
             Function<Path, Map<String, Object>> yaml, List<String> problems) {
         Map<String, List<Template>> found = new TreeMap<>();
         for (PackResolver.Module m : modules) {
-            if (!active.test(m.id())) {
+            if (m.connectors() == null || !active.test(m.id()) || !Files.isDirectory(m.connectors())) {
                 continue;
             }
-            for (Source src : sources(m)) {
-                List<Path> files;
-                try (Stream<Path> s = Files.list(src.connectors())) {
-                    files = s.filter(Files::isRegularFile).filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).matches(".*\\.ya?ml"))
-                            .sorted().toList();
-                } catch (IOException e) {
-                    problems.add("the connectors of module " + m.id() + " (" + src.connectors() + ") cannot be listed: " + e.getMessage());
+            List<Path> files;
+            try (Stream<Path> s = Files.list(m.connectors())) {
+                files = s.filter(Files::isRegularFile).filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).matches(".*\\.ya?ml"))
+                        .sorted().toList();
+            } catch (IOException e) {
+                problems.add("the connectors of module " + m.id() + " (" + m.connectors() + ") cannot be listed: " + e.getMessage());
+                continue;
+            }
+            for (Path f : files) {
+                Map<String, Object> c;
+                try {
+                    c = new LinkedHashMap<>(yaml.apply(f));
+                } catch (RuntimeException e) {
+                    problems.add("the connector template " + f + " of module " + m.id() + " cannot be read: " + e.getMessage());
                     continue;
                 }
-                for (Path f : files) {
-                    Map<String, Object> c;
-                    try {
-                        c = new LinkedHashMap<>(yaml.apply(f));
-                    } catch (RuntimeException e) {
-                        problems.add("the connector template " + f + " of module " + m.id() + " cannot be read: " + e.getMessage());
-                        continue;
-                    }
-                    String stem = f.getFileName().toString().replaceFirst("\\.ya?ml$", "");
-                    Object n = c.remove("name");
-                    String name = n == null || String.valueOf(n).isBlank() ? stem : String.valueOf(n).strip();
-                    c.put(FROM_MODULE, m.id());
-                    if (src.pack() != null) {
-                        c.put(FROM_PACK, src.pack());
-                    }
-                    Map<String, Object> settings = c.get("settings") instanceof Map<?, ?> sm ? new LinkedHashMap<>((Map<String, Object>) sm)
-                            : new LinkedHashMap<>();
-                    settings.putIfAbsent(MODULE_DIR, src.home().toAbsolutePath().normalize().toString());
-                    c.put("settings", settings);
-                    found.computeIfAbsent(name, k -> new ArrayList<>()).add(new Template(name, m.id(), f, c));
-                }
+                String stem = f.getFileName().toString().replaceFirst("\\.ya?ml$", "");
+                Object n = c.remove("name");
+                String name = n == null || String.valueOf(n).isBlank() ? stem : String.valueOf(n).strip();
+                c.put(FROM_MODULE, m.id());
+                Map<String, Object> settings = c.get("settings") instanceof Map<?, ?> sm ? new LinkedHashMap<>((Map<String, Object>) sm)
+                        : new LinkedHashMap<>();
+                settings.putIfAbsent(MODULE_DIR, m.home().toAbsolutePath().normalize().toString());
+                c.put("settings", settings);
+                found.computeIfAbsent(name, k -> new ArrayList<>()).add(new Template(name, m.id(), f, c));
             }
         }
         Map<String, Template> out = new LinkedHashMap<>();
@@ -147,38 +120,79 @@ public final class ModuleTemplates {
             List<String> problems) {
         List<Rule> out = new ArrayList<>();
         for (PackResolver.Module m : modules) {
-            if (!active.test(m.id())) {
+            if (m.dataload() == null || !active.test(m.id())) {
                 continue;
             }
-            List<Path> files = new ArrayList<>();
-            if (m.dataload() != null) {
-                files.add(m.dataload());
-            }
-            if (m.folder() != null) {                                    // a pack's own inbox rules: <pack>/dataload.yaml
-                for (String p : m.packs()) {
-                    Path f = m.folder().resolve(p).resolve("dataload.yaml").normalize();
-                    if (f.startsWith(m.folder()) && Files.isRegularFile(f)) {
-                        files.add(f);
-                    }
-                }
-            }
-            for (Path file : files) {
-                try {
-                    Object d = yaml.apply(file).get("dataload");
-                    Object rules = d instanceof Map<?, ?> dm ? dm.get("rules") : null;
-                    if (rules instanceof List<?> l) {
-                        for (Object r : l) {
-                            if (r instanceof Map<?, ?> rm) {
-                                Map<String, Object> one = new LinkedHashMap<>();
-                                rm.forEach((k, v) -> one.put(String.valueOf(k), v));
-                                out.add(new Rule(m.id(), file, one));
-                            }
+            try {
+                Object d = yaml.apply(m.dataload()).get("dataload");
+                Object rules = d instanceof Map<?, ?> dm ? dm.get("rules") : null;
+                if (rules instanceof List<?> l) {
+                    for (Object r : l) {
+                        if (r instanceof Map<?, ?> rm) {
+                            Map<String, Object> one = new LinkedHashMap<>();
+                            rm.forEach((k, v) -> one.put(String.valueOf(k), v));
+                            out.add(new Rule(m.id(), m.dataload(), one));
                         }
                     }
-                } catch (RuntimeException e) {
-                    problems.add("the inbox rules of module " + m.id() + " (" + file + ") cannot be read: " + e.getMessage()
-                            + "; its files will not be matched (DRS-1048)");
                 }
+            } catch (RuntimeException e) {
+                problems.add("the inbox rules of module " + m.id() + " (" + m.dataload() + ") cannot be read: " + e.getMessage()
+                        + "; its files will not be matched (DRS-1048)");
+            }
+        }
+        return out;
+    }
+
+    /**
+     * The inbox rules the packs carry (pack.yaml {@code dataload:}, a rules file in the pack's own folder, same format as a module's): a rule
+     * that names no {@code pack:} belongs to the pack that carries it, so it follows that pack's switch like every rule ({@code DataLoadConfiguration}).
+     * The packs are those of the modules that are on ({@link PackResolver.Result#packs}). A file outside the pack's folder, or one that cannot
+     * be read, is a problem (DRS-1048) and its rules are not used. A {@code mappings:} file that is not in the pack's folder is a problem too.
+     */
+    public static List<Rule> packRules(Collection<PackResolver.Located> packs, Function<Path, Map<String, Object>> yaml, List<String> problems) {
+        List<Rule> out = new ArrayList<>();
+        for (PackResolver.Located lp : packs) {
+            Path manifest = lp.dir().resolve("pack.yaml");
+            if (!Files.isRegularFile(manifest)) {
+                continue;
+            }
+            Map<String, Object> m;
+            try {
+                m = yaml.apply(manifest);
+            } catch (RuntimeException e) {
+                continue;                                                // an unreadable pack.yaml is the pack loader's problem, said there
+            }
+            if (m.get("mappings") instanceof Map<?, ?> maps) {
+                maps.forEach((kind, file) -> {
+                    Path f = lp.dir().resolve(String.valueOf(file)).normalize();
+                    if (!f.startsWith(lp.dir()) || !Files.isRegularFile(f)) {
+                        problems.add("pack " + lp.name() + ": its map for kind " + kind + " (" + file + ") is not a file inside the pack's folder " + lp.dir());
+                    }
+                });
+            }
+            if (m.get("dataload") == null) {
+                continue;
+            }
+            Path rules = lp.dir().resolve(String.valueOf(m.get("dataload"))).normalize();
+            if (!rules.startsWith(lp.dir())) {
+                problems.add("pack " + lp.name() + ": its dataload file (" + m.get("dataload") + ") is outside the pack's folder " + lp.dir() + "; its rules are not used (DRS-1048)");
+                continue;
+            }
+            try {
+                Object d = yaml.apply(rules).get("dataload");
+                Object list = d instanceof Map<?, ?> dm ? dm.get("rules") : null;
+                if (list instanceof List<?> l) {
+                    for (Object r : l) {
+                        if (r instanceof Map<?, ?> rm) {
+                            Map<String, Object> one = new LinkedHashMap<>();
+                            rm.forEach((k, v) -> one.put(String.valueOf(k), v));
+                            one.putIfAbsent("pack", lp.name());
+                            out.add(new Rule(lp.module() != null ? lp.module() : "pack:" + lp.name(), rules, one));
+                        }
+                    }
+                }
+            } catch (RuntimeException e) {
+                problems.add("the inbox rules of pack " + lp.name() + " (" + rules + ") cannot be read: " + e.getMessage() + "; its files will not be matched (DRS-1048)");
             }
         }
         return out;
@@ -191,28 +205,18 @@ public final class ModuleTemplates {
      */
     public static Predicate<String> offline(Map<String, PackResolver.Module> modules, Path switchesDir, Function<String, String> property,
             Function<Path, Map<String, Object>> yaml) {
-        return offline(modules, null, switchesDir, property, yaml);
-    }
-
-    /** As above, the release's shipped switch files ({@code defaultsDir}) read where the site's folder has no file of a module. */
-    public static Predicate<String> offline(Map<String, PackResolver.Module> modules, Path defaultsDir, Path switchesDir,
-            Function<String, String> property, Function<Path, Map<String, Object>> yaml) {
         Map<String, Boolean> on = new TreeMap<>();
         for (String id : modules.keySet()) {
             Boolean set = null;
             String v = property.apply("drishti.modules." + id + ".enabled");
             if (v != null && !v.isBlank()) {
                 set = List.of("true", "on", "yes").contains(v.strip().toLowerCase(Locale.ROOT));
-            } else {
-                for (Path dir : new Path[] {defaultsDir, switchesDir}) {   // the release's file first, the site's after it (it wins)
-                    if (dir != null && Files.isRegularFile(dir.resolve(id + ".yaml"))) {
-                        try {
-                            Object e = yaml.apply(dir.resolve(id + ".yaml")).get("enabled");
-                            set = e == null ? set : Boolean.valueOf(String.valueOf(e));
-                        } catch (RuntimeException e) {
-                            set = null;                                  // an unreadable switch: the module's own default
-                        }
-                    }
+            } else if (switchesDir != null && Files.isRegularFile(switchesDir.resolve(id + ".yaml"))) {
+                try {
+                    Object e = yaml.apply(switchesDir.resolve(id + ".yaml")).get("enabled");
+                    set = e == null ? null : Boolean.valueOf(String.valueOf(e));
+                } catch (RuntimeException e) {
+                    set = null;                                          // an unreadable switch: the module's own default
                 }
             }
             on.put(id, set == null || set);

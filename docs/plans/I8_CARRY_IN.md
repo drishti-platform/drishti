@@ -43,3 +43,18 @@ M1 and its scope does not grow. Open for the owner: EN-45 to EN-55, each with a 
 | Admin snapshots: connectors (2–3%) and bindings (0.2–0.3%) differ from golden | i7b final drill | review the diffs (data/drill/snapshot-diffs/rerun/admin-*) then re-approve or fix |
 | Iceberg: Python lake build under load (tools/lake/test_maintain_iceberg) | i7b final drill (owner: Iceberg parked to i8; Delta only in use) | `build.main --format iceberg` exited 1 in the loaded tools lane, passes alone (4.8 s); find the load-dependent cause with the Iceberg parity work |
 | One platform pom.xml in the parent folder (owner 11-22) | i7b release | An aggregator `pom.xml` (+ `.mvn/`, `mvnw`) in `<parent>/` with modules drishti-tools/java, drishti-rachana/java, drishti-lake/java, drishti — written by clone_all.py, IntelliJ opens it as one workspace. Blocked today: the products anchor paths on `${maven.multiModuleProjectDirectory}` (tools 1, Rachana 2, Lake 2, Drishti 1 poms), which becomes the parent folder in a combined reactor (Rachana's tmp-create looked for `<parent>/../tools/gate/tmp_leaks.py`). Fix: anchor on each product's own root (a `<product>.root` property set from the product parent's `${project.basedir}`, e.g. via build-helper `rootlocation`/directory-maven-plugin), then the aggregator; ships with tools 1.2.0 / Rachana 1.1 / Lake 0.9.2 / Drishti i8. Drishti's `-Drevision` comes from the parent's `.mvn/maven.config` (copied from drishti/.mvn) |
+
+
+
+## Windows workflow (windows.yml, branch i8/windows-docs): state for i9
+
+- Last run: 46166152450 (still in progress when stopped; check `gh run view 46166152450 -R drishti-platform/drishti`). Lake is built from tag v0.9.2 (carries the `\` split fix in ConnectorLake).
+- Fixed so far: RunServiceTest twin test (latch instead of timing); route-inventory guard (`/` keys, TestRoots.repo()); TableCataloguePaths allow-list for LakeTableFigures; cluster tests' budgets scale with MachineSpeed (env DRISHTI_TEST_SLOW_FACTOR=3 on the server-test step: NetGossipBusy, NetSecurity, NetHttp2); PackReloader.checkNow() (Admin actions wait for a running reload; ArtifactApiTest failed 4x on Windows because check() returned on a busy lock).
+- Previous run 46162949006: only ArtifactApiTest failed (cause above, fix in the last run). Server suite takes about 15-20 min on the runner.
+- Never yet reached on Windows: Python small lake (make_data.py, load_rows.py), build jar, setup/--check, start/stop server steps. First thing in i9: read the last run's result, then those steps.
+- BiFoundationParityTest stays skipped on Windows (written reason).
+
+## i9 items from the merge round (merge3b)
+
+- **Genomicist Home ignores the person** (gate S2): `modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/GenomicsHome.java:96-148` answers the counts, cohort ids and gene rows from the module snapshot; `Principal p` is unused, while the routes are gated by `GenomicsAccess.require`. Fix: the Home's `kpi`, `values` and tables call `access.require(KINDS)` as the person (no rows on refusal), with a two-user test (`GenomicsHomeTest`: a person with the role and without the genomics packs sees nothing). Needs `GenomicsAccess` passed into `GenomicsHome` and the test doors (`Doors`).
+- **PackAccess.reconcile switch listeners** (gate S1) is fixed in merge3b (the listeners fire when a switch from another node changed anything); the two-node test that proves it is still to write (`PackAccessTest`: switch a source-system pack on node A, read on node B).

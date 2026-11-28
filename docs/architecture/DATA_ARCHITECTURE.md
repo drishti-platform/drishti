@@ -2770,7 +2770,7 @@ The ordered migration list (the inventory of content kept on one node only, 2026
 5. **Collaboration:** done (section 5.10.3): threads, comments, revisions, mentions, follows, note links, shares and recipients, inbox,
    outbox, holds and seals. Still per node: the access log (`drishti_access`, who read what), next.
 6. **Alerts and monitors:** NOT copied, on purpose (each node evaluates its own).
-7. **Embed apps** (`drishti_embed_app`), **pack switches** (`drishti_pack_state`), **audit** (`drishti_audit` and `audit.jsonl`):
+7. **Embed apps** (`drishti_embed_app`), **audit** (`drishti_audit` and `audit.jsonl`):
    done (section 5.10.4).
 8. **Files:** governance proposals (`<data>/governance`): done (section 5.10.5); load history (`<data>/loads`): done (section 5.10.6).
    Next, in this order: report outputs (`<data>/reports`), designer bound files (`<data>/dev-sutras`), pack admin state (`<data>/packs/*`, `uninstalled`,
@@ -2904,7 +2904,7 @@ The revision chains keep their hashes, so `GET /admin/collab/verify` verifies th
 | Data | Switch | Key |
 |---|---|---|
 | Embed apps (`drishti_embed_app`) | `drishti.embed.store` (`content` / `jpa`) | `admin/embed-apps/<id>.json`; a save is a compare-and-set against the version read, so two administrators editing one application on two nodes get one `409 DRS-5057` |
-| Pack switches (`drishti_pack_state`) | `drishti.packs.state-store` (`content` / `jpa`) | `admin/pack-state.json` (every pack's state; nodes re-read it every refresh interval) |
+| Pack switches | none: the switches ledger (`drishti_switch`, spread by Drishti*net) | the ledger's `pack` entries |
 | Audit (`drishti_audit`, and `audit.jsonl` through the earlier import into it) | `drishti.audit.store` (`content` / `jpa`) | `audit/<yyyy-MM-dd>/<node>-<nnnn>.jsonl` and `audit-heads/<node>.json` |
 
 **Audit is append-only**, so no two nodes write one document: each node appends to its own per-day segments (a new segment past

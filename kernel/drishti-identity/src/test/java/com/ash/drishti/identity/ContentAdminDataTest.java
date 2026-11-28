@@ -27,7 +27,6 @@ import com.ash.drishti.identity.content.ContentStore;
 import com.ash.drishti.identity.content.FileContentStore;
 import com.ash.drishti.identity.db.EmbedAppEntity;
 import com.ash.drishti.identity.db.IdentityRepositories;
-import com.ash.drishti.identity.db.PackStateEntity;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -92,28 +91,6 @@ class ContentAdminDataTest {
         assertThat(b.verify(10)).anyMatch(p -> p.contains("node-a#2"));
         raw.putLatest(seg, text.substring(0, text.indexOf('\n') + 1).getBytes(StandardCharsets.UTF_8));
         assertThat(b.verify(10)).anyMatch(p -> p.contains("lost its newest lines"));
-    }
-
-    @Test
-    void aPackSwitchOnOneNodeIsSeenOnTheOtherAfterTheImport() {
-        IdentityRepositories.PackStates states = mock(IdentityRepositories.PackStates.class);
-        PackStateEntity off = new PackStateEntity();
-        off.name = "logistics";
-        off.enabled = false;
-        off.updatedAt = Instant.now();
-        off.updatedBy = "admin";
-        when(states.findAll()).thenReturn(List.of(off));
-        PackStateStore a = new PackStateStore(states, tx(), NO_AUDIT, node());
-        PackStateStore b = new PackStateStore(states, tx(), NO_AUDIT, node());
-        assertThat(a.enabled("logistics")).as("imported from the table").isFalse();
-        a.set("logistics", true, "admin");
-        b.set("finance", false, "admin");
-        a.refresh();
-        b.refresh();
-        assertThat(b.enabled("logistics")).isTrue();
-        assertThat(a.enabled("finance")).isFalse();
-        when(states.findAll()).thenReturn(List.of());
-        assertThat(new PackStateStore(states, tx(), NO_AUDIT, node()).enabled("finance")).as("the import runs once").isFalse();
     }
 
     @Test

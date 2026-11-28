@@ -74,7 +74,6 @@ abstract class IdentityStoreContract {
         props.put("drishti.collab.store", "jpa");                  // this contract is the database stores'; the content stores have their own tests
         props.put("drishti.audit.store", "jpa");
         props.put("drishti.embed.store", "jpa");
-        props.put("drishti.packs.state-store", "jpa");
         props.put("drishti.identity.users-file", tmp.resolve("no-legacy/users.json").toString());
         c.getEnvironment().getPropertySources().addFirst(new MapPropertySource("test", props));
         c.registerBean(RoleNames.class, () -> RoleNames.of(Set.of("admin", "trader", "risk")));

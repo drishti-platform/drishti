@@ -659,7 +659,6 @@ files (`application-files.yaml`, `application-postgres.yaml`, …) and packs hav
 | (no variable) | `drishti.collab.store` | `content` | Where threads, notes, shares, the inbox, the outbox, holds and seals are kept: `content` (the content store, every node of a cluster), or one node only `jpa` (the identity database) or `file`. [DATA_ARCHITECTURE.md › The content store: user content every node reaches, section 9](../architecture/DATA_ARCHITECTURE.md#5-the-content-store-user-content-every-node-reaches). |
 | (no variable) | `drishti.audit.store` | `content` | The audit trail: `content` (per-node day segments in the content store, merged when read) or `jpa` (the identity database, one node). |
 | (no variable) | `drishti.embed.store` | `content` | Embed applications: `content` (`admin/embed-apps/`) or `jpa`. |
-| (no variable) | `drishti.packs.state-store` | `content` | Packs switched off in Admin: `content` (`admin/pack-state.json`, `drishti_pack_state` imported once) or `jpa`. |
 | (no variable) | `drishti.loads.store` | `content` | Load history: `content` (`loads/<pack>.json`, each pack's `drishti.loads.dir` file imported on first read) or `file` (one node). |
 | (no variable) | `drishti.loads.config-store` | `content` | Per-pack data loads overrides saved through Admin: `content` (`loads/config/<pack>.yaml` in the content store, every node) or `file` (one node). |
 | (no variable) | `drishti.store.watch-ms` | `2000` | How often each node asks the content store what changed, to apply another node's shared edits (connectors, load overrides, pack state). |

@@ -293,12 +293,8 @@ public class IdentityConfiguration {
     }
 
     @Bean
-    public PackStateStore packStateStore(IdentityRepositories.PackStates states, TransactionTemplate identityTransactions, JpaAuditLog auditLog,
-            com.ash.drishti.identity.content.ContentStore content, org.springframework.core.env.Environment env, SwitchLedger switches) {
-        boolean jpa = "jpa".equalsIgnoreCase(env.getProperty("drishti.packs.state-store", "content").trim());
-        PackStateStore store = new PackStateStore(states, identityTransactions, auditLog, jpa ? null : content);
-        store.ledger(switches);
-        return store;
+    public PackStateStore packStateStore(JpaAuditLog auditLog, SwitchLedger switches) {
+        return new PackStateStore(auditLog, switches);
     }
 
     /** Host applications for embedded views (Drishti Elements); the limits are the defaults a new registration gets. */
@@ -321,14 +317,13 @@ public class IdentityConfiguration {
      * {@code drishti.identity.refresh-seconds} (15): the snapshots every check reads are re-read on that interval.
      */
     @Bean(destroyMethod = "shutdownNow")
-    public java.util.concurrent.ScheduledExecutorService identityRefresher(RoleStore roles, PackStateStore packs, EmbedAppStore embedApps,
+    public java.util.concurrent.ScheduledExecutorService identityRefresher(RoleStore roles, EmbedAppStore embedApps,
             org.springframework.core.env.Environment env, com.ash.drishti.identity.content.TxContentStore contentTransactions, SwitchLedger switches) {
         long every = Long.parseLong(env.getProperty("drishti.identity.refresh-seconds", "15"));
         var exec = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().name("drishti-identity-refresh").factory());
         exec.scheduleWithFixedDelay(() -> {
             try {
                 roles.refresh();
-                packs.refresh();
                 switches.refresh();
                 embedApps.refresh();
                 contentTransactions.recover();

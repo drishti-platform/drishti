@@ -4840,7 +4840,7 @@ Switching off, at every user's next click: the pack's kinds cannot be opened (`D
 examples, guides, starter workspaces and monitors disappear; `GET /api/v1/packs` stops listing it. Its Sutras, connectors and routes stay loaded, so
 switching it back on is instant. **A pack that a switched-on pack builds on cannot be switched off** (*Needed by …: switch those off first*;
 `DRS-5001 'trading' is needed by [counterparty-risk, market-risk]; switch those off first`); **switching a pack on switches on everything it builds on**;
-a pack that is not loaded cannot be switched on. The choice is kept in the identity database (`drishti_pack_state`), survives restarts, reaches the
+a pack that is not loaded cannot be switched on. The choice is kept in the switches ledger (`drishti_switch`, in the identity database), survives restarts, reaches the
 other servers sharing that database within `drishti.identity.refresh-seconds`, and is audited (`pack-enabled`, `pack-disabled`). For programs:
 `GET /api/v1/admin/packs` lists each pack with `loaded`, `enabled` and `requiredBy`; `PUT /api/v1/admin/packs/<name>` with `{"enabled": false}`
 switches one ([API_REFERENCE.md](API_REFERENCE.md)).

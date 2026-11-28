@@ -396,7 +396,7 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
 - **Infrastructure**: from 05:4x this lane builds into its own Maven repository (`~/drishti-bench-scratch/i8-m2-r2b`, the lead's
   instruction after this lane's kernel SNAPSHOTs replaced lane A's in the shared `i8-m2`).
 
-### Status, R2 lane V (2026-11-28 10:0x, branch `r2/vres`; drishti-risk `r2/vres`)
+### Status, R2 lane V (2026-11-28 10:2x, branch `r2/vres`; drishti-risk `r2/vres`)
 
 - **VRES side by side: green on both tiers, now part of the default run** (the `-Dsbs.vres` gate dropped). Built fresh (full reactor
   install: the exec jar and the `.dmod` newer than the last change; lane B's red run had read an older build). The 45 differences of
@@ -408,13 +408,18 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
   the provenance's words included (before, the whole provenance and the result's meta were left out). Proof after merging
   `r2/consumers-speed` (`22e9aea05`): 58 `var-result` records each tier (43 answered, 15 refused in-tree and on the engine alike),
   **0 differences** on the mapped and on the heap tier; `PackagedVarGoldenTest` green (2/2, mapped).
-- **Still red in `ConsumersSideBySideTest`, not VRES** (open, every run since the fresh build, both tiers): (1) the two regulatory
-  report runs on the engine path: `annual-report-var` refused ("the engine market-risk answered no statistics of MGMT~DESK-RATES
-  (not found: risk/var-official@1 for date 2026-09-30)") and `var-backtesting-chart` with 0 days tested where in-tree has 2: the
-  engine's `var-history` input read no published record of 2026-09-30 (the published records' connector `var-results` is restarted
-  by the capture's publish 0.7 s before the runs; the session keeps what it read); the views reader serves the records. Lane B's
-  "0 differences" on the reports came from the older build. (2) The position page's trade links panel (`panels[6].data.links[].status`,
-  `pending` against `resolved`, either way round, 0 to 4 pages a run): the link resolver's timing under load, not a VaR figure.
+- **The two other reds, fixed at their cause (10:2x)**: (1) the report runs on the engine path (`annual-report-var` refused "not found:
+  risk/var-official@1 for date 2026-09-30", `var-backtesting-chart` 0 days tested against 2): the role Home's snapshot asks the engine at
+  start, before the official captures are published, and the engine session it opened kept the 0 published records it read (the
+  engine file declares no `data-version` trigger, so nothing made it stale). Now each capture's publish calls `Engines.inputsChanged("var-official")`
+  (kernel API, a default method; `EngineHost`/`HostedEngine.inputsChanged`): every engine that binds the kind stales its open sessions
+  and drops its kept answers, so the next ask reads the published records again. The table read is unchanged (kind `var-official`,
+  connector `var-results`, the same one both paths read). (2) The position page's trade links `pending` against `resolved`: a page answers
+  within its link budget and marks a link not yet fetched `pending` (the console fills it in); the test now asks a page again while a
+  link is pending (bounded, 60 s), the figures untouched.
+- **Proof (full reactor install, exec jar 10:15, `.dmod` 10:15)**: `ConsumersSideBySideTest` **117 answers, 0 differences on the mapped
+  tier and on the heap tier** (2 report runs, 57 pages, 22,868 page items, 58 VRES records); `PackagedVarGoldenTest` 2/2 (VaR
+  167,372,692, ES 210,131,972); kernel-api `ApiSurfaceTest` 3/3 (surface regenerated with `Engines.inputsChanged`).
 - Maven: `~/drishti-bench-scratch/i8-m2-r2vres` (removed at the stop).
 
 ### R2 gate brief (lane B, 2026-11-28; for the Fable R2 gate)

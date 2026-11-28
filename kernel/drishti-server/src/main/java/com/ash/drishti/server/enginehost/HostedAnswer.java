@@ -202,31 +202,25 @@ final class HostedAnswer implements EngineAnswer {
 
         @Override
         public int find(String keyColumn, String key) {
-            Map<String, Integer> index = owner.shaped("find|" + name() + "|" + keyColumn, x -> new Index(this, keyColumn));
-            Integer r = index.get(key);
+            Index index = owner.shaped("find|" + name() + "|" + keyColumn, x -> Index.of(this, keyColumn));
+            Integer r = index.rows().get(key);
             return r == null ? -1 : r;
         }
     }
 
     /** One column's rows by value (the first row of each), counted in bytes with the answer. */
-    private static final class Index extends HashMap<String, Integer> implements Sized {
+    private record Index(Map<String, Integer> rows, long bytes) implements Sized {
 
-        private static final long serialVersionUID = 1L;
-        private long bytes = 64;
-
-        Index(Columns table, String column) {
-            super(Math.max(16, table.rows() * 2));
+        static Index of(Columns table, String column) {
+            Map<String, Integer> rows = new HashMap<>(Math.max(16, table.rows() * 2));
+            long bytes = 64;
             for (int r = 0; r < table.rows(); r++) {
                 String v = table.text(column, r);
-                if (v != null && putIfAbsent(v, r) == null) {
+                if (v != null && rows.putIfAbsent(v, r) == null) {
                     bytes += 72 + 2L * v.length();
                 }
             }
-        }
-
-        @Override
-        public long bytes() {
-            return bytes;
+            return new Index(rows, bytes);
         }
     }
 }

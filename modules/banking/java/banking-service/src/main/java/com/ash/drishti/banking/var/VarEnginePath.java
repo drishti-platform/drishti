@@ -1432,7 +1432,7 @@ public class VarEnginePath {
     private static Map<String, Parametric> parametricRows(EngineAnswer a, double confidence, double esConfidence,
             com.ash.drishti.banking.compute.var.ParametricVar.Settings settings) {
         return a.shaped("var.parametric|" + confidence + "|" + esConfidence + "|" + settings, x -> {
-            ByNode out = new ByNode();
+            Map<String, Parametric> out = new LinkedHashMap<>();
             EngineTable t = x.table("node-pvar");
             for (int r = 0; t != null && r < t.rows(); r++) {
                 double sigma = t.number("SIGMA", r);
@@ -1444,18 +1444,16 @@ public class VarEnginePath {
                 out.put(t.text("NODE_ID", r), new Parametric(f, (int) t.integer("K", r), String.valueOf(t.value("SCENARIO_SET", r)),
                         t.isNull("LAST_DAY", r) ? null : String.valueOf(t.value("LAST_DAY", r))));
             }
-            return out;
-        });
+            return new ByNode(java.util.Collections.unmodifiableMap(out));
+        }).figures();
     }
 
     /** Figures by node id, shaped from an answer and kept with it (about 400 bytes a node). */
-    static final class ByNode extends LinkedHashMap<String, Parametric> implements EngineAnswer.Sized {
-
-        private static final long serialVersionUID = 1L;
+    record ByNode(Map<String, Parametric> figures) implements EngineAnswer.Sized {
 
         @Override
         public long bytes() {
-            return 64 + 400L * size();
+            return 64 + 400L * figures.size();
         }
     }
 

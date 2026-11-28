@@ -424,21 +424,63 @@ final class VarLoader {
      * outside a load (the engine path's tree and labels, the pivot's labels); listed and purged with {@code var.views} (Admin, Caches).
      */
     com.ash.drishti.banking.compute.var.Cells.Names names(LocalDate date, Hierarchies hs) {
-        return namesByDate.get(date + "|" + hs.digest() + namesKey(date, hs), k -> readNames(AsOf.of(date), hs));
+        return namesByDate.get(date + "|" + hs.digest() + namesKey(date, hs), k -> new KeptNames(this, AsOf.of(date), hs));
     }
 
-    /** The names {@link #names(LocalDate, Hierarchies)} keeps: a few dates and their reference versions, least recently used out. */
-    private final com.github.benmanes.caffeine.cache.Cache<String, com.ash.drishti.banking.compute.var.Cells.Names> namesByDate =
-            com.github.benmanes.caffeine.cache.Caffeine.newBuilder().maximumSize(16).recordStats().build();
+    /**
+     * The names {@link #names(LocalDate, Hierarchies)} keeps, weighed in bytes: each kind's name column read when kept, and at most
+     * {@link #NAME_READS} names a kind read one by one later (counted at their most).
+     */
+    private final com.github.benmanes.caffeine.cache.Cache<String, KeptNames> namesByDate = com.github.benmanes.caffeine.cache.Caffeine
+            .newBuilder().maximumWeight(NAMES_BYTES).weigher((String k, KeptNames n) -> n.weight()).recordStats().build();
 
-    com.github.benmanes.caffeine.cache.Cache<String, com.ash.drishti.banking.compute.var.Cells.Names> namesCache() {
+    /** The most bytes of node names kept for the readers outside a load. */
+    static final long NAMES_BYTES = 32L << 20;
+
+    com.github.benmanes.caffeine.cache.Cache<String, KeptNames> namesCache() {
         return namesByDate;
+    }
+
+    /** A date's names with every naming kind's column read up front, so the cache weighs them when it keeps them. */
+    static final class KeptNames implements com.ash.drishti.banking.compute.var.Cells.Names {
+
+        private final com.ash.drishti.banking.compute.var.Cells.Names names;
+        private final int weight;
+
+        KeptNames(VarLoader loader, AsOf asOf, Hierarchies hs) {
+            java.util.Set<String> levels = new java.util.TreeSet<>();
+            hs.specs().forEach(s -> levels.addAll(s.levelNames()));
+            Map<String, Map<String, String>> byKind = new java.util.concurrent.ConcurrentHashMap<>();
+            long w = 256;
+            for (String level : levels) {
+                Map<String, String> m = loader.nameColumn(level, asOf);
+                byKind.put(level, m);
+                for (Map.Entry<String, String> e : m.entrySet()) {
+                    w += 96 + 2L * (e.getKey().length() + e.getValue().length());
+                }
+                w += (long) NAME_READS * 160;                            // the names a kind without a column may still read
+            }
+            this.names = loader.readNames(asOf, levels, byKind);
+            this.weight = (int) Math.min(Integer.MAX_VALUE, w);
+        }
+
+        int weight() {
+            return weight;
+        }
+
+        @Override
+        public String of(String level, String value) {
+            return names.of(level, value);
+        }
     }
 
     private com.ash.drishti.banking.compute.var.Cells.Names readNames(AsOf asOf, Hierarchies hs) {
         java.util.Set<String> levels = new java.util.HashSet<>();
         hs.specs().forEach(s -> levels.addAll(s.levelNames()));
-        Map<String, Map<String, String>> byKind = new java.util.concurrent.ConcurrentHashMap<>();
+        return readNames(asOf, levels, new java.util.concurrent.ConcurrentHashMap<>());
+    }
+
+    private com.ash.drishti.banking.compute.var.Cells.Names readNames(AsOf asOf, java.util.Set<String> levels, Map<String, Map<String, String>> byKind) {
         Map<String, java.util.concurrent.atomic.AtomicInteger> reads = new java.util.concurrent.ConcurrentHashMap<>();
         return (level, value) -> {
             if (!levels.contains(level) || value == null) {

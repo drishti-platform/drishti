@@ -51,6 +51,7 @@ public final class VarCaches implements com.ash.drishti.server.caches.CacheGroup
     public void join(com.ash.drishti.server.caches.MemoryBudget b) {
         b.join("engine.answers", com.ash.drishti.server.caches.MemoryBudget.of("var.answers", svc.answers(), VarService.ANSWERS_BYTES));
         b.join("small", com.ash.drishti.server.caches.MemoryBudget.of("var.views", svc.access().cache(), (long) svc.props().viewCacheMb() << 20));
+        b.join("small", com.ash.drishti.server.caches.MemoryBudget.of(NAMES, svc.loader().namesCache(), VarLoader.NAMES_BYTES));
         b.join("small", com.ash.drishti.server.caches.MemoryBudget.of(STANDALONES, svc.partTotals().cache(), VarPartTotals.OWN_LIMIT));
     }
 
@@ -85,7 +86,7 @@ public final class VarCaches implements com.ash.drishti.server.caches.CacheGroup
         out.add(CacheReport.of(VIEWS, "var", "Viewers' views per date, version, currency and role set", "heap", svc.access().cache(),
                 (long) svc.props().viewCacheMb() << 20, null, 3600L, "data-version", true));
         out.add(CacheReport.of(NAMES, "var", "Node display names per date, hierarchies and reference-data version (the engine path's labels)",
-                "heap", svc.loader().namesCache(), null, 16L, null, "data-version (the naming kinds' versions)", true));
+                "heap", svc.loader().namesCache(), VarLoader.NAMES_BYTES, null, null, "data-version (the naming kinds' versions)", true));
         out.add(CacheReport.of(STANDALONES, "var", "Each open book's whole positions' standalone VaRs, per lens (the totals over every part)",
                 "heap", svc.partTotals().cache(), VarPartTotals.OWN_LIMIT, null, 3600L, "the book (released with it)", true));
         VarShards sh = svc.shards();

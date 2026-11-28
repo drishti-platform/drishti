@@ -1475,6 +1475,13 @@ EN-35), EN-18 (the certificate is evidence, EN-39) and EN-19 (in process means t
 |---|---|---|---|
 | EN-75 | Native linear algebra shared by engines | **bytedeco `openblas` and `javacpp` are a fifth shared platform library**, provided parent-first by the server (`NativeLibraries` binds it once per JVM, as it does today); an engine JAR declares them `provided`, never shades them, and names the version it was built against in its descriptor's `platform:`; the host refuses, in words naming both versions, an engine whose platform version does not match. One copy on disk (the server's `lib`), one native binding per JVM, every engine native | each engine JAR carries its own OpenBLAS (51 MB each in R2's two per-line JARs; a JVM binds a native library in one class loader only, so the second engine falls back to Java) |
 
+
+### EN-76 and EN-77: the engine path as fast as the in-tree path, host side (R2_ENGINE_SPEED_DESIGN 2.1, 2.4, 2.7)
+
+| # | Decision | Decided | The alternative |
+|---|---|---|---|
+| EN-76 | Answers are read as columns; the host keeps what is shaped from them | **`Engines.ask` returns `EngineAnswer`** (tables read in place as `EngineTable`, `find` by a key column, `shaped(name, shape)`); **one answer cache per host**, bounded in bytes (`drishti.engine-lib.answers-mb`), in the memory budget's `engine.answers` pool, Admin → Caches `engines.answers`; keyed by the stamp (the inputs' lake data versions and the caller's visibility), dropped when a data version moves the session stale, when the snapshot's last session closes, at an instance's start or shutdown; what a module derives from an answer is kept with it, so no module keeps a second cache | a plain map of boxed rows per ask (17 % of a warm ask), a count-bounded cache outside the budget, and a module's own map of indexes (which served one viewer's index to another viewer of the same date) |
+| EN-77 | The host's fixed cost per ask | **the request hashed once and carried** (`Request.hash`; `EngineContext.stamp` reuses it), **the options hashed once per instance**, **a stamp composed from data versions without reading a row** (spec 5.2 rule 8), **a long list audited by its count beside the request's hash** (spec 3.2), the engine's log forwarded from an index, a session's inputs released when it closes | rehashing per ask, a stamp that reads every input, megabyte audit lines |
 ## 17. Zero-copy data access (EN-56 to EN-65)
 
 **The owner's principle (2026-11-22): "Engines should be built using zero copy as design and architecture."** The

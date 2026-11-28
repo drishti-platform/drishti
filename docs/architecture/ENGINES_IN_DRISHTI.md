@@ -84,15 +84,30 @@ drishti:
 ```
 
 The schema is the engine specification's section 9. The file never names a JAR or a class. Site-wide settings:
-`drishti.engine-lib.path`, `drishti.engine-lib.trust` (`folder` or `pinned`), `drishti.engine-lib.licence`, `drishti.engine-lib.poll-seconds`, `drishti.engine-lib.answers` (the host's answer cache, below).
+`drishti.engine-lib.path`, `drishti.engine-lib.trust` (`folder` or `pinned`), `drishti.engine-lib.licence`, `drishti.engine-lib.poll-seconds`, `drishti.engine-lib.answers-mb` (the host's answer cache, below).
 
-**The host's answer cache** (engine specification 13 rule 6): the host keeps each engine's final answers by their stamp (the engine's
-version, descriptor and options, the input stamps of the session that answered, the request with the caller's visibility signature), so
-a question asked again over the same data, by a caller who sees the same rows, is answered from the cache without asking the engine. The
-stamp is the asking session's own (never another viewer's); a new data version opens a new session whose stamps differ, and a start or an
-options change empties the cache, so a kept answer is never stale. It is the one result cache of the engine path, owned by the host and listed
-with the server's other caches (Admin → Caches, `engines.answers`: entries, hits, misses, purge); an engine keeps no answer cache of its
-own. A published ask always runs.
+**The host's answer cache** (engine specification 13 rule 6): one cache for every engine of the host. It keeps each final answer by its
+stamp (the engine's version, descriptor and options, the input stamps of the session that answered, which are the inputs' lake data
+versions, and the request with the caller's visibility signature), so a question asked again over the same data, by a caller who sees the
+same rows, is answered from the cache without asking the engine. A new commit of an input is a new data version: the session goes stale,
+its kept answers are dropped by the data-version look, and the next ask opens a session whose stamps differ; a start or an options change
+drops the engine's answers, and a snapshot's answers leave when its last session closes. It is bounded in **bytes**
+(`drishti.engine-lib.answers-mb`, 256; 0 off) and joins the memory budget's `engine.answers` pool like every other answer cache of the
+server; Admin → Caches lists it as `engines.answers` (bytes, entries, hits and misses per engine) and purges it whole or per business date.
+An engine keeps no answer cache of its own, and a module keeps none either: what a module derives from an answer (an index of the date,
+rows by key, figures by node) it keeps **with the answer** through the kernel API's `EngineAnswer.shaped`, so it is counted, evicted and
+purged with it and reachable only through the same stamp. A shape function reads the answer and reference data that is the same for every
+viewer; anything per caller is applied after, on each ask. The output gate runs on every answer, kept or not. A published ask always runs.
+
+**Reading an answer in a module.** `Engines.ask` returns an `EngineAnswer`: status, missing, notes, input stamps, key, and each output's
+table read as columns in place (`EngineTable`: `text`, `number`, `integer`, `flag`, `list`, `value` by column and row, `find(keyColumn, key)`
+by an index built once per answer). Nothing is boxed; reading one node of a table of every node is one `find`. The plain shape (maps and
+lists) is made only at the HTTP edge (`POST /api/v1/engines/{id}/output`, the Data Protocol table).
+
+**The host's fixed cost per ask.** A request is hashed once (the cache's look-up and the engine's own stamp share the hash the request
+carries); the options are hashed once per instance; an input's stamp is composed from the lake's data versions without reading a row and is
+fixed for the session; the audit line names a list of more than 32 items by its count beside the request's hash, never item by item; the
+engine's log lines are forwarded from where the host last read; a session's inputs are released when it closes.
 
 ## 4. Inputs
 

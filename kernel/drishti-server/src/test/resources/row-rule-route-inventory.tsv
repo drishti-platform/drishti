@@ -155,3 +155,4 @@ none	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/Genomics
 none	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/ShowcaseController.java	showcase landing
 none	modules/market-data/java/market-data-service/src/main/java/com/ash/drishti/marketdata/MarketLandingController.java	landing page
 none	modules/trading/java/trading-service/src/main/java/com/ash/drishti/trading/TradingLandingController.java	landing page
+gated	kernel/drishti-server/src/main/java/com/ash/drishti/server/memlake/LakeTablesController.java	

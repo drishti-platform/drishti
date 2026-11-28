@@ -37,6 +37,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from core import lakes as server_lakes
 from core.lakes import LakeError, _tool
 
 log = logging.getLogger(__name__)
@@ -108,15 +109,30 @@ class LakeMaintenance:
 
     # -------------------------------------------------------------------------------------------- what the page shows
 
+    def see(self, figures: list[dict]) -> None:
+        """The lake roots of the local tables the server listed: the roots this console may maintain, beside ``lakes.roots``."""
+        seen = self.lakes.cfg.seen
+        for t in figures:
+            if t.get("root") and not t.get("error") and Path(t["root"]) not in seen:
+                seen.append(Path(t["root"]))
+
+    async def refresh_roots(self, app) -> None:
+        """Asks the server for its tables (as an administrator) so the schedules know the roots without a page being open."""
+        try:
+            self.see(await server_lakes.tables(app.state.backend, schedule_identity(app, {})))
+        except Exception:  # noqa: BLE001 - the server is down or has no lakes: the roots known stay
+            pass
+
     def overview(self, figures: list[dict]) -> dict:
         mc, ms, own = self.mod("maintconfig"), self.mod("maintschedule"), self.mod("ownership")
+        self.see(figures)
         config = self.config()
         built = {str(r): own.built(r) for r in self.lakes.cfg.lake_roots()}
         rows = []
         for t in figures:
             name, root = t.get("table"), t.get("root")
             rec = (built.get(root) or {}).get(name)
-            rows.append({"root": root, "table": name, "domain": t.get("domain"), "format": t.get("format") or "delta", "owned": rec is not None, "owner": rec,
+            rows.append({"root": root, "table": name, "lake": t.get("lake"), "name": t.get("name"), "domain": t.get("domain"), "format": t.get("format") or "delta", "owned": rec is not None, "owner": rec,
                          "reason": None if rec else own.FOREIGN, "settings": mc.table_settings(config, root, name),
                          "files": t.get("files"), "size": t.get("size"), "bytes": t.get("bytes"), "error": t.get("error")})
         zone = self.zone(config)
@@ -355,6 +371,7 @@ class LakeMaintenance:
             m = maintenance(app)                                      # the app's current one (tests replace the Lakes)
             try:
                 await m.after(app.state.backend)                     # the signals of runs finished since the last tick
+                await m.refresh_roots(app)
                 await asyncio.to_thread(m.tick, lambda s: schedule_identity(app, s))
                 told = False
             except LakeError as e:

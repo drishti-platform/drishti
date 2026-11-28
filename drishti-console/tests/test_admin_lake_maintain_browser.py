@@ -33,11 +33,19 @@ if importlib.util.find_spec("deltalake") is None:
 
 from conftest import CONSOLE, FakeBackend  # noqa: E402
 from core.lakes import Lakes, LakeSettings  # noqa: E402
-from test_admin_lake_maintain import make_lake  # noqa: E402
-from test_admin_lakes_browser import _free_port  # noqa: E402
+from test_admin_lake_maintain import make_lake, serve_tables  # noqa: E402
 from test_live_tabs_browser import browser  # noqa: E402,F401 - the shared browser fixture
 
 REPO = Path(__file__).resolve().parents[2]
+
+
+def _free_port() -> int:
+    import socket
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
 SHOTS = os.environ.get("DRISHTI_DOC_SHOTS")
 
 
@@ -63,6 +71,7 @@ def maint_console(tmp_path_factory):
     make_lake(root)
     app = create_app(load_settings(CONSOLE / "config"))
     app.state.backend = SignalBackend()
+    serve_tables(app.state.backend, root)
     app.state.lakes = Lakes(LakeSettings(roots=[root], tools_dir=REPO / "tools", data_dir=work / "data", schedules=False))
     port = _free_port()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning", timeout_graceful_shutdown=2))

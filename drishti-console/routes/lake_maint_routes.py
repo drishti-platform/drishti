@@ -25,7 +25,8 @@ from fastapi.responses import JSONResponse
 from core.csrf import json_body
 from core.lake_maint import identity_for, maintenance
 from core.lakes import LakeError
-from routes.lake_routes import _admin, _err, lakes_of
+from core import lakes as server_lakes
+from routes.lake_routes import _admin, _err
 
 router = APIRouter(prefix="/admin/api/lakes/maintain", include_in_schema=False)
 
@@ -34,8 +35,8 @@ router = APIRouter(prefix="/admin/api/lakes/maintain", include_in_schema=False)
 async def overview(request: Request):
     """{tables[{root, table, domain, owned, owner, reason, settings, files, size}], schedules[], history[] (last 50), configFile, zone, running[]}."""
     try:
-        _admin(request)
-        figures = await asyncio.to_thread(lakes_of(request.app).figures)
+        me = _admin(request)
+        figures = await server_lakes.tables(request.app.state.backend, me)
         return await asyncio.to_thread(maintenance(request.app).overview, figures)
     except LakeError as e:
         return _err(e)

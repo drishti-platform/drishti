@@ -20,64 +20,30 @@
 {% block body_class %}terminal{% endblock %}
 {% block nav %}{% include "terminal/_topbar.html" %}{% endblock %}
 {% block content %}
-<div class="adm" data-lakes data-max-mb="{{ cfg.maxUploadMb }}">
+<div class="adm" data-lakes>
   {% with tab='lakes' %}{% include "admin/_nav.html" %}{% endwith %}
   <p class="lk-crumb"><a href="{{ BASE }}/admin/loads">Data loads</a> <span aria-hidden="true">›</span> Lakes</p>
-  {% if elsewhere %}
-  <h1 class="ws-h">Lakes</h1>
-  {% include "admin/_lakes_elsewhere.html" %}
-  {% else %}
-  <h1 class="ws-h">Load a file into a lake <a class="emb-help" href="{{ BASE }}/help/cli-guide" aria-label="Help: the lake build tool" title="Help: the lake build tool">?</a></h1>
+  <h1 class="ws-h">Lakes <a class="emb-help" href="{{ BASE }}/help/lake-guide" aria-label="Help: the data lake" title="Help: the data lake">?</a></h1>
   <details class="adm-about"><summary>About this page</summary>
-  <p class="text-muted-d">Bring a large JSON export (an array or JSON Lines, gzipped or not) and turn it into a Delta table that {{ PRODUCT }}'s Delta connector
-    reads: one row per document, the whole document kept (nested lists intact), partitioned by business date and the classifiers you pick.
-    The build runs on this console's machine with the same engine as <span class="mono">drishti.py lake build</span>, so a run here and a scheduled run
-    behave the same (lock, summary, run log). Re-running a day replaces that day only. Lake roots this console may write:
-    <span class="mono">{{ cfg.roots | join(', ') }}</span> (<span class="mono">lakes.roots</span>). See <a href="{{ BASE }}/help/cli-guide">Tools</a>.</p>
+  <p class="text-muted-d">Every lake the server reads (its lake files) and each table's figures, as the server answers: rows, business dates and the last
+    build, read from the table's own log. To load a file into a table use <a href="{{ BASE }}/admin/loads/upload">Admin → Data loads → Upload</a>:
+    the data inbox is the one way a file reaches a table, for the console and for the command line alike.</p>
   </details>
   <p class="adm-msg" data-msg role="status" aria-live="polite"></p>
 
-  <section class="lk-step" data-step="file" aria-labelledby="lkFile">
-    <h2 id="lkFile"><span class="lk-n">1</span> The file</h2>
-    {{ admin_form('lake_file', max_mb=cfg.maxUploadMb) }}
-    <div class="lk-progress" data-upload-progress hidden><progress max="100" value="0" data-bar aria-label="Upload"></progress> <span data-upload-text></span></div>
-  </section>
-
-  <section class="lk-step" data-step="fields" aria-labelledby="lkFields" hidden>
-    <h2 id="lkFields"><span class="lk-n">2</span> Id, business date and classifiers</h2>
-    <p class="text-muted-d" data-scan-note></p>
-    {{ admin_form('lake_fields') }}
-    <p class="loads-field">Business date <span class="mono" data-date-said></span></p>
-    <div class="lk-fields" data-fields role="region" aria-label="The file's fields: classifiers become partition folders, promoted fields become columns"></div>{# drishti-grid with cell editing (drishti_admin-lakes.js) #}
-  </section>
-
-  <section class="lk-step" data-step="target" aria-labelledby="lkTarget" hidden>
-    <h2 id="lkTarget"><span class="lk-n">3</span> Where it goes</h2>
-    {{ admin_form('lake_target') }}
-    <p class="lk-warn" data-target-warn role="status" hidden></p>
-    <p><button type="button" class="btn-pill btn-accent" data-run>Build the lake</button></p>
-  </section>
-
-  <section class="lk-step" data-step="run" aria-labelledby="lkRun" hidden>
-    <h2 id="lkRun"><span class="lk-n">4</span> Build</h2>
-    <div class="lk-progress"><progress max="100" value="0" data-run-bar aria-label="Build"></progress> <span data-run-text>Starting…</span></div>
-    <div data-result></div>
-  </section>
-
+  {% if maint %}
   {% include "admin/_lake_maintain.html" %}
   {% endif %}
   {% if lake_files %}{% include "admin/_lake_files.html" %}{% endif %}
   {% if memory %}{% include "admin/_lake_memory.html" %}{% endif %}
-  {% if not elsewhere %}
 
   <h2 class="lk-h2">Recent builds</h2>
   <div class="tbl-wrap"><table class="tbl adm-tbl lk-runs">
-    <caption class="visually-hidden">The last runs of the lake builds, from each root's run log</caption>
+    <caption class="visually-hidden">The last runs of the lake builds, from each lake's run log</caption>
     <thead><tr><th scope="col">Run log line</th></tr></thead>
-    <tbody>{% for r in runs | reverse %}<tr><td class="mono">{{ r.line }}</td></tr>{% else %}<tr><td class="text-muted-d">No build has run on these roots yet.</td></tr>{% endfor %}</tbody>
+    <tbody>{% for r in runs | reverse %}<tr><td class="mono">{{ r.line }}</td></tr>{% else %}<tr><td class="text-muted-d">No lake build has run on the server's lakes yet.</td></tr>{% endfor %}</tbody>
   </table></div>
-  {% endif %}
 </div>
 {% endblock %}
 {% block footer %}{% include "_footer.html" %}{% endblock %}
-{% block scripts %}<script src="{{ BASE }}/static/js/drishti_command.js?v={{ ASSET_V }}"></script>{% if not elsewhere %}<script src="{{ BASE }}/static/js/drishti_admin-lakes.js?v={{ ASSET_V }}"></script><script src="{{ BASE }}/static/js/drishti_admin-lake-maintain.js?v={{ ASSET_V }}"></script>{% endif %}{% endblock %}
+{% block scripts %}<script src="{{ BASE }}/static/js/drishti_command.js?v={{ ASSET_V }}"></script>{% if maint %}<script src="{{ BASE }}/static/js/drishti_admin-lake-maintain.js?v={{ ASSET_V }}"></script>{% endif %}{% endblock %}

@@ -54,8 +54,9 @@ class EditionsTest {
     void theDefaultPacksFollowTheModulesLessTheirOffByDefaultOnes() {
         java.util.List<String> d = com.ash.drishti.packs.distribution.Distributions.defaultPacks(Path.of(TestRoots.repo(), "config", "distributions", "kernel.yaml"),
                 com.ash.drishti.api.resolution.ModuleHomes.source(Path.of(TestRoots.repo())));
-        assertThat(d).startsWith("core").contains("market-data", "trading", "counterparty-risk", "market-risk", "world-economy", "news-and-markets",
+        assertThat(d).contains("core", "market-data", "trading", "counterparty-risk", "market-risk", "world-economy", "news-and-markets",
                 "genomics-showcase", "protein-engineering").doesNotContain("us-equities", "funds", "gleif", "compute-demo", "world-development", "central-banks", "gdelt-events");
+        assertThat(d.indexOf("core")).isLessThan(d.indexOf("market-data"));        // the reference data module first: market-data packs extend core
         assertThat(d.indexOf("market-data")).isLessThan(d.indexOf("trading"));     // requirement order: market-data before the packs that extend it
         assertThat(Files.exists(Path.of(TestRoots.repo(), "config", "packs", "default-packs.yaml"))).as("no pack list beside the manifests").isFalse();
     }

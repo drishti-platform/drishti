@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: press-release
 version: 1
+libraries: [core@1]
 description: "One official press release: its title, publisher, date, summary and the link to the original."
 doc:
   summary: "A press release: the title, the publisher, when it was published, its category, the summary and the original's address."
@@ -49,14 +50,17 @@ strip:
   - { label: Country, bind: $.COUNTRY }
   - { label: Internal only, bind: "$.INTERNAL_ONLY ? 'yes' : 'no'" }
 panels:
-  - id: release
-    kind: kv
-    title: The release
-    key: F2
-    columns:
-      - { label: Title, bind: $.TITLE }
-      - { label: Summary, bind: "nonblank($.SUMMARY, 'The feed gives no summary: open the original.')" }
-      - { label: Original, bind: $.URL }
-      - { label: Publisher, bind: "link($.RELEASE_SOURCE, 'release-source', $.PUBLISHER_NAME)" }
+  - use: core/record-card@1
+    as: release
+    with:
+      id: release
+      record: "$"
+      title: The release
+      key: F2
+      facts:
+        - { label: Title, bind: $.TITLE }
+        - { label: Summary, bind: "nonblank($.SUMMARY, 'The feed gives no summary: open the original.')" }
+        - { label: Original, bind: $.URL }
+        - { label: Publisher, bind: "link($.RELEASE_SOURCE, 'release-source', $.PUBLISHER_NAME)" }
   - { use: source-footer@1 }
 keys: { F7: "link($.RELEASE_SOURCE, 'release-source')", F9: raw }

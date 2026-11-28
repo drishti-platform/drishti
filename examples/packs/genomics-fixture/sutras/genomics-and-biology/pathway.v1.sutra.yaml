@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: pathway
 version: 1
+libraries: [core@1]
 description: A biological pathway and the genes that take part in it.
 doc:
   summary: "A biological pathway and the genes that take part in it."
@@ -45,14 +46,16 @@ strip:
   - { label: Category, bind: $.category }
   - { label: Genes, bind: $.geneCount, fmt: amount0 }
 panels:
-  - id: members
-    kind: table
-    title: Member genes
-    key: F2
-    rows: $.members
-    columns:
-      - { label: Gene, bind: "@.symbol" }
-      - { label: Role, bind: "@.role" }
-      - { label: Location, bind: "@.location" }
+  - use: core/data-table@1
+    as: members
+    with:
+      id: members
+      title: Member genes
+      key: F2
+      rows: $.members
+      columns:
+        - { label: Gene, bind: "@.symbol" }
+        - { label: Role, bind: "@.role" }
+        - { label: Location, bind: "@.location" }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

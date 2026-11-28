@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: endur-comfut
 version: 1
+libraries: [core@1]
 description: "An Endur exchange-traded commodity future: one leg, one settlement against the index."
 doc:
   summary: "An Endur exchange-traded commodity future: one leg, one settlement against the index."
@@ -60,17 +61,20 @@ controls:                       # the events by leg and by date: a trader's 'wha
   - { id: when, kind: date-range, label: Between, placement: header, panel: event-list }
 panels:
   - { use: trading/deal-ticket@1, with: { rate-fmt: price4, product: "Commodity future" } }
-  - id: contract
-    kind: kv
-    title: "Exchange contract"
-    code: FUT
-    when: "$.PRODUCT_SUB_TYPE == 'ENGY-EXCH-FUT'"
-    columns:
-      - { label: "Quantity", bind: "fmt($.QUANTITY, 'amount0') + ' ' + nonblank(first($.LEGS).PRICE_UNIT, '')" }
-      - { label: "Price", bind: "$.PRICE", fmt: price4 }
-      - { label: "Index", bind: "nonblank(first($.LEGS).INDEX.NAME, '–')" }
-      - { label: "Settles", bind: "first($.LEGS).CASH_FLOWS[0].PAYMENT_DATE", fmt: date }
-      - { label: "Settlement", bind: "nonblank(first($.LEGS).SETTLEMENT_TYPE, '–')" }
+  - use: core/record-card@1
+    as: contract
+    with:
+      id: contract
+      record: "$"
+      title: "Exchange contract"
+      code: FUT
+      when: "$.PRODUCT_SUB_TYPE == 'ENGY-EXCH-FUT'"
+      facts:
+        - { label: "Quantity", bind: "fmt($.QUANTITY, 'amount0') + ' ' + nonblank(first($.LEGS).PRICE_UNIT, '')" }
+        - { label: "Price", bind: "$.PRICE", fmt: price4 }
+        - { label: "Index", bind: "nonblank(first($.LEGS).INDEX.NAME, '–')" }
+        - { label: "Settles", bind: "first($.LEGS).CASH_FLOWS[0].PAYMENT_DATE", fmt: date }
+        - { label: "Settlement", bind: "nonblank(first($.LEGS).SETTLEMENT_TYPE, '–')" }
   - { use: trading/legs@1, with: { rate-fmt: price4 } }
   - { use: trading/flow-schedule@1, with: { rate-fmt: price4 } }
   - { use: trading/events@1 }

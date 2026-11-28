@@ -17,6 +17,7 @@
 rachana: 1.2
 sutra: fund
 version: 1
+libraries: [core@1]
 description: "A US mutual fund or ETF from SEC public data: the fact sheet, the look-through holdings with derivatives and counterparties, and the fund against its index."
 doc:
   summary: "A fund's fact sheet; tabs: the look-through holdings (derivatives, counterparties, who else holds its largest company) and the fund against its index."
@@ -86,49 +87,57 @@ panels:
       - { label: SIC division, bind: "nonblank(@.SECTOR, '')" }
       - { label: Weight, bind: "@.PCT", fmt: weight2 }
       - { label: Value, bind: "@.VALUE", fmt: compact }
-  - id: the-fund
-    kind: kv
-    title: The fund
+  - use: core/record-card@1
+    as: the-fund
     area: side
-    code: FND
-    columns:
-      - { label: Type, bind: $.TYPE }
-      - { label: Index, bind: "nonblank($.INDEX_ID) ? link($.INDEX_ID, 'index-membership', $.VS_INDEX.INDEX_NAME) : 'none matched'" }
-      - { label: Adviser, bind: "nonblank($.ADVISER_LEI) ? link($.ADVISER_LEI, 'lei-entity', $.ADVISER) : nonblank($.ADVISER, '–')" }
-      - { label: Registrant, bind: $.REGISTRANT }
-      - { label: Fund LEI, bind: "nonblank($.LEI) ? link($.LEI, 'lei-entity', $.LEI) : '–'" }
-      - { label: Share classes, bind: $.TICKERS }
-      - { label: Exchange, bind: "nonblank($.EXCHANGE, '–')" }
-      - { label: Creation unit (shares), bind: $.CREATION_UNIT, fmt: amount0 }
-      - { label: Authorised participants, bind: $.AP_COUNT, fmt: amount0 }
-      - { label: Rank by net assets, bind: $.RANK, fmt: amount0 }
+    with:
+      id: the-fund
+      record: "$"
+      title: The fund
+      code: FND
+      facts:
+        - { label: Type, bind: $.TYPE }
+        - { label: Index, bind: "nonblank($.INDEX_ID) ? link($.INDEX_ID, 'index-membership', $.VS_INDEX.INDEX_NAME) : 'none matched'" }
+        - { label: Adviser, bind: "nonblank($.ADVISER_LEI) ? link($.ADVISER_LEI, 'lei-entity', $.ADVISER) : nonblank($.ADVISER, '–')" }
+        - { label: Registrant, bind: $.REGISTRANT }
+        - { label: Fund LEI, bind: "nonblank($.LEI) ? link($.LEI, 'lei-entity', $.LEI) : '–'" }
+        - { label: Share classes, bind: $.TICKERS }
+        - { label: Exchange, bind: "nonblank($.EXCHANGE, '–')" }
+        - { label: Creation unit (shares), bind: $.CREATION_UNIT, fmt: amount0 }
+        - { label: Authorised participants, bind: $.AP_COUNT, fmt: amount0 }
+        - { label: Rank by net assets, bind: $.RANK, fmt: amount0 }
   - { id: by-sector, kind: hbar, when: "size($.BY_SECTOR) > 0", title: "Holdings by SIC division (us-equities companies, % of net assets)", area: side, rows: $.BY_SECTOR, label: LABEL, value: PCT, fmt: weight2, key: F3 }
   - { id: annual-returns, kind: hbar, when: "size($.ANNUAL_RETURNS) > 0", title: Calendar-year returns (prospectus), area: low, span: 4, rows: $.ANNUAL_RETURNS, label: YEAR, value: RETURN, fmt: return2, tone: sign, key: F4 }
-  - id: flows
-    kind: table
-    title: "Flows and returns, three months (N-PORT)"
+  - use: core/data-table@1
+    as: flows
     area: low
-    span: 4
-    rows: $.FLOWS
-    search: false
-    columns:
-      - { label: Month, bind: "@.MONTH" }
-      - { label: Sales, bind: "@.SALES", fmt: compact, total: true }
-      - { label: Redemptions, bind: "@.REDEMPTIONS", fmt: compact, total: true }
-      - { label: Net flow, bind: "@.NET_FLOW", fmt: compact, tone: sign, total: true }
-      - { label: Return, bind: "@.RETURN", fmt: return2, tone: sign }
-  - id: providers
-    kind: kv
-    title: Service providers (N-CEN, GLEIF)
+    with:
+      id: flows
+      title: "Flows and returns, three months (N-PORT)"
+      span: 4
+      rows: $.FLOWS
+      search: false
+      columns:
+        - { label: Month, bind: "@.MONTH" }
+        - { label: Sales, bind: "@.SALES", fmt: compact, total: true }
+        - { label: Redemptions, bind: "@.REDEMPTIONS", fmt: compact, total: true }
+        - { label: Net flow, bind: "@.NET_FLOW", fmt: compact, tone: sign, total: true }
+        - { label: Return, bind: "@.RETURN", fmt: return2, tone: sign }
+  - use: core/record-card@1
+    as: providers
     area: low
-    span: 4
-    columns:
-      - { label: Custodian, bind: "nonblank($.CUSTODIAN_LEI) ? link($.CUSTODIAN_LEI, 'lei-entity', $.CUSTODIAN) : nonblank($.CUSTODIAN, '–')" }
-      - { label: Auditor, bind: "nonblank($.AUDITOR, '–')" }
-      - { label: Administrator, bind: "nonblank($.ADMINISTRATOR, '–')" }
-      - { label: Transfer agent, bind: "nonblank($.TRANSFER_AGENT, '–')" }
-      - { label: Sub-advisers, bind: "nonblank($.SUB_ADVISERS, '–')" }
-      - { label: Census period, bind: "nonblank($.NCEN_PERIOD, 'no N-CEN found')" }
+    with:
+      id: providers
+      record: "$"
+      title: Service providers (N-CEN, GLEIF)
+      span: 4
+      facts:
+        - { label: Custodian, bind: "nonblank($.CUSTODIAN_LEI) ? link($.CUSTODIAN_LEI, 'lei-entity', $.CUSTODIAN) : nonblank($.CUSTODIAN, '–')" }
+        - { label: Auditor, bind: "nonblank($.AUDITOR, '–')" }
+        - { label: Administrator, bind: "nonblank($.ADMINISTRATOR, '–')" }
+        - { label: Transfer agent, bind: "nonblank($.TRANSFER_AGENT, '–')" }
+        - { label: Sub-advisers, bind: "nonblank($.SUB_ADVISERS, '–')" }
+        - { label: Census period, bind: "nonblank($.NCEN_PERIOD, 'no N-CEN found')" }
   - id: views
     kind: tabs
     title: Look-through and index

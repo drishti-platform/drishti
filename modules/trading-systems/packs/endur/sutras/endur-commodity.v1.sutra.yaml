@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: endur-commodity
 version: 1
+libraries: [core@1]
 description: "An Endur physical commodity deal: a delivery leg in the commodity's unit and a payment leg."
 doc:
   summary: "An Endur physical commodity deal: a delivery leg in the commodity's unit and a payment leg."
@@ -60,31 +61,37 @@ controls:                       # the events by leg and by date: a trader's 'wha
   - { id: when, kind: date-range, label: Between, placement: header, panel: event-list }
 panels:
   - { use: trading/deal-ticket@1, with: { rate-fmt: price4, product: "Physical commodity" } }
-  - id: delivery
-    kind: kv
-    title: "Physical delivery at the hub"
-    code: DLV
-    when: "$.PRODUCT_SUB_TYPE == 'NGX-COMM-PHYS'"
-    columns:
-      - { label: "Hub", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].PHYSICAL_LOCATION_NAME, '–')" }
-      - { label: "Index location", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].INDEX_LOCATION_NAME, '–')" }
-      - { label: "Daily volume", bind: "$.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].DAILY_VOLUME", fmt: amount0 }
-      - { label: "Unit", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].PRICE_UNIT, '–')" }
-      - { label: "Delivery from", bind: "$.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].CASH_FLOWS[0].START_DATE", fmt: date }
-      - { label: "Delivery to", bind: "last($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].CASH_FLOWS).END_DATE", fmt: date }
-      - { label: "Settlement", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].SETTLEMENT_TYPE, '–')" }
-  - id: inventory
-    kind: kv
-    title: "Warehouse warrants (inventory)"
-    code: INV
-    when: "$.PRODUCT_SUB_TYPE == 'COMM-WARRANTS-INV'"
-    columns:
-      - { label: "Vault", bind: "nonblank($.VAULT_LOCATION_ALLOCATION, '–')" }
-      - { label: "Registered", bind: "nonblank($.REGISTRY_DELIVERY_DATE, '–')" }
-      - { label: "Quantity", bind: "fmt($.QUANTITY, 'amount0') + ' ' + nonblank(first($.LEGS).PRICE_UNIT, '')" }
-      - { label: "Price", bind: "$.PRICE", fmt: price4 }
-      - { label: "Lease perpetuity", bind: "nonblank($.LEASE_PERPETUITY_FLAG, '–')" }
-      - { label: "Precious metal", bind: "nonblank($.PRECIOUS_METAL_FLAG, '–')" }
+  - use: core/record-card@1
+    as: delivery
+    with:
+      id: delivery
+      record: "$"
+      title: "Physical delivery at the hub"
+      code: DLV
+      when: "$.PRODUCT_SUB_TYPE == 'NGX-COMM-PHYS'"
+      facts:
+        - { label: "Hub", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].PHYSICAL_LOCATION_NAME, '–')" }
+        - { label: "Index location", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].INDEX_LOCATION_NAME, '–')" }
+        - { label: "Daily volume", bind: "$.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].DAILY_VOLUME", fmt: amount0 }
+        - { label: "Unit", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].PRICE_UNIT, '–')" }
+        - { label: "Delivery from", bind: "$.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].CASH_FLOWS[0].START_DATE", fmt: date }
+        - { label: "Delivery to", bind: "last($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].CASH_FLOWS).END_DATE", fmt: date }
+        - { label: "Settlement", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'PHYSICAL'][0].SETTLEMENT_TYPE, '–')" }
+  - use: core/record-card@1
+    as: inventory
+    with:
+      id: inventory
+      record: "$"
+      title: "Warehouse warrants (inventory)"
+      code: INV
+      when: "$.PRODUCT_SUB_TYPE == 'COMM-WARRANTS-INV'"
+      facts:
+        - { label: "Vault", bind: "nonblank($.VAULT_LOCATION_ALLOCATION, '–')" }
+        - { label: "Registered", bind: "nonblank($.REGISTRY_DELIVERY_DATE, '–')" }
+        - { label: "Quantity", bind: "fmt($.QUANTITY, 'amount0') + ' ' + nonblank(first($.LEGS).PRICE_UNIT, '')" }
+        - { label: "Price", bind: "$.PRICE", fmt: price4 }
+        - { label: "Lease perpetuity", bind: "nonblank($.LEASE_PERPETUITY_FLAG, '–')" }
+        - { label: "Precious metal", bind: "nonblank($.PRECIOUS_METAL_FLAG, '–')" }
   - { use: trading/legs@1, with: { rate-fmt: price4 } }
   - { use: trading/flow-schedule@1, with: { rate-fmt: price4 } }
   - { use: trading/events@1 }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: study-sample
 version: 1
+libraries: [core@1]
 description: 'Study sample: One patient''s sample of the 1,500 of cohort ONC-1: the clinical tracks, the response to therapy, the cluster it belongs
   to and its place on the two-dimensional map of samples (precomputed, never projected at view time).'
 doc:
@@ -58,34 +59,37 @@ strip:
   bind: $.CLUSTER
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Study sample
-  columns:
-  - label: Sample id
-    bind: $.SAMPLE_ID
-  - label: Cohort
-    bind: $.COHORT
-  - label: Tumour type
-    bind: $.TUMOUR_TYPE
-  - label: Stage
-    bind: $.STAGE
-  - label: Age band
-    bind: $.AGE_BAND
-  - label: Response
-    bind: $.RESPONSE
-  - label: Toxicity
-    bind: $.TOXICITY
-  - label: Relapse
-    bind: $.RELAPSE
-  - label: Cluster
-    bind: $.CLUSTER
-  - label: Emb x
-    bind: $.EMB_X
-  - label: Emb y
-    bind: $.EMB_Y
-  - label: Mutation count
-    bind: $.MUTATION_COUNT
-    fmt: amount0
+- use: core/record-card@1
+  as: record
+  with:
+    id: record
+    record: "$"
+    title: Study sample
+    facts:
+    - label: Sample id
+      bind: $.SAMPLE_ID
+    - label: Cohort
+      bind: $.COHORT
+    - label: Tumour type
+      bind: $.TUMOUR_TYPE
+    - label: Stage
+      bind: $.STAGE
+    - label: Age band
+      bind: $.AGE_BAND
+    - label: Response
+      bind: $.RESPONSE
+    - label: Toxicity
+      bind: $.TOXICITY
+    - label: Relapse
+      bind: $.RELAPSE
+    - label: Cluster
+      bind: $.CLUSTER
+    - label: Emb x
+      bind: $.EMB_X
+    - label: Emb y
+      bind: $.EMB_Y
+    - label: Mutation count
+      bind: $.MUTATION_COUNT
+      fmt: amount0
 keys:
   F9: raw

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: customer
 version: 1
+libraries: [core@1]
 description: "A retail customer: segment, products held, KYC risk and total relationship."
 doc:
   summary: "A retail customer: segment, products held, KYC risk and total relationship."
@@ -50,15 +51,17 @@ strip:
   - { label: KYC risk, bind: $.kycRisk, tone: status }
   - { label: Customer since, bind: $.since, fmt: date }
 panels:
-  - id: products
-    kind: table
-    title: Products held
-    key: F2
-    rows: $.products
-    columns:
-      - { label: Product, bind: "@.product" }
-      - { label: Account, bind: "@.id" }
-      - { label: Balance, bind: "@.balance", fmt: signed2, tone: sign, total: true }
+  - use: core/data-table@1
+    as: products
+    with:
+      id: products
+      title: Products held
+      key: F2
+      rows: $.products
+      columns:
+        - { label: Product, bind: "@.product" }
+        - { label: Account, bind: "@.id" }
+        - { label: Balance, bind: "@.balance", fmt: signed2, tone: sign, total: true }
   - { use: field-list@1, with: { id: profile, title: Profile, key: F3, area: right, rows: $.profile } }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }

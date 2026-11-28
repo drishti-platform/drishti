@@ -1,0 +1,61 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Built from the Drishti UI kit only (config/ui-kit/fragments): no screen code of its own.
+rachana: 1.2
+sutra: oecd-series
+version: 99
+description: "One OECD measure of one member by period: the history, the latest value and the change."
+doc:
+  summary: "An OECD series: its monthly or quarterly history, the latest value and period, the change."
+  description: >-
+    One page per member and measure: the strip gives the measure, the latest value with its unit and period, the previous value and the
+    change; the chart draws the history; the dataflow it came from is in the facts; F7 opens the member.
+  params: {}
+  emits: []
+  expects: []
+  examples:
+    - "/v/oecd-series/OECDS-USA-CLI"
+    - "OECDS OECDS-USA-CLI"
+  category: "Public sector"
+  tags: ["oecd-series", "public-sector", "record"]
+  use-when: "You have one OECD series (its id, or a link from another screen) and want to read it in full: an OECD series: its monthly or quarterly history, the latest value and period, the change."
+  avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
+  data:
+    in-words: "One OECD series record (kind oecd-series); the page reads SERIES_ID, NAME, TITLE, LATEST, UNIT, LATEST_PERIOD, CHANGE, HISTORY, OECD_COUNTRY, COUNTRY_NAME, FREQUENCY, DATAFLOW."
+    sample-row: {"CHANGE": 0.0529, "COUNTRY_NAME": "United States", "DATAFLOW": "OECD.SDD.STES,DSD_STES@DF_CLI,", "FREQUENCY": "monthly", "ISO3": "USA", "LATEST": 100.9993, "LATEST_PERIOD": "2026-09", "MEASURE": "CLI"}
+  example: "OECDS OECDS-USA-CLI"
+  see-also: ["oecd-country"]
+  keywords: ["oecd series", "public sector"]
+  since: "2.9.11"
+match: { kind: oecd-series, priority: 10 }
+title: { pill: Public sector · OECD series, id: $.SERIES_ID, with: $.NAME }
+strip:
+  - { label: Measure, bind: $.TITLE }
+  - { label: Latest, bind: $.LATEST, fmt: amount2, emphasis: true }
+  - { label: Unit, bind: $.UNIT }
+  - { label: Period, bind: $.LATEST_PERIOD }
+  - { label: Change, bind: $.CHANGE, fmt: signed2 }
+panels:
+  - { use: series-line@1, with: { id: history, title: History, key: F2, rows: $.HISTORY, x: PERIOD, y: VALUE, fmt: amount2 } }
+  - id: about
+    kind: kv
+    title: About this series
+    area: right
+    columns:
+      - { label: Member, bind: "link($.OECD_COUNTRY, 'oecd-country', $.COUNTRY_NAME)" }
+      - { label: Frequency, bind: $.FREQUENCY }
+      - { label: Dataflow, bind: $.DATAFLOW }
+  - { use: source-footer@1 }
+keys: { F7: "link($.OECD_COUNTRY, 'oecd-country')", F9: raw }

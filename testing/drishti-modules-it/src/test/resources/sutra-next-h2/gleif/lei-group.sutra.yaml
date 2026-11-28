@@ -1,0 +1,109 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Hand-written from the Drishti UI kit (config/ui-kit/fragments) and the pack's own fragments (sutras/common).
+rachana: 1.2
+sutra: lei-group
+version: 99
+description: "An ownership group, computed from the entities when asked: the ultimate parent with its whole tree, every member, and counts by country and legal form."
+doc:
+  summary: "An ownership group computed from the entities: the ultimate parent's tree (a tree table), its members (a click opens one beside), counts by country and legal form."
+  description: >-
+    One page per ultimate parent, computed when it is opened from every entity in the lake whose ownership group (LEI_GROUP) it is,
+    with no member cap (since 2.9.2; docs/guides/bi/README.md). The strip counts the members, the members GLEIF has,
+    the levels, the countries and the late renewals. The tree table opens the group from the ultimate parent down, two levels open
+    (each name a link to the entity), built from each member's direct parent; members whose direct parent is not in the group hang
+    under the ultimate parent. The members table lists every member with its country and level, and a click opens the member's key
+    facts beside it. On the right: the group's facts (with the cap of the committed data when GLEIF has more members), members by
+    country and by legal form, the seeded entities that brought the group into the pack, and the source.
+  params: {}
+  emits: []
+  expects: []
+  examples:
+    - "/v/lei-group/8I5DZWZKVSZI1NUHU748"
+    - "LEIG MLU0ZO3ML4LN2LL2TL39"
+  category: "GLEIF"
+  tags: ["lei-group", "gleif", "record", "table"]
+  use-when: "You have one ownership group (computed) (its id, or a link from another screen) and want to read it in full: an ownership group computed from the entities: the ultimate parent's tree (a tree table), its members (a click opens one beside), counts by country and legal form."
+  avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
+  data:
+    in-words: "One ownership group (computed) record (kind lei-group); the page reads GROUP_ID, NAME, MEMBERS, MEMBERS_IN_GLEIF, LEVELS, COUNTRIES, LATE_RENEWALS, LEI_COUNTRY, COUNTRY_NAME, TREE, ROWS, ENTITY_LEI."
+  example: "LEIG MLU0ZO3ML4LN2LL2TL39"
+  see-also: ["lei-entity", "lei-country", "us-company"]
+  keywords: ["lei group", "ownership group (computed)", "gleif"]
+  since: "2.7.0"
+match: { kind: lei-group, where: "$.GROUP_ID != 'ALL'", priority: 10 }
+title: { pill: GLEIF · Ownership group (computed), id: $.GROUP_ID, with: $.NAME }
+strip:
+  - { label: Members, bind: $.MEMBERS, fmt: entities0, emphasis: true }
+  - { label: Members (GLEIF), bind: $.MEMBERS_IN_GLEIF, fmt: entities0 }
+  - { label: Levels, bind: $.LEVELS }
+  - { label: Countries, bind: $.COUNTRIES }
+  - { label: Late renewals, bind: "$.LATE_RENEWALS > 0 ? $.LATE_RENEWALS + ' late: renewal failed' : 'None late'", tone: status }
+  - { label: Home, bind: "link($.LEI_COUNTRY, 'lei-country', $.COUNTRY_NAME)" }
+panels:
+  - id: tree
+    kind: table
+    title: The group tree (from the ultimate parent; two levels open)
+    key: F2
+    code: TREE
+    rows: $.TREE
+    children: "@.CHILDREN"
+    expand: 2
+    columns:
+      - { label: Entity, bind: "link(@.LEI, 'lei-entity', @.NAME)" }
+      - { label: Country, bind: "@.COUNTRY" }
+      - { label: Level, bind: "@.LEVEL" }
+      - { label: LEI, bind: "@.LEI" }
+  - use: gleif/entity-list@1
+    with: { id: members, title: "Members (a click opens one beside)", rows: $.ROWS, key: F3, code: MEM }
+    children:
+      - place: detail-right
+        source: { kind: lei-entity, id: "@parent.open.id" }
+        waits: Pick a member to see its key facts
+        panels:
+          - { use: gleif/entity-card@1, with: { id: member, title: "${@parent.open.id}", rec: $src } }
+  - id: facts
+    kind: kv
+    title: The group
+    area: right
+    columns:
+      - { label: Ultimate parent, bind: "link($.ENTITY_LEI, 'lei-entity', $.NAME)" }
+      - { label: Legal form, bind: $.LEGAL_FORM }
+      - { label: Segment, bind: $.SEGMENT }
+      - { label: Listed company, bind: "link($.US_COMPANY, 'us-company')" }
+      - { label: Members, bind: $.MEMBERS, fmt: entities0 }
+      - { label: Members in GLEIF, bind: $.MEMBERS_IN_GLEIF, fmt: entities0 }
+      - { label: Lapsed, bind: $.LAPSED }
+      - { label: Cap, bind: "$.CAPPED ? 'GLEIF has ' + $.MEMBERS_IN_GLEIF + ' entities in the group; the committed data keeps ' + $.MEMBERS : 'The whole group is in the lake'" }
+  - { use: ranked-bars@1, with: { id: by-country, title: Members by country, rows: $.BY_COUNTRY, label: label, value: value, fmt: entities0, area: right, key: F4 } }
+  - { use: ranked-bars@1, with: { id: by-form, title: Members by legal form, rows: $.BY_LEGAL_FORM, label: label, value: value, fmt: entities0, area: right } }
+  - id: seeds
+    kind: table
+    title: Why the group is in the pack (its seeded entities)
+    area: right
+    rows: "$.ROWS[?nonblank(@.SEGMENT)]"
+    search: false
+    columns:
+      - { label: Entity, bind: "link(@.LEI, 'lei-entity', @.NAME)" }
+      - { label: Segment, bind: "@.SEGMENT" }
+      - { label: Ticker, bind: "link(@.US_COMPANY, 'us-company')" }
+  - use: explainer-note@1
+    with:
+      title: How this group is computed
+      area: right
+      text: "Computed when the page opens from every legal entity in the lake whose ownership group is this ultimate parent (GLEIF's level 2 consolidation relationships, CC0): counts, countries, late renewals and the tree from each member's direct parent, with no member cap. Nothing of the group is stored. The committed data keeps at most 50 entities a group (Cap says when GLEIF has more); a wider refresh brings more and the page counts them all."
+  - { use: field-list@1, with: { id: source, title: Data source and licence, rows: $.PROVENANCE, area: right } }
+  - { use: data-provenance@1 }
+keys: { F5: "link($.ENTITY_LEI, 'lei-entity', 'Ultimate parent')", F6: "link($.LEI_COUNTRY, 'lei-country', 'Country')", F9: raw }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: design
 version: 1
+libraries: [core@1]
 description: 'Protein design: One designed variant of Helixase-7 from one round of the campaign: its parent, how many changes it carries, how
   active and stable it measured, what the model predicted and where it sits on the map of designs.'
 doc:
@@ -62,35 +63,38 @@ strip:
   bind: $.STATUS
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Protein design
-  columns:
-  - label: Design id
-    bind: $.DESIGN_ID
-  - label: Protein
-    bind: link($.PROTEIN, 'protein')
-  - label: Round
-    bind: $.ROUND
-    fmt: amount0
-  - label: Parent
-    bind: $.PARENT
-  - label: N changes
-    bind: $.N_CHANGES
-    fmt: amount0
-  - label: Changes
-    bind: $.CHANGES
-  - label: Activity
-    bind: $.ACTIVITY
-  - label: Delta tm
-    bind: $.DELTA_TM
-  - label: Model score
-    bind: $.MODEL_SCORE
-  - label: Status
-    bind: $.STATUS
-  - label: Emb x
-    bind: $.EMB_X
-  - label: Emb y
-    bind: $.EMB_Y
+- use: core/record-card@1
+  as: record
+  with:
+    id: record
+    record: "$"
+    title: Protein design
+    facts:
+    - label: Design id
+      bind: $.DESIGN_ID
+    - label: Protein
+      bind: link($.PROTEIN, 'protein')
+    - label: Round
+      bind: $.ROUND
+      fmt: amount0
+    - label: Parent
+      bind: $.PARENT
+    - label: N changes
+      bind: $.N_CHANGES
+      fmt: amount0
+    - label: Changes
+      bind: $.CHANGES
+    - label: Activity
+      bind: $.ACTIVITY
+    - label: Delta tm
+      bind: $.DELTA_TM
+    - label: Model score
+      bind: $.MODEL_SCORE
+    - label: Status
+      bind: $.STATUS
+    - label: Emb x
+      bind: $.EMB_X
+    - label: Emb y
+      bind: $.EMB_Y
 keys:
   F9: raw

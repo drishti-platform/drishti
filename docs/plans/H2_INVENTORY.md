@@ -28,7 +28,7 @@ Status: proposed, a write-only pass (nothing built or run on a server). Branch `
 3. The library fragments of Rachana (`core`, `finance`, i8 role-home) are typed, hermetic fragments (`arg.`, columns passed in `with:`,
    `libraries: [core@1]`). Drishti on this branch resolves only the UI-kit and pack fragments (`%{}` text fragments); it has no library
    resolver (item C6, "Drishti's fragments on the library mechanism"). A `use: core/record-card@1` cannot resolve here and cannot be
-   proved without a build, so the 213 residual panels are NOT moved to `core/` fragments in this pass (see "Blocked on C6").
+   proved without a build, the conversion is described in `H2_CONVERSION.md`.
 4. What could be done without a resolver and without a build was done: see "Converted".
 
 ## Inventory of the non-risk Sutras
@@ -93,12 +93,10 @@ Intended differences: none in what a screen shows. The converted panels expand t
 columns and options unchanged); the generator's equivalence tests (`PackSutraNextEquivalence`, `SutraNextEquivalenceTest`) prove it
 on the next build. The doc fields are additive.
 
-## Blocked on C6 (the library resolver)
+## Residual panels
 
-The 213 residual panels are bespoke bindings (explicit columns, links, tones, highlights). They become `core/record-card`,
-`core/data-table`, `core/tree-table`, `core/pivot-table`, `core/key-figure` uses once Drishti resolves `libraries: [core@1]`; each
-passes its columns in `with:` and so keeps its bindings. Then: the 57 kv and 75 table panels, about 1,000 lines. Until a build can
-compare the compiled ViewModels, writing them is a guess.
+The residual inline table, kv and tabs panels are converted to the Rachana Core fragments where Rachana 1.1.1 allows it; what remains inline,
+and why, is in `H2_CONVERSION.md` (the one place for it).
 
 ## Needs building (nothing was run)
 
@@ -107,3 +105,11 @@ compare the compiled ViewModels, writing them is a guess.
    parser must accept `category`, `tags`, `use-when`, `avoid-when`, `data`, `example`, `see-also`, `keywords`; the schema `doc` definition is on
    `genui/kit-lite`).
 3. `retail-banking` and `genomics` example packs loaded through `DRISHTI_PACKS_EXTRA_DIRS`: open one page of each.
+
+## Status check on i8/develop (2026-11-28, increment 1)
+
+Live tables and blotters: already on the one engine. `DrishtiLiveTables` (Rachana's live tables), `KindSnapshot`, `KindStream`, `KindBindings`,
+`FormResults` and `DrishtiAuthoriser` serve `/api/v1/rdp/tables`; the console's `live_routes.py` and `live_results.py` only proxy and shape
+pages; the one declaration is `modules/trading/blotters/trade.live.yaml` (a FORM's result is the same table without edits). No `LiveSet` class,
+route or template is left, so there is no bespoke path to retire. The BI engine's `LiveTables` (dataset live tables) is a separate feature
+(a dataset's in-memory table), not a result set; whether it should read through the same engine is a decision for the owner.

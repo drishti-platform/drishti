@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: index-funds
 version: 1
+libraries: [core@1]
 description: "The funds and ETFs of the pack that track one us-equities index, by net assets, with their cost and how closely they follow it."
 doc:
   summary: "The funds tracking an index, by net assets: type, expense ratio, members held and active share against the computed index."
@@ -50,21 +51,23 @@ strip:
   - { label: Net assets together, bind: $.TOTAL_NET_ASSETS, fmt: compact }
   - { label: Largest, bind: "link($.LARGEST, 'fund', $.LARGEST)" }
 panels:
-  - id: trackers
-    kind: table
-    title: "Funds tracking the ${$.NAME}, by net assets (a fund opens its page)"
-    key: F2
-    code: TRK
-    rows: $.ROWS
-    columns:
-      - { label: Fund, bind: "link(@.FUND, 'fund', @.NAME)" }
-      - { label: Ticker, bind: "@.FUND" }
-      - { label: Type, bind: "@.TYPE" }
-      - { label: Net assets, bind: "@.NET_ASSETS", fmt: compact, total: true }
-      - { label: Expense ratio, bind: "@.EXPENSE_RATIO", fmt: ratio2 }
-      - { label: Members held, bind: "@.MEMBERS_HELD", fmt: amount0 }
-      - { label: Active share*, bind: "@.ACTIVE_SHARE", fmt: weight2 }
-      - { label: Report date, bind: "@.REPORT_DATE", fmt: date }
+  - use: core/data-table@1
+    as: trackers
+    with:
+      id: trackers
+      title: "Funds tracking the ${$.NAME}, by net assets (a fund opens its page)"
+      key: F2
+      code: TRK
+      rows: $.ROWS
+      columns:
+        - { label: Fund, bind: "link(@.FUND, 'fund', @.NAME)" }
+        - { label: Ticker, bind: "@.FUND" }
+        - { label: Type, bind: "@.TYPE" }
+        - { label: Net assets, bind: "@.NET_ASSETS", fmt: compact, total: true }
+        - { label: Expense ratio, bind: "@.EXPENSE_RATIO", fmt: ratio2 }
+        - { label: Members held, bind: "@.MEMBERS_HELD", fmt: amount0 }
+        - { label: Active share*, bind: "@.ACTIVE_SHARE", fmt: weight2 }
+        - { label: Report date, bind: "@.REPORT_DATE", fmt: date }
   - { use: ranked-bars@1, with: { id: by-assets, title: "Net assets (USD)", rows: $.ROWS, label: FUND, value: NET_ASSETS, fmt: compact, area: right, key: F3 } }
   - use: explainer-note@1
     with:

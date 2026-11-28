@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: central-bank
 version: 1
+libraries: [core@1]
 description: "One central bank: its policy rate, the last move, the rate's history and the market series around it."
 doc:
   summary: "A central bank's page: the policy rate and its last move, two years of the policy rate, and the bank's series."
@@ -52,26 +53,31 @@ strip:
   - { label: Currency, bind: $.CURRENCY }
 panels:
   - { use: series-line@1, with: { id: policy, title: "Policy rate, %", key: F2, rows: $.POLICY_HISTORY, x: DATE, y: VALUE, fmt: price2 } }
-  - id: series
-    kind: table
-    title: "The bank's series (a row opens its history)"
-    key: F3
-    code: SER
-    rows: $.SERIES
-    search: false
-    columns:
-      - { label: Series, bind: "link(@.RATE_SERIES, 'rate-series', @.TITLE)" }
-      - { label: Latest, bind: "@.LATEST", fmt: amount2 }
-      - { label: Unit, bind: "@.UNIT" }
-      - { label: Date, bind: "@.DATE", fmt: date }
-      - { label: Change, bind: "@.CHANGE", fmt: signed2 }
-  - id: bank
-    kind: kv
-    title: The bank
+  - use: core/data-table@1
+    as: series
+    with:
+      id: series
+      title: "The bank's series (a row opens its history)"
+      key: F3
+      code: SER
+      rows: $.SERIES
+      search: false
+      columns:
+        - { label: Series, bind: "link(@.RATE_SERIES, 'rate-series', @.TITLE)" }
+        - { label: Latest, bind: "@.LATEST", fmt: amount2 }
+        - { label: Unit, bind: "@.UNIT" }
+        - { label: Date, bind: "@.DATE", fmt: date }
+        - { label: Change, bind: "@.CHANGE", fmt: signed2 }
+  - use: core/record-card@1
+    as: bank
     area: right
-    columns:
-      - { label: Country, bind: $.COUNTRY_NAME }
-      - { label: Website, bind: $.WEBSITE }
-      - { label: Press releases, bind: "link($.PRESS, 'release-source', 'Latest press releases')" }
+    with:
+      id: bank
+      record: "$"
+      title: The bank
+      facts:
+        - { label: Country, bind: $.COUNTRY_NAME }
+        - { label: Website, bind: $.WEBSITE }
+        - { label: Press releases, bind: "link($.PRESS, 'release-source', 'Latest press releases')" }
   - { use: source-footer@1 }
 keys: { F7: "link($.PRESS, 'release-source')", F9: raw }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: desk
 version: 1
+libraries: [core@1]
 description: "A trading desk: books, limits and risk results."
 doc:
   summary: "A trading desk: books, limits and risk results."
@@ -49,15 +50,17 @@ strip:
   - { label: VaR 99% 1D (engine), bind: $.VAR_ENGINE.VAR, fmt: compact, emphasis: true }
   - { label: MTM, bind: $.MTM, fmt: signed0, tone: sign }
 panels:
-  - id: books
-    kind: table
-    title: Books
-    key: F2
-    rows: $.BOOKS
-    columns:
-      - { label: Book, bind: "@.ID", link: true }
-      - { label: Trades, bind: "@.TRADES", fmt: amount0, total: true }
-      - { label: MTM, bind: "@.MTM", fmt: signed0, tone: sign, total: true }
+  - use: core/data-table@1
+    as: books
+    with:
+      id: books
+      title: Books
+      key: F2
+      rows: $.BOOKS
+      columns:
+        - { label: Book, bind: "@.ID", link: true }
+        - { label: Trades, bind: "@.TRADES", fmt: amount0, total: true }
+        - { label: MTM, bind: "@.MTM", fmt: signed0, tone: sign, total: true }
   - id: mtmGrid
     kind: pivot
     title: "MTM grid (by book and currency, USD)"

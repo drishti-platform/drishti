@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: filing-feed
 version: 1
+libraries: [core@1]
 description: "The filings browser: the latest SEC filings of the covered companies, of every form or one; a click opens a filing beside."
 doc:
   summary: "The latest SEC filings of the Dow 30, Nasdaq-100 and S&P 500 companies; a click opens the filing beside the table."
@@ -58,17 +59,20 @@ panels:
         panels:
           - { use: us-equities/filing-card@1, with: { id: picked, title: "Filing ${@parent.open.id}", rec: $src } }
   - { use: ranked-bars@1, with: { id: by, title: Filings by form or company, rows: $.BY, fmt: amount0, area: right, key: F3 } }
-  - id: forms
-    kind: kv
-    title: Browse by form
+  - use: core/record-card@1
+    as: forms
     area: right
-    columns:
-      - { label: Every form, bind: "link('ALL', 'filing-feed', 'EDGAR ALL')" }
-      - { label: Annual reports, bind: "link('10-K', 'filing-feed', 'EDGAR 10-K')" }
-      - { label: Quarterly reports, bind: "link('10-Q', 'filing-feed', 'EDGAR 10-Q')" }
-      - { label: Current reports, bind: "link('8-K', 'filing-feed', 'EDGAR 8-K')" }
-      - { label: Insider transactions, bind: "link('4', 'filing-feed', 'EDGAR 4')" }
-      - { label: Proxy statements, bind: "link('DEF-14A', 'filing-feed', 'EDGAR DEF-14A')" }
+    with:
+      id: forms
+      record: "$"
+      title: Browse by form
+      facts:
+        - { label: Every form, bind: "link('ALL', 'filing-feed', 'EDGAR ALL')" }
+        - { label: Annual reports, bind: "link('10-K', 'filing-feed', 'EDGAR 10-K')" }
+        - { label: Quarterly reports, bind: "link('10-Q', 'filing-feed', 'EDGAR 10-Q')" }
+        - { label: Current reports, bind: "link('8-K', 'filing-feed', 'EDGAR 8-K')" }
+        - { label: Insider transactions, bind: "link('4', 'filing-feed', 'EDGAR 4')" }
+        - { label: Proxy statements, bind: "link('DEF-14A', 'filing-feed', 'EDGAR DEF-14A')" }
   - { use: field-list@1, with: { id: source, title: Data source and licence, rows: $.PROVENANCE, area: right } }
   - { use: data-provenance@1 }
 keys: { F9: raw }

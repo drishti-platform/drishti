@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: price-history
 version: 1
+libraries: [core@1]
 description: "A company's quote, a year of daily prices and their analytics (returns, volatility, beta), read live by the us-equities-prices connector: off as shipped, internal use only."
 doc:
   summary: "A ticker's live quote, a year of daily closes and the returns, volatility and beta computed from them; internal use only, off until a site turns it on."
@@ -52,32 +53,38 @@ strip:
   - { label: As of, bind: $.AS_OF }
 panels:
   - { use: series-line@1, with: { id: closes, title: "Daily close, one year", rows: $.HISTORY, x: DATE, y: CLOSE, fmt: price2, key: F2 } }
-  - id: analytics
-    kind: kv
-    title: Analytics (computed from the closes when read)
+  - use: core/record-card@1
+    as: analytics
     area: right
-    key: F3
-    columns:
-      - { label: Return 1 month, bind: $.ANALYTICS.RETURN_1M, fmt: pct2, tone: sign }
-      - { label: Return 3 months, bind: $.ANALYTICS.RETURN_3M, fmt: pct2, tone: sign }
-      - { label: Return 6 months, bind: $.ANALYTICS.RETURN_6M, fmt: pct2, tone: sign }
-      - { label: Return over the history, bind: $.ANALYTICS.RETURN_PERIOD, fmt: pct2, tone: sign }
-      - { label: Volatility (annualised), bind: $.ANALYTICS.VOLATILITY, fmt: pct2 }
-      - { label: Largest drawdown, bind: $.ANALYTICS.MAX_DRAWDOWN, fmt: pct2, tone: sign }
-      - { label: "Beta", bind: "$.ANALYTICS.BETA != null ? fmt($.ANALYTICS.BETA, 'price2') + ' against ' + $.ANALYTICS.BENCHMARK : 'No benchmark'" }
-      - { label: Correlation, bind: $.ANALYTICS.CORRELATION, fmt: price2 }
-      - { label: Daily closes, bind: $.ANALYTICS.OBSERVATIONS }
-  - id: quote
-    kind: kv
-    title: Quote
+    with:
+      id: analytics
+      record: "$"
+      title: Analytics (computed from the closes when read)
+      key: F3
+      facts:
+        - { label: Return 1 month, bind: $.ANALYTICS.RETURN_1M, fmt: pct2, tone: sign }
+        - { label: Return 3 months, bind: $.ANALYTICS.RETURN_3M, fmt: pct2, tone: sign }
+        - { label: Return 6 months, bind: $.ANALYTICS.RETURN_6M, fmt: pct2, tone: sign }
+        - { label: Return over the history, bind: $.ANALYTICS.RETURN_PERIOD, fmt: pct2, tone: sign }
+        - { label: Volatility (annualised), bind: $.ANALYTICS.VOLATILITY, fmt: pct2 }
+        - { label: Largest drawdown, bind: $.ANALYTICS.MAX_DRAWDOWN, fmt: pct2, tone: sign }
+        - { label: "Beta", bind: "$.ANALYTICS.BETA != null ? fmt($.ANALYTICS.BETA, 'price2') + ' against ' + $.ANALYTICS.BENCHMARK : 'No benchmark'" }
+        - { label: Correlation, bind: $.ANALYTICS.CORRELATION, fmt: price2 }
+        - { label: Daily closes, bind: $.ANALYTICS.OBSERVATIONS }
+  - use: core/record-card@1
+    as: quote
     area: right
-    columns:
-      - { label: Day low, bind: $.DAY_LOW, fmt: price2 }
-      - { label: Day high, bind: $.DAY_HIGH, fmt: price2 }
-      - { label: 52-week low, bind: $.FIFTY_TWO_WEEK_LOW, fmt: price2 }
-      - { label: 52-week high, bind: $.FIFTY_TWO_WEEK_HIGH, fmt: price2 }
-      - { label: Volume, bind: $.VOLUME, fmt: amount0 }
-      - { label: Market, bind: $.MARKET_STATE }
+    with:
+      id: quote
+      record: "$"
+      title: Quote
+      facts:
+        - { label: Day low, bind: $.DAY_LOW, fmt: price2 }
+        - { label: Day high, bind: $.DAY_HIGH, fmt: price2 }
+        - { label: 52-week low, bind: $.FIFTY_TWO_WEEK_LOW, fmt: price2 }
+        - { label: 52-week high, bind: $.FIFTY_TWO_WEEK_HIGH, fmt: price2 }
+        - { label: Volume, bind: $.VOLUME, fmt: amount0 }
+        - { label: Market, bind: $.MARKET_STATE }
   - use: explainer-note@1
     with:
       title: Internal use only

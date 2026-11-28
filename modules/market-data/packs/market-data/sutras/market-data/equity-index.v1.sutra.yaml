@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: equity-index
 version: 1
+libraries: [core@1]
 description: Index level with its largest constituents.
 doc:
   summary: "Index level with its largest constituents."
@@ -49,14 +50,16 @@ strip:
   - { label: Constituents, bind: $.CONSTITUENT_COUNT }
   - { label: Currency, bind: $.CURRENCY }
 panels:
-  - id: constituents
-    kind: table
-    title: Top constituents
-    key: F2
-    rows: $.CONSTITUENTS
-    columns:
-      - { label: Equity, bind: "@.EQUITY" }
-      - { label: Weight, bind: "@.WEIGHT", fmt: pct2 }
+  - use: core/data-table@1
+    as: constituents
+    with:
+      id: constituents
+      title: Top constituents
+      key: F2
+      rows: $.CONSTITUENTS
+      columns:
+        - { label: Equity, bind: "@.EQUITY" }
+        - { label: Weight, bind: "@.WEIGHT", fmt: pct2 }
   - { use: series-line@1, with: { id: history, title: "Level, last 30 days", area: right, rows: $.HISTORY, x: DATE, y: CLOSE } }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }

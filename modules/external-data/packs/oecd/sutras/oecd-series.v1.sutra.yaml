@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: oecd-series
 version: 1
+libraries: [core@1]
 description: "One OECD measure of one member by period: the history, the latest value and the change."
 doc:
   summary: "An OECD series: its monthly or quarterly history, the latest value and period, the change."
@@ -49,13 +50,16 @@ strip:
   - { label: Change, bind: $.CHANGE, fmt: signed2 }
 panels:
   - { use: series-line@1, with: { id: history, title: History, key: F2, rows: $.HISTORY, x: PERIOD, y: VALUE, fmt: amount2 } }
-  - id: about
-    kind: kv
-    title: About this series
+  - use: core/record-card@1
+    as: about
     area: right
-    columns:
-      - { label: Member, bind: "link($.OECD_COUNTRY, 'oecd-country', $.COUNTRY_NAME)" }
-      - { label: Frequency, bind: $.FREQUENCY }
-      - { label: Dataflow, bind: $.DATAFLOW }
+    with:
+      id: about
+      record: "$"
+      title: About this series
+      facts:
+        - { label: Member, bind: "link($.OECD_COUNTRY, 'oecd-country', $.COUNTRY_NAME)" }
+        - { label: Frequency, bind: $.FREQUENCY }
+        - { label: Dataflow, bind: $.DATAFLOW }
   - { use: source-footer@1 }
 keys: { F7: "link($.OECD_COUNTRY, 'oecd-country')", F9: raw }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: fx-forward-curve
 version: 1
+libraries: [core@1]
 description: Forward points by tenor for a pair.
 doc:
   summary: "Forward points by tenor for a pair."
@@ -49,14 +50,16 @@ strip:
   - { label: "1Y points", bind: $.POINTS_1Y, fmt: pips1, tone: sign }
 panels:
   - { use: series-line@1, with: { id: points, title: Forward points (pips), key: F2, y: PIPS, fmt: pips1 } }
-  - id: outright
-    kind: table
-    title: Outrights
-    rows: $.POINTS
-    columns:
-      - { label: Tenor, bind: "@.TENOR" }
-      - { label: Points, bind: "@.PIPS", fmt: pips1, tone: sign }
-      - { label: Outright, bind: "@.OUTRIGHT", fmt: rate5 }
+  - use: core/data-table@1
+    as: outright
+    with:
+      id: outright
+      title: Outrights
+      rows: $.POINTS
+      columns:
+        - { label: Tenor, bind: "@.TENOR" }
+        - { label: Points, bind: "@.PIPS", fmt: pips1, tone: sign }
+        - { label: Outright, bind: "@.OUTRIGHT", fmt: rate5 }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.FX_SPOT, 'fx-spot')", F8: impact, F9: raw }

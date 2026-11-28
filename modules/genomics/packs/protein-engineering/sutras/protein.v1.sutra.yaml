@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: protein
 version: 1
+libraries: [core@1]
 description: 'Protein: One invented protein: its sequence, family and active site.'
 doc:
   summary: One protein, as a record.
@@ -59,26 +60,29 @@ strip:
   fmt: amount0
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Protein
-  columns:
-  - label: Protein
-    bind: $.PROTEIN
-  - label: Gene
-    bind: link($.GENE, 'study-gene')
-  - label: Name
-    bind: $.NAME
-  - label: Length
-    bind: $.LENGTH
-  - label: Family
-    bind: $.FAMILY
-  - label: Sequence
-    bind: $.SEQUENCE
-  - label: Active site
-    bind: $.ACTIVE_SITE
-  - label: Design rounds
-    bind: $.DESIGN_ROUNDS
-    fmt: amount0
+- use: core/record-card@1
+  as: record
+  with:
+    id: record
+    record: "$"
+    title: Protein
+    facts:
+    - label: Protein
+      bind: $.PROTEIN
+    - label: Gene
+      bind: link($.GENE, 'study-gene')
+    - label: Name
+      bind: $.NAME
+    - label: Length
+      bind: $.LENGTH
+    - label: Family
+      bind: $.FAMILY
+    - label: Sequence
+      bind: $.SEQUENCE
+    - label: Active site
+      bind: $.ACTIVE_SITE
+    - label: Design rounds
+      bind: $.DESIGN_ROUNDS
+      fmt: amount0
 keys:
   F9: raw

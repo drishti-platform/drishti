@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-mapping
 version: 1
+libraries: [core@1]
 description: "An ISIN, BIC or MIC and the legal entity GLEIF's mapping files give it."
 doc:
   summary: "An identifier (ISIN, BIC or MIC) and the LEI it maps to, with the entity's key facts."
@@ -48,17 +49,20 @@ strip:
   - { label: Entity, bind: $.ENTITY_NAME }
   - { label: Country, bind: "link($.COUNTRY, 'lei-country')" }
 panels:
-  - id: mapping
-    kind: kv
-    title: The mapping
-    key: F2
-    columns:
-      - { label: Identifier, bind: $.IDENTIFIER }
-      - { label: Type, bind: "$.TYPE == 'BIC' ? 'BIC (business identifier code, with SWIFT)' : ($.TYPE == 'ISIN' ? 'ISIN (securities identifier, with ANNA: the issuer)' : 'MIC (market identifier code: the operator)')" }
-      - { label: Maps to, bind: "link($.ENTITY_LEI, 'lei-entity', $.ENTITY_NAME)" }
-      - { label: Ownership group, bind: "link($.LEI_GROUP, 'lei-group')" }
-      - { label: ISINs of the issuer, bind: $.ISIN_COUNT, fmt: entities0 }
-      - { label: Mapping file, bind: $.MAPPING_FILE }
+  - use: core/record-card@1
+    as: mapping
+    with:
+      id: mapping
+      record: "$"
+      title: The mapping
+      key: F2
+      facts:
+        - { label: Identifier, bind: $.IDENTIFIER }
+        - { label: Type, bind: "$.TYPE == 'BIC' ? 'BIC (business identifier code, with SWIFT)' : ($.TYPE == 'ISIN' ? 'ISIN (securities identifier, with ANNA: the issuer)' : 'MIC (market identifier code: the operator)')" }
+        - { label: Maps to, bind: "link($.ENTITY_LEI, 'lei-entity', $.ENTITY_NAME)" }
+        - { label: Ownership group, bind: "link($.LEI_GROUP, 'lei-group')" }
+        - { label: ISINs of the issuer, bind: $.ISIN_COUNT, fmt: entities0 }
+        - { label: Mapping file, bind: $.MAPPING_FILE }
   - use: gleif/entity-card@1
     with: { id: entity, title: The entity, rec: $src, area: right }
     source: { kind: lei-entity, id: $.ENTITY_LEI }

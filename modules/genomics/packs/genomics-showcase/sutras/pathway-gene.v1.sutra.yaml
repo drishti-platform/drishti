@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: pathway-gene
 version: 1
+libraries: [core@1]
 description: 'Pathway membership: One gene in one biological pathway and the part it plays there.'
 doc:
   summary: One pathway membership, as a record.
@@ -56,17 +57,20 @@ strip:
   bind: $.ROLE_IN_PATHWAY
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Pathway membership
-  columns:
-  - label: Pathway gene id
-    bind: $.PATHWAY_GENE_ID
-  - label: Pathway
-    bind: $.PATHWAY
-  - label: Gene
-    bind: link($.GENE, 'study-gene')
-  - label: Role in pathway
-    bind: $.ROLE_IN_PATHWAY
+- use: core/record-card@1
+  as: record
+  with:
+    id: record
+    record: "$"
+    title: Pathway membership
+    facts:
+    - label: Pathway gene id
+      bind: $.PATHWAY_GENE_ID
+    - label: Pathway
+      bind: $.PATHWAY
+    - label: Gene
+      bind: link($.GENE, 'study-gene')
+    - label: Role in pathway
+      bind: $.ROLE_IN_PATHWAY
 keys:
   F9: raw

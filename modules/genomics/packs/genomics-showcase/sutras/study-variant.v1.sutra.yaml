@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: study-variant
 version: 1
+libraries: [core@1]
 description: 'Study variant: One variant site of the synthetic genome: its place, the change it makes to the gene''s protein (the amino acids
   before and after, the key into the protein workbench''s scan) and how many samples carry it.'
 doc:
@@ -60,36 +61,39 @@ strip:
   fmt: amount0
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Study variant
-  columns:
-  - label: Variant id
-    bind: $.VARIANT_ID
-  - label: Chrom
-    bind: $.CHROM
-  - label: Pos
-    bind: $.POS
-    fmt: amount0
-  - label: Ref
-    bind: $.REF
-  - label: Alt
-    bind: $.ALT
-  - label: Gene
-    bind: link($.GENE, 'study-gene')
-  - label: Consequence
-    bind: $.CONSEQUENCE
-  - label: Impact
-    bind: $.IMPACT
-  - label: Protein pos
-    bind: $.PROTEIN_POS
-    fmt: amount0
-  - label: Aa ref
-    bind: $.AA_REF
-  - label: Aa alt
-    bind: $.AA_ALT
-  - label: Carriers
-    bind: $.CARRIERS
-    fmt: amount0
+- use: core/record-card@1
+  as: record
+  with:
+    id: record
+    record: "$"
+    title: Study variant
+    facts:
+    - label: Variant id
+      bind: $.VARIANT_ID
+    - label: Chrom
+      bind: $.CHROM
+    - label: Pos
+      bind: $.POS
+      fmt: amount0
+    - label: Ref
+      bind: $.REF
+    - label: Alt
+      bind: $.ALT
+    - label: Gene
+      bind: link($.GENE, 'study-gene')
+    - label: Consequence
+      bind: $.CONSEQUENCE
+    - label: Impact
+      bind: $.IMPACT
+    - label: Protein pos
+      bind: $.PROTEIN_POS
+      fmt: amount0
+    - label: Aa ref
+      bind: $.AA_REF
+    - label: Aa alt
+      bind: $.AA_ALT
+    - label: Carriers
+      bind: $.CARRIERS
+      fmt: amount0
 keys:
   F9: raw

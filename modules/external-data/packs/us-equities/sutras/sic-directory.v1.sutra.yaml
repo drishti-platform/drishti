@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: sic-directory
 version: 1
+libraries: [core@1]
 description: "Every SIC code of the covered companies, by revenue, and revenue by SIC division."
 doc:
   summary: "Every SIC code of the covered companies with its company count and revenue; revenue by SIC division."
@@ -47,19 +48,21 @@ strip:
   - { label: Revenue, bind: $.REVENUE, fmt: compact }
   - { label: Net income, bind: $.NET_INCOME, fmt: compact, tone: sign }
 panels:
-  - id: codes
-    kind: table
-    title: SIC codes (sort by a column)
-    key: F2
+  - use: core/data-table@1
+    as: codes
     source: { kind: sic-sector, search: "'*'", limit: 200 }
-    rows: $src
-    where: "@.SIC != 'ALL'"
-    columns:
-      - { label: SIC, bind: "link(@.SIC, 'sic-sector')" }
-      - { label: Industry, bind: "@.DESCRIPTION" }
-      - { label: Division, bind: "@.SECTOR" }
-      - { label: Companies, bind: "@.COMPANIES", total: true }
-      - { label: "Revenue, latest FY", bind: "@.REVENUE", fmt: compact, total: true }
+    with:
+      id: codes
+      title: SIC codes (sort by a column)
+      key: F2
+      rows: $src
+      where: "lambda r: r.SIC != 'ALL'"
+      columns:
+        - { label: SIC, bind: "link(@.SIC, 'sic-sector')" }
+        - { label: Industry, bind: "@.DESCRIPTION" }
+        - { label: Division, bind: "@.SECTOR" }
+        - { label: Companies, bind: "@.COMPANIES", total: true }
+        - { label: "Revenue, latest FY", bind: "@.REVENUE", fmt: compact, total: true }
   - { use: ranked-bars@1, with: { id: by-division, title: "Revenue by SIC division, USD", rows: $.BY_DIVISION, label: label, value: value, fmt: compact, area: right, key: F3 } }
   - { use: field-list@1, with: { id: source, title: Data source and licence, rows: $.PROVENANCE, area: right } }
   - { use: data-provenance@1 }

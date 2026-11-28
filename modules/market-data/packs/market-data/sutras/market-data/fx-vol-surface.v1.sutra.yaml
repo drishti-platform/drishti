@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: fx-vol-surface
 version: 1
+libraries: [core@1]
 description: "Implied vols by expiry and delta (ATM, 25D RR/BF)."
 doc:
   summary: "Implied vols by expiry and delta (ATM, 25D RR/BF)."
@@ -62,18 +63,20 @@ panels:
       - { label: "25D C", bind: "@.C_25", fmt: price2 }
       - { label: "10D C", bind: "@.C_10", fmt: price2 }
   - { use: series-line@1, with: { id: atm, title: ATM vol term structure, key: F2, rows: $.GRID, x: EXPIRY, y: ATM } }
-  - id: grid
-    kind: table
-    title: Surface (vol %)
-    key: F3
-    rows: $.GRID
-    columns:
-      - { label: Expiry, bind: "@.EXPIRY" }
-      - { label: "10D P", bind: "@.P_10", fmt: price2 }
-      - { label: "25D P", bind: "@.P_25", fmt: price2 }
-      - { label: ATM, bind: "@.ATM", fmt: price2 }
-      - { label: "25D C", bind: "@.C_25", fmt: price2 }
-      - { label: "10D C", bind: "@.C_10", fmt: price2 }
+  - use: core/data-table@1
+    as: grid
+    with:
+      id: grid
+      title: Surface (vol %)
+      key: F3
+      rows: $.GRID
+      columns:
+        - { label: Expiry, bind: "@.EXPIRY" }
+        - { label: "10D P", bind: "@.P_10", fmt: price2 }
+        - { label: "25D P", bind: "@.P_25", fmt: price2 }
+        - { label: ATM, bind: "@.ATM", fmt: price2 }
+        - { label: "25D C", bind: "@.C_25", fmt: price2 }
+        - { label: "10D C", bind: "@.C_10", fmt: price2 }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.FX_SPOT, 'fx-spot')", F8: impact, F9: raw }

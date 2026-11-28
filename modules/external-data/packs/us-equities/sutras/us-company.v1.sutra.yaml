@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: us-company
 version: 1
+libraries: [core@1]
 description: "A US listed company: key facts, ten years of annual financials, recent SEC filings and index memberships, from public data."
 doc:
   summary: "A US listed company: key facts, financials over ten years, recent filings (a click opens one beside) and its indexes."
@@ -73,45 +74,52 @@ panels:
         waits: Pick a filing to see its details and EDGAR links
         panels:
           - { use: us-equities/filing-card@1, with: { id: picked-filing, title: "Filing ${@parent.open.id}", rec: $src } }
-  - id: held-by-funds
-    kind: table
-    title: "Held by funds (a fund opens its page)"
-    area: funds
-    key: F8
-    code: HLD
-    source: { pack: funds, kind: fund-holder, id: $.TICKER }
-    rows: $src.HOLDERS
-    empty: No fund of the funds pack holds this company (or the pack is off)
-    columns:
-      - { label: Fund, bind: "link(@.FUND, 'fund', @.FUND_NAME)" }
-      - { label: Type, bind: "@.TYPE" }
-      - { label: Weight in the fund, bind: "@.PCT", fmt: amount2 }
-      - { label: Value, bind: "@.VALUE", fmt: compact, total: true }
-      - { label: Shares, bind: "@.SHARES", fmt: compact, total: true }
-      - { label: Report date, bind: "@.REPORT_DATE", fmt: date }
-  - id: fund-ownership
-    kind: kv
-    title: Fund ownership
+  - use: core/data-table@1
+    as: held-by-funds
     area: funds
     source: { pack: funds, kind: fund-holder, id: $.TICKER }
-    columns:
-      - { label: Funds holding it, bind: "link($src.TICKER, 'fund-holder', fmt($src.FUNDS, 'amount0') + ' of the 200 largest')" }
-      - { label: of which ETFs, bind: $src.ETFS, fmt: amount0 }
-      - { label: Value held, bind: $src.TOTAL_VALUE, fmt: compact }
-      - { label: "Share of its shares (%)", bind: $src.PCT_OF_SHARES, fmt: amount2 }
-      - { label: "Average weight in a fund (%)", bind: $src.AVG_WEIGHT, fmt: amount2 }
-      - { label: Largest holder, bind: "link($src.TOP_HOLDER, 'fund', $src.TOP_HOLDER)" }
+    with:
+      id: held-by-funds
+      title: "Held by funds (a fund opens its page)"
+      key: F8
+      code: HLD
+      rows: $src.HOLDERS
+      empty: No fund of the funds pack holds this company (or the pack is off)
+      columns:
+        - { label: Fund, bind: "link(@.FUND, 'fund', @.FUND_NAME)" }
+        - { label: Type, bind: "@.TYPE" }
+        - { label: Weight in the fund, bind: "@.PCT", fmt: amount2 }
+        - { label: Value, bind: "@.VALUE", fmt: compact, total: true }
+        - { label: Shares, bind: "@.SHARES", fmt: compact, total: true }
+        - { label: Report date, bind: "@.REPORT_DATE", fmt: date }
+  - use: core/record-card@1
+    as: fund-ownership
+    area: funds
+    source: { pack: funds, kind: fund-holder, id: $.TICKER }
+    with:
+      id: fund-ownership
+      record: "$"
+      title: Fund ownership
+      facts:
+        - { label: Funds holding it, bind: "link($src.TICKER, 'fund-holder', fmt($src.FUNDS, 'amount0') + ' of the 200 largest')" }
+        - { label: of which ETFs, bind: $src.ETFS, fmt: amount0 }
+        - { label: Value held, bind: $src.TOTAL_VALUE, fmt: compact }
+        - { label: "Share of its shares (%)", bind: $src.PCT_OF_SHARES, fmt: amount2 }
+        - { label: "Average weight in a fund (%)", bind: $src.AVG_WEIGHT, fmt: amount2 }
+        - { label: Largest holder, bind: "link($src.TOP_HOLDER, 'fund', $src.TOP_HOLDER)" }
   - { use: us-equities/company-card@1, with: { area: right, code: CO } }
-  - id: indexes
-    kind: table
-    title: Index memberships
+  - use: core/data-table@1
+    as: indexes
     area: right
-    rows: $.INDEXES
-    search: false
-    empty: Not a member of the Dow 30, the Nasdaq-100, the S&P 500 or a bank list
-    columns:
-      - { label: Index, bind: "link(@.INDEX, 'index-membership', @.NAME)" }
-      - { label: Member since, bind: "@.SINCE", fmt: date }
+    with:
+      id: indexes
+      title: Index memberships
+      rows: $.INDEXES
+      search: false
+      empty: Not a member of the Dow 30, the Nasdaq-100, the S&P 500 or a bank list
+      columns:
+        - { label: Index, bind: "link(@.INDEX, 'index-membership', @.NAME)" }
+        - { label: Member since, bind: "@.SINCE", fmt: date }
   - use: explainer-note@1
     with:
       title: About this page

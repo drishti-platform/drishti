@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-entity
 version: 1
+libraries: [core@1]
 description: "A legal entity from its LEI record: key facts, addresses, registration and renewal, parents, children and identifiers."
 doc:
   summary: "A legal entity's LEI record: facts, renewal (late flagged), its parents chain and its children (a click opens one beside)."
@@ -87,14 +88,17 @@ panels:
         panels:
           - { use: gleif/entity-card@1, with: { id: child, title: "${@parent.open.id}", rec: $src } }
   - { use: gleif/entity-card@1, with: { area: right, code: FACTS } }
-  - id: addresses
-    kind: kv
-    title: Addresses
+  - use: core/record-card@1
+    as: addresses
     area: right
-    columns:
-      - { label: Legal address, bind: $.LEGAL_ADDRESS }
-      - { label: Headquarters, bind: "nonblank($.HQ_ADDRESS, 'Same as the legal address')" }
-      - { label: Headquarters country, bind: "nonblank($.HQ_COUNTRY, $.LEI_COUNTRY)" }
+    with:
+      id: addresses
+      record: "$"
+      title: Addresses
+      facts:
+        - { label: Legal address, bind: $.LEGAL_ADDRESS }
+        - { label: Headquarters, bind: "nonblank($.HQ_ADDRESS, 'Same as the legal address')" }
+        - { label: Headquarters country, bind: "nonblank($.HQ_COUNTRY, $.LEI_COUNTRY)" }
   - id: registration
     kind: status
     title: Registration and renewal
@@ -111,37 +115,45 @@ panels:
       - { label: Entity created, bind: $.CREATED, fmt: date }
       - { label: Managing LOU, bind: $.MANAGING_LOU }
       - { label: GLEIF record, bind: "'https://search.gleif.org/#/record/' + $.LEI" }
-  - id: identifiers
-    kind: kv
-    title: Identifiers
+  - use: core/record-card@1
+    as: identifiers
     area: right
-    columns:
-      - { label: LEI, bind: $.LEI }
-      - { label: BICs, bind: "nonblank($.BICS, 'None mapped')" }
-      - { label: ISINs mapped, bind: "nonblank($.ISIN_COUNT, 0)", fmt: entities0 }
-      - { label: MIC, bind: $.MIC }
-      - { label: OpenCorporates, bind: "nonblank($.OPENCORPORATES) ? 'https://opencorporates.com/companies/' + $.OPENCORPORATES : ''" }
-      - { label: Other names, bind: "first($.OTHER_NAMES).NAME" }
-  - id: listed
-    kind: kv
-    title: US listed company (us-equities)
+    with:
+      id: identifiers
+      record: "$"
+      title: Identifiers
+      facts:
+        - { label: LEI, bind: $.LEI }
+        - { label: BICs, bind: "nonblank($.BICS, 'None mapped')" }
+        - { label: ISINs mapped, bind: "nonblank($.ISIN_COUNT, 0)", fmt: entities0 }
+        - { label: MIC, bind: $.MIC }
+        - { label: OpenCorporates, bind: "nonblank($.OPENCORPORATES) ? 'https://opencorporates.com/companies/' + $.OPENCORPORATES : ''" }
+        - { label: Other names, bind: "first($.OTHER_NAMES).NAME" }
+  - use: core/record-card@1
+    as: listed
     area: right
-    when: "nonblank($.US_COMPANY)"
-    columns:
-      - { label: Company, bind: "link($.US_COMPANY, 'us-company', $.US_COMPANY_NAME)" }
-      - { label: Ticker, bind: $.US_COMPANY }
-      - { label: Why in this pack, bind: $.SEGMENT }
-  - id: exceptions
-    kind: table
-    title: Reporting exceptions (why no parent is reported)
+    with:
+      id: listed
+      record: "$"
+      title: US listed company (us-equities)
+      when: "nonblank($.US_COMPANY)"
+      facts:
+        - { label: Company, bind: "link($.US_COMPANY, 'us-company', $.US_COMPANY_NAME)" }
+        - { label: Ticker, bind: $.US_COMPANY }
+        - { label: Why in this pack, bind: $.SEGMENT }
+  - use: core/data-table@1
+    as: exceptions
     area: right
-    rows: $.PARENT_EXCEPTIONS
-    search: false
-    when: "size($.PARENT_EXCEPTIONS) > 0"
-    columns:
-      - { label: For, bind: "@.LEVEL" }
-      - { label: Reason, bind: "@.REASON" }
-      - { label: Meaning, bind: "@.MEANING" }
+    with:
+      id: exceptions
+      title: Reporting exceptions (why no parent is reported)
+      rows: $.PARENT_EXCEPTIONS
+      search: false
+      when: "size($.PARENT_EXCEPTIONS) > 0"
+      columns:
+        - { label: For, bind: "@.LEVEL" }
+        - { label: Reason, bind: "@.REASON" }
+        - { label: Meaning, bind: "@.MEANING" }
   - { use: linked-entities@1, with: { title: Linked entities and identifiers } }
   - use: explainer-note@1
     with:

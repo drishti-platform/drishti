@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: ccp
 version: 1
+libraries: [core@1]
 description: A clearing house with its default fund and margin model.
 doc:
   summary: "A clearing house with its default fund and margin model."
@@ -46,13 +47,15 @@ strip:
   - { label: IM posted, bind: $.IM_POSTED, fmt: compact, emphasis: true }
   - { label: Model, bind: $.MARGIN_MODEL }
 panels:
-  - id: accounts
-    kind: table
-    title: Clearing accounts
-    key: F2
-    rows: $.ACCOUNTS
-    columns:
-      - { label: Account, bind: "@.ID", link: true }
-      - { label: IM, bind: "@.IM", fmt: compact, total: true }
+  - use: core/data-table@1
+    as: accounts
+    with:
+      id: accounts
+      title: Clearing accounts
+      key: F2
+      rows: $.ACCOUNTS
+      columns:
+        - { label: Account, bind: "@.ID", link: true }
+        - { label: IM, bind: "@.IM", fmt: compact, total: true }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

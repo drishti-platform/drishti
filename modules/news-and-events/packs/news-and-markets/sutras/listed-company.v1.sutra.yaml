@@ -15,6 +15,7 @@
 rachana: 1.2
 sutra: listed-company
 version: 1
+libraries: [core@1]
 description: "A listed company: its live quote and price history (yfinance connector) and its news headlines (news connector), both computed on demand."
 doc:
   summary: "A listed company: its live quote, closing price history and news headlines, each computed on demand."
@@ -50,23 +51,26 @@ strip:
   - { label: Other names, bind: $.ALIAS_TEXT }
   - { label: Quote, bind: "link($.QUOTE_ID, 'quote')" }
 panels:
-  - id: quote
-    kind: kv
-    title: "Quote"
-    code: QUOTE
-    key: F2
+  - use: core/record-card@1
+    as: quote
     source: "link($.QUOTE_ID, 'quote')"
-    columns:
-      - { label: Price, bind: $.PRICE, fmt: price2 }
-      - { label: Currency, bind: $.CURRENCY }
-      - { label: Change, bind: $.CHANGE, fmt: signed2, tone: sign }
-      - { label: Change %, bind: $.CHANGE_PCT, fmt: pc2, tone: sign }
-      - { label: Market, bind: $.MARKET_STATE }
-      - { label: Day range, bind: $.DAY_RANGE }
-      - { label: 52-week range, bind: $.FIFTY_TWO_WEEK_RANGE }
-      - { label: Volume, bind: $.VOLUME, fmt: amount0 }
-      - { label: Market cap, bind: $.MARKET_CAP, fmt: compact }
-      - { label: As of, bind: $.AS_OF }
+    with:
+      id: quote
+      record: "$"
+      title: "Quote"
+      code: QUOTE
+      key: F2
+      facts:
+        - { label: Price, bind: $.PRICE, fmt: price2 }
+        - { label: Currency, bind: $.CURRENCY }
+        - { label: Change, bind: $.CHANGE, fmt: signed2, tone: sign }
+        - { label: Change %, bind: $.CHANGE_PCT, fmt: pc2, tone: sign }
+        - { label: Market, bind: $.MARKET_STATE }
+        - { label: Day range, bind: $.DAY_RANGE }
+        - { label: 52-week range, bind: $.FIFTY_TWO_WEEK_RANGE }
+        - { label: Volume, bind: $.VOLUME, fmt: amount0 }
+        - { label: Market cap, bind: $.MARKET_CAP, fmt: compact }
+        - { label: As of, bind: $.AS_OF }
   - id: history
     kind: line
     title: "Closing price"
@@ -76,18 +80,20 @@ panels:
     x: DATE
     y: CLOSE
     fmt: price2
-  - id: headlines
-    kind: table
-    title: "Headlines, newest first"
-    code: NEWS
-    key: F4
+  - use: core/data-table@1
+    as: headlines
     source: "link($.NEWS_ID, 'news')"
-    rows: $.ITEMS
-    columns:
-      - { label: Published, bind: "@.PUBLISHED" }
-      - { label: Source, bind: "@.SOURCE" }
-      - { label: Headline, bind: "@.TITLE" }
-      - { label: Link, bind: "@.LINK" }
+    with:
+      id: headlines
+      title: "Headlines, newest first"
+      code: NEWS
+      key: F4
+      rows: $.ITEMS
+      columns:
+        - { label: Published, bind: "@.PUBLISHED" }
+        - { label: Source, bind: "@.SOURCE" }
+        - { label: Headline, bind: "@.TITLE" }
+        - { label: Link, bind: "@.LINK" }
   - id: bySource
     kind: hbar
     title: "Headlines by source"

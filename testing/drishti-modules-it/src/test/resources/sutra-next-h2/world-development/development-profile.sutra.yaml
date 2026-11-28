@@ -1,0 +1,71 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Built from the Drishti UI kit only (config/ui-kit/fragments): no screen code of its own.
+rachana: 1.2
+sutra: development-profile
+version: 99
+description: "One country's World Development Indicators: the latest of each, the world map shaded by GDP per head, each series one click away."
+doc:
+  summary: "A country's development profile: the latest value of each World Bank indicator, the world map by GDP per head, the series."
+  description: >-
+    One page per economy from the World Bank's World Development Indicators: the strip gives the region, the income group, the capital,
+    the population and GDP per head; the table lists every indicator the feed pulls with its latest value, its unit and its year (a row's
+    series opens its history by year); the world map shades every economy by GDP per head (a click opens that country's profile); the
+    source, licence and how the view was built close the page.
+  params: {}
+  emits: []
+  expects: []
+  examples:
+    - "/v/development-profile/WDI-CAN"
+    - "WDI WDI-CAN"
+  category: "Public sector"
+  tags: ["development-profile", "public-sector", "table"]
+  use-when: "You have one development profile (its id, or a link from another screen) and want to read it in full: A country's development profile: the latest value of each World Bank indicator, the world map by GDP per head, the series."
+  avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
+  data:
+    in-words: "One development profile record (kind development-profile); the page reads PROFILE_ID, COUNTRY_NAME, REGION, INCOME_GROUP, CAPITAL, POPULATION, GDP_PER_CAPITA, INDICATORS, ISO3."
+    sample-row: {"CAPITAL": "Canberra", "CENTRAL_GOVERNMENT_DEBT": 57.8834285733848, "COUNTRY_NAME": "Australia", "DATA_YEAR": "2025", "ELECTRICITY_ACCESS": 100.0, "GDP_GROWTH": 1.35039785076631, "GDP_PER_CAPITA": 65129.7227990563, "INCOME_GROUP": "High income"}
+  example: "WDI WDI-CAN"
+  see-also: ["development-series"]
+  keywords: ["development profile", "public sector"]
+  since: "2.9.11"
+match: { kind: development-profile, priority: 10 }
+title: { pill: Public sector · Development profile, id: $.PROFILE_ID, with: $.COUNTRY_NAME }
+strip:
+  - { label: Country, bind: $.COUNTRY_NAME, emphasis: true }
+  - { label: Region, bind: $.REGION }
+  - { label: Income group, bind: $.INCOME_GROUP }
+  - { label: Capital, bind: $.CAPITAL }
+  - { label: Population, bind: $.POPULATION, fmt: compact }
+  - { label: "GDP per head, USD", bind: $.GDP_PER_CAPITA, fmt: amount0 }
+panels:
+  - id: indicators
+    kind: table
+    title: "Indicators, latest year (a row opens its series)"
+    key: F2
+    code: IND
+    rows: $.INDICATORS
+    search: false
+    columns:
+      - { label: Indicator, bind: "link(@.WDI_SERIES, 'development-series', @.INDICATOR)" }
+      - { label: Latest, bind: "@.LATEST", fmt: amount2 }
+      - { label: Unit, bind: "@.UNIT" }
+      - { label: Year, bind: "@.YEAR" }
+  - use: region-map@1
+    with: { id: world, title: "GDP per head by country, USD (a country opens its profile)", key: F3, highlight: $.ISO3,
+            link-kind: development-profile, link-id: "WDI-{iso3}", shade-kind: development-profile, shade-field: $.GDP_PER_CAPITA,
+            shade-by: $.ISO3, shade-fmt: amount0, shade-label: "GDP per head, USD" }
+  - { use: source-footer@1 }
+keys: { F9: raw }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: repo-curve
 version: 1
+libraries: [core@1]
 description: General-collateral or specials repo rates by term.
 doc:
   summary: "General-collateral or specials repo rates by term."
@@ -47,12 +48,14 @@ strip:
   - { label: As of, bind: $.AS_OF, fmt: date }
 panels:
   - { use: series-line@1, with: { id: curve, title: Repo rates (%), key: F2, y: RATE } }
-  - id: points
-    kind: table
-    title: Terms
-    rows: $.POINTS
-    columns:
-      - { label: Term, bind: "@.TENOR" }
-      - { label: Rate (%), bind: "@.RATE", fmt: price2 }
+  - use: core/data-table@1
+    as: points
+    with:
+      id: points
+      title: Terms
+      rows: $.POINTS
+      columns:
+        - { label: Term, bind: "@.TENOR" }
+        - { label: Rate (%), bind: "@.RATE", fmt: price2 }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

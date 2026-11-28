@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: calendar
 version: 1
+libraries: [core@1]
 description: "Business-day calendar (USNY, TARGET, GBLO, JPTO…)."
 doc:
   summary: "Business-day calendar (USNY, TARGET, GBLO, JPTO…)."
@@ -47,15 +48,17 @@ strip:
   - { label: Next holiday, bind: $.NEXT_HOLIDAY }
   - { label: "On", bind: $.NEXT_HOLIDAY_DATE, fmt: date }
 panels:
-  - id: holidays
-    kind: table
-    title: Holidays
-    key: F2
-    rows: $.HOLIDAYS
-    columns:
-      - { label: Date, bind: "@.DATE", fmt: date }
-      - { label: Day, bind: "@.WEEKDAY" }
-      - { label: Holiday, bind: "@.NAME" }
-      - { label: Observed, bind: "@.OBSERVED" }
+  - use: core/data-table@1
+    as: holidays
+    with:
+      id: holidays
+      title: Holidays
+      key: F2
+      rows: $.HOLIDAYS
+      columns:
+        - { label: Date, bind: "@.DATE", fmt: date }
+        - { label: Day, bind: "@.WEEKDAY" }
+        - { label: Holiday, bind: "@.NAME" }
+        - { label: Observed, bind: "@.OBSERVED" }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

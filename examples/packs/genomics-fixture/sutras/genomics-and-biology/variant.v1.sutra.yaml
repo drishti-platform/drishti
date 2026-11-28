@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: variant
 version: 1
+libraries: [core@1]
 description: "A sequence variant: HGVS names, consequence, clinical significance and population frequencies."
 doc:
   summary: "A sequence variant: HGVS names, consequence, clinical significance and population frequencies."
@@ -51,16 +52,18 @@ strip:
   - { label: dbSNP, bind: $.rsid }
 panels:
   - { use: ranked-bars@1, with: { id: frequencies, title: Allele frequency by population, key: F2, rows: $.frequencies, label: population, value: af, fmt: pct4 } }
-  - id: evidence
-    kind: table
-    title: Evidence
-    key: F3
-    rows: $.evidence
-    columns:
-      - { label: Source, bind: "@.source" }
-      - { label: Assertion, bind: "@.assertion" }
-      - { label: Review stars, bind: "@.stars", fmt: amount0 }
-      - { label: Last evaluated, bind: "@.date", fmt: date }
+  - use: core/data-table@1
+    as: evidence
+    with:
+      id: evidence
+      title: Evidence
+      key: F3
+      rows: $.evidence
+      columns:
+        - { label: Source, bind: "@.source" }
+        - { label: Assertion, bind: "@.assertion" }
+        - { label: Review stars, bind: "@.stars", fmt: amount0 }
+        - { label: Last evaluated, bind: "@.date", fmt: date }
   - { use: field-list@1, with: { id: annotation, title: Annotation, area: right, rows: $.annotation } }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: jurisdiction
 version: 1
+libraries: [core@1]
 description: "A country: government type, capital, legislature and seats by party, office holders, elections and governance indicators, from the CIA World Factbook, World Bank and UNDP."
 doc:
   summary: "A country:"
@@ -59,31 +60,37 @@ panels:
     highlight: $.ISO3
     link: { kind: jurisdiction, id: "JUR-{iso3}" }
     height: 11
-  - id: legislature
-    kind: table
-    title: "Seats by party, lower chamber"
-    key: F2
-    rows: $.LEGISLATURE
-    columns:
-      - { label: Party, bind: "@.PARTY" }
-      - { label: Seats, bind: "@.SEATS", fmt: amount0, total: true }
-  - id: indicators
-    kind: table
-    title: Society and governance (latest)
-    key: F3
-    rows: $.INDICATORS
-    columns:
-      - { label: Indicator, bind: "@.INDICATOR" }
-      - { label: Value, bind: "@.VALUE", fmt: price2, total: true }
-      - { label: Year, bind: "@.YEAR" }
-      - { label: Unit, bind: "@.UNIT" }
+  - use: core/data-table@1
+    as: legislature
+    with:
+      id: legislature
+      title: "Seats by party, lower chamber"
+      key: F2
+      rows: $.LEGISLATURE
+      columns:
+        - { label: Party, bind: "@.PARTY" }
+        - { label: Seats, bind: "@.SEATS", fmt: amount0, total: true }
+  - use: core/data-table@1
+    as: indicators
+    with:
+      id: indicators
+      title: Society and governance (latest)
+      key: F3
+      rows: $.INDICATORS
+      columns:
+        - { label: Indicator, bind: "@.INDICATOR" }
+        - { label: Value, bind: "@.VALUE", fmt: price2, total: true }
+        - { label: Year, bind: "@.YEAR" }
+        - { label: Unit, bind: "@.UNIT" }
   - { use: field-list@1, with: { id: profile, title: Profile, area: right, rows: $.PROFILE } }
-  - id: partiesListed
-    kind: table
-    title: Political parties (as published)
-    key: F4
-    rows: $.PARTIES_LISTED
-    columns:
-      - { label: Party, bind: "@.PARTY" }
+  - use: core/data-table@1
+    as: partiesListed
+    with:
+      id: partiesListed
+      title: Political parties (as published)
+      key: F4
+      rows: $.PARTIES_LISTED
+      columns:
+        - { label: Party, bind: "@.PARTY" }
   - { use: source-footer@1 }
 keys: { F7: "link($.REGION, 'region')", F8: impact, F9: raw }

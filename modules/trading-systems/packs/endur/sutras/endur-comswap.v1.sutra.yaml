@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: endur-comswap
 version: 1
+libraries: [core@1]
 description: "An Endur commodity swap: fixed price against the average of a floating index (or two indexes, a basis), month by month."
 doc:
   summary: "An Endur commodity swap: fixed price against the average of a floating index (or two indexes, a basis), month by month."
@@ -63,28 +64,34 @@ phone:                           # on a phone (docs/guides/BUILD_GUIDE.md): the 
   summary: "${$.CURRENCY} ${fmt(first($.LEGS).NOTIONAL, 'amount0')} · matures ${$.MATURITY_DATE}"
 panels:
   - { use: trading/deal-ticket@1, with: { rate-fmt: price4, product: "Commodity swap" } }
-  - id: fixed-float
-    kind: kv
-    title: "Fixed against floating"
-    code: SWAP
-    when: "$.PRODUCT_SUB_TYPE == 'ENGY-SWAP'"
-    columns:
-      - { label: "Fixed price", bind: "$.LEGS[?@.LEG_TYPE == 'FIXED'][0].CASH_FLOWS[0].STRIKE_PRICE", fmt: price4 }
-      - { label: "Floating index", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'FLOAT'][0].INDEX.NAME, '–')" }
-      - { label: "Averaging", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'FLOAT'][0].RESET_CONVENTION, '–')" }
-      - { label: "Price unit", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'FIXED'][0].PRICE_UNIT, '–')" }
-      - { label: "Periods", bind: "size($.LEGS[?@.LEG_TYPE == 'FIXED'][0].CASH_FLOWS)" }
-  - id: basis
-    kind: kv
-    title: "Basis: one index against another"
-    code: BAS
-    when: "$.PRODUCT_SUB_TYPE == 'ENGY-B-SWAP'"
-    columns:
-      - { label: "Index, leg 1", bind: "nonblank($.LEGS[0].INDEX.NAME, '–')" }
-      - { label: "Index, leg 2", bind: "nonblank($.LEGS[1].INDEX.NAME, '–')" }
-      - { label: "Spread, leg 2", bind: "$.LEGS[1].FLOAT_SPREAD", fmt: price4 }
-      - { label: "Location", bind: "nonblank($.LEGS[1].INDEX_LOCATION_NAME, '–')" }
-      - { label: "Averaging", bind: "nonblank($.LEGS[0].RESET_CONVENTION, '–')" }
+  - use: core/record-card@1
+    as: fixed-float
+    with:
+      id: fixed-float
+      record: "$"
+      title: "Fixed against floating"
+      code: SWAP
+      when: "$.PRODUCT_SUB_TYPE == 'ENGY-SWAP'"
+      facts:
+        - { label: "Fixed price", bind: "$.LEGS[?@.LEG_TYPE == 'FIXED'][0].CASH_FLOWS[0].STRIKE_PRICE", fmt: price4 }
+        - { label: "Floating index", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'FLOAT'][0].INDEX.NAME, '–')" }
+        - { label: "Averaging", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'FLOAT'][0].RESET_CONVENTION, '–')" }
+        - { label: "Price unit", bind: "nonblank($.LEGS[?@.LEG_TYPE == 'FIXED'][0].PRICE_UNIT, '–')" }
+        - { label: "Periods", bind: "size($.LEGS[?@.LEG_TYPE == 'FIXED'][0].CASH_FLOWS)" }
+  - use: core/record-card@1
+    as: basis
+    with:
+      id: basis
+      record: "$"
+      title: "Basis: one index against another"
+      code: BAS
+      when: "$.PRODUCT_SUB_TYPE == 'ENGY-B-SWAP'"
+      facts:
+        - { label: "Index, leg 1", bind: "nonblank($.LEGS[0].INDEX.NAME, '–')" }
+        - { label: "Index, leg 2", bind: "nonblank($.LEGS[1].INDEX.NAME, '–')" }
+        - { label: "Spread, leg 2", bind: "$.LEGS[1].FLOAT_SPREAD", fmt: price4 }
+        - { label: "Location", bind: "nonblank($.LEGS[1].INDEX_LOCATION_NAME, '–')" }
+        - { label: "Averaging", bind: "nonblank($.LEGS[0].RESET_CONVENTION, '–')" }
   - { use: trading/legs@1, with: { rate-fmt: price4 } }
   - { use: trading/flow-schedule@1, with: { rate-fmt: price4 } }
   - { use: trading/events@1 }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: legal-entity
 version: 1
+libraries: [core@1]
 description: "The bank's own booking entity."
 doc:
   summary: "The bank's own booking entity."
@@ -47,14 +48,16 @@ strip:
   - { label: Regulator, bind: $.REGULATOR }
   - { label: VaR 99% 1D (engine), bind: $.VAR_ENGINE.VAR, fmt: compact, emphasis: true }
 panels:
-  - id: desks
-    kind: table
-    title: Desks
-    key: F2
-    rows: $.DESKS
-    columns:
-      - { label: Desk, bind: "@.ID", link: true }
-      - { label: Name, bind: "@.NAME" }
+  - use: core/data-table@1
+    as: desks
+    with:
+      id: desks
+      title: Desks
+      key: F2
+      rows: $.DESKS
+      columns:
+        - { label: Desk, bind: "@.ID", link: true }
+        - { label: Name, bind: "@.NAME" }
   - id: riskReturn
     kind: scatter
     title: "Risk and return (books: VaR against today's P&L, USD)"

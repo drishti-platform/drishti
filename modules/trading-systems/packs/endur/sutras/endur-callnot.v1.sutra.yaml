@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: endur-callnot
 version: 1
+libraries: [core@1]
 description: "An Endur call-notice deposit: interest periods, then the principal on notice."
 doc:
   summary: "An Endur call-notice deposit: interest periods, then the principal on notice."
@@ -60,17 +61,20 @@ controls:                       # the events by leg and by date: a trader's 'wha
   - { id: when, kind: date-range, label: Between, placement: header, panel: event-list }
 panels:
   - { use: trading/deal-ticket@1, with: { rate-fmt: price4, product: "Call-notice deposit" } }
-  - id: deposit
-    kind: kv
-    title: "Call-notice deposit (nostro)"
-    code: DEP
-    when: "$.PRODUCT_SUB_TYPE == 'NOSTRO'"
-    columns:
-      - { label: "Principal", bind: "$.CURRENCY + ' ' + fmt($.QUANTITY, 'amount0')" }
-      - { label: "Rate", bind: "nonblank(first($.LEGS).CASH_FLOWS[0].RATE, '–')" }
-      - { label: "Interest periods", bind: "size(first($.LEGS).CASH_FLOWS)" }
-      - { label: "Next interest", bind: "first($.LEGS).CASH_FLOWS[?@.PAYMENT_DATE >= today()][0].PAYMENT_DATE", fmt: date }
-      - { label: "Lease currency", bind: "nonblank(first($.LEGS).LEASE_CURRENCY, '–')" }
+  - use: core/record-card@1
+    as: deposit
+    with:
+      id: deposit
+      record: "$"
+      title: "Call-notice deposit (nostro)"
+      code: DEP
+      when: "$.PRODUCT_SUB_TYPE == 'NOSTRO'"
+      facts:
+        - { label: "Principal", bind: "$.CURRENCY + ' ' + fmt($.QUANTITY, 'amount0')" }
+        - { label: "Rate", bind: "nonblank(first($.LEGS).CASH_FLOWS[0].RATE, '–')" }
+        - { label: "Interest periods", bind: "size(first($.LEGS).CASH_FLOWS)" }
+        - { label: "Next interest", bind: "first($.LEGS).CASH_FLOWS[?@.PAYMENT_DATE >= today()][0].PAYMENT_DATE", fmt: date }
+        - { label: "Lease currency", bind: "nonblank(first($.LEGS).LEASE_CURRENCY, '–')" }
   - { use: trading/legs@1, with: { rate-fmt: price4 } }
   - { use: trading/flow-schedule@1, with: { rate-fmt: price4 } }
   - { use: trading/events@1 }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: cnv-segment
 version: 1
+libraries: [core@1]
 description: 'Copy-number segment: One stretch of a sample''s genome with a copy number other than two: an amplification or a deletion over a
   driver gene, or a broad gain or loss.'
 doc:
@@ -60,28 +61,31 @@ strip:
   bind: $.CALL
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Copy-number segment
-  columns:
-  - label: Segment id
-    bind: $.SEGMENT_ID
-  - label: Sample id
-    bind: link($.SAMPLE_ID, 'study-sample')
-  - label: Chrom
-    bind: $.CHROM
-  - label: Start
-    bind: $.START
-    fmt: amount0
-  - label: End
-    bind: $.END
-    fmt: amount0
-  - label: Copy number
-    bind: $.COPY_NUMBER
-    fmt: amount0
-  - label: Call
-    bind: $.CALL
-  - label: Gene
-    bind: link($.GENE, 'study-gene')
+- use: core/record-card@1
+  as: record
+  with:
+    id: record
+    record: "$"
+    title: Copy-number segment
+    facts:
+    - label: Segment id
+      bind: $.SEGMENT_ID
+    - label: Sample id
+      bind: link($.SAMPLE_ID, 'study-sample')
+    - label: Chrom
+      bind: $.CHROM
+    - label: Start
+      bind: $.START
+      fmt: amount0
+    - label: End
+      bind: $.END
+      fmt: amount0
+    - label: Copy number
+      bind: $.COPY_NUMBER
+      fmt: amount0
+    - label: Call
+      bind: $.CALL
+    - label: Gene
+      bind: link($.GENE, 'study-gene')
 keys:
   F9: raw

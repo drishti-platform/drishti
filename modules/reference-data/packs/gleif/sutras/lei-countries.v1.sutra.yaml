@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-countries
 version: 1
+libraries: [core@1]
 description: "Every country of the pack's legal entities, by the number of entities."
 doc:
   summary: "Every country of the entities' legal addresses with its entity count, groups headquartered and lapsed registrations."
@@ -47,15 +48,17 @@ strip:
   - { label: Groups headquartered, bind: $.GROUPS_HEADQUARTERED }
   - { label: Lapsed, bind: $.LAPSED }
 panels:
-  - id: countries
-    kind: table
-    title: Countries by entities
-    key: F2
-    rows: $.COUNTRY_ROWS
-    limit: 300
-    columns:
-      - { label: Country, bind: "link(@.label, 'lei-country')" }
-      - { label: Entities, bind: "@.value", fmt: entities0, total: true }
+  - use: core/data-table@1
+    as: countries
+    with:
+      id: countries
+      title: Countries by entities
+      key: F2
+      rows: $.COUNTRY_ROWS
+      limit: 300
+      columns:
+        - { label: Country, bind: "link(@.label, 'lei-country')" }
+        - { label: Entities, bind: "@.value", fmt: entities0, total: true }
   - { use: ranked-bars@1, with: { id: by-country, title: Entities by country (top 20), rows: $.BY_COUNTRY, label: label, value: value, fmt: entities0, area: right, key: F3 } }
   - { use: field-list@1, with: { id: source, title: Data source and licence, rows: $.PROVENANCE, area: right } }
   - { use: data-provenance@1 }

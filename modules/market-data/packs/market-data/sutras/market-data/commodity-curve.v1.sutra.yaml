@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: commodity-curve
 version: 1
+libraries: [core@1]
 description: Futures settlement prices by delivery month.
 doc:
   summary: "Futures settlement prices by delivery month."
@@ -49,14 +50,16 @@ strip:
   - { label: "M1–M12", bind: $.ROLL, fmt: price2, tone: sign }
 panels:
   - { use: series-line@1, with: { id: curve, title: Forward curve, key: F2, x: MONTH, y: PRICE } }
-  - id: points
-    kind: table
-    title: Settlements
-    rows: $.POINTS
-    columns:
-      - { label: Month, bind: "@.MONTH" }
-      - { label: Price, bind: "@.PRICE", fmt: price2 }
-      - { label: OI, bind: "@.OPEN_INTEREST", fmt: amount0 }
+  - use: core/data-table@1
+    as: points
+    with:
+      id: points
+      title: Settlements
+      rows: $.POINTS
+      columns:
+        - { label: Month, bind: "@.MONTH" }
+        - { label: Price, bind: "@.PRICE", fmt: price2 }
+        - { label: OI, bind: "@.OPEN_INTEREST", fmt: amount0 }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.COMMODITY_REF, 'commodity')", F8: impact, F9: raw }

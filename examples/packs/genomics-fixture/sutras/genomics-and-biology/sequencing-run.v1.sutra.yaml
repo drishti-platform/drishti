@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: sequencing-run
 version: 1
+libraries: [core@1]
 description: "An instrument run: yield, quality by cycle, and the samples it carried."
 doc:
   summary: "An instrument run: yield, quality by cycle, and the samples it carried."
@@ -50,14 +51,16 @@ strip:
   - { label: Status, bind: $.status, tone: status }
 panels:
   - { use: series-line@1, with: { id: quality, title: Mean quality score by cycle, key: F2, rows: $.qualityByCycle, x: cycle, y: q } }
-  - id: samples
-    kind: table
-    title: Samples
-    key: F3
-    rows: $.samples
-    columns:
-      - { label: Sample, bind: "@.sample" }
-      - { label: Reads (M), bind: "@.readsM", fmt: price2, total: true }
-      - { label: Mean coverage, bind: "@.coverage", fmt: amount0 }
+  - use: core/data-table@1
+    as: samples
+    with:
+      id: samples
+      title: Samples
+      key: F3
+      rows: $.samples
+      columns:
+        - { label: Sample, bind: "@.sample" }
+        - { label: Reads (M), bind: "@.readsM", fmt: price2, total: true }
+        - { label: Mean coverage, bind: "@.coverage", fmt: amount0 }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

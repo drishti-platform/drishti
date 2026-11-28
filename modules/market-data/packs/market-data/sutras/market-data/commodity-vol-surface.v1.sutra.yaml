@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: commodity-vol-surface
 version: 1
+libraries: [core@1]
 description: Implied vols by delivery month and moneyness.
 doc:
   summary: "Implied vols by delivery month and moneyness."
@@ -55,16 +56,18 @@ panels:
       - { label: "90%", bind: "@.M_90", fmt: price2 }
       - { label: "100%", bind: "@.M_100", fmt: price2 }
       - { label: "110%", bind: "@.M_110", fmt: price2 }
-  - id: grid
-    kind: table
-    title: Vol (%)
-    key: F2
-    rows: $.GRID
-    columns:
-      - { label: Month, bind: "@.MONTH" }
-      - { label: "90%", bind: "@.M_90", fmt: price2 }
-      - { label: ATM, bind: "@.M_100", fmt: price2 }
-      - { label: "110%", bind: "@.M_110", fmt: price2 }
+  - use: core/data-table@1
+    as: grid
+    with:
+      id: grid
+      title: Vol (%)
+      key: F2
+      rows: $.GRID
+      columns:
+        - { label: Month, bind: "@.MONTH" }
+        - { label: "90%", bind: "@.M_90", fmt: price2 }
+        - { label: ATM, bind: "@.M_100", fmt: price2 }
+        - { label: "110%", bind: "@.M_110", fmt: price2 }
   - { use: series-line@1, with: { id: atm, title: ATM by month, area: right, rows: $.GRID, x: MONTH, y: M_100 } }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

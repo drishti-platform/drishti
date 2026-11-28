@@ -309,7 +309,7 @@ def register(groups, add) -> None:
                            description=f"Builds {text}. The server jar holds no module: a module is a package beside it. One Maven run (packaging/dist) "
                                        "builds the modules' jars, packs every module with the one packer (module pack of the server classes, Java), runs the "
                                        "conformance checks and installs the packages (an older version of a module removed, first-party.yaml written).",
-                           epilog=f"examples:\n  {P} build {verb}" + (f"\n  {P} build modules banking source-endur   (only those packages are installed)" if verb == "modules" else f"\n  {P} build all --no-copy"))
+                           epilog=f"examples:\n  {P} build {verb}" + (f"\n  {P} build modules banking trading-systems   (only those packages are installed)" if verb == "modules" else f"\n  {P} build all --no-copy"))
         if verb == "modules":
             bm.add_argument("ids", nargs="*", metavar="ID", help="only these modules (default: every module folder under <home>/modules)")
         bm.add_argument("--java-home", metavar="DIR", help="the JDK to build with (Java 21+)")

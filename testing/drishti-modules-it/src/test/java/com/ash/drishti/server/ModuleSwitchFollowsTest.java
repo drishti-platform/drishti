@@ -72,23 +72,22 @@ class ModuleSwitchFollowsTest {
     void aModuleSwitchedOffIsGoneEverywhereAndSwitchedOnComesBack() throws Exception {
         assertThat(names()).contains("trading", "world-economy");
         assertThat(resolution().templates()).containsKey("trade-endur");
-        assertThat(rulesOf("source-endur")).isTrue();
+        assertThat(rulesOf("trading-systems")).isTrue();
 
-        access.setEnabled("economy", false, "test");
+        access.setEnabled("external-data", false, "test");
         // the packs unload from the server's new resolution, which is held a moment apart: wait for both
         until("world-economy to unload", () -> !names().contains("world-economy")
                 && resolution().packs().off().containsKey("world-economy"));
         assertThat(names()).contains("trading");                                              // nothing else moves
 
-        access.setEnabled("source-endur", false, "test");
-        until("source-endur's template and rules to leave", () -> !resolution().templates().containsKey("trade-endur")
-                && !rulesOf("source-endur"));
-        assertThat(resolution().templates()).containsKey("trade-murex");          // the other systems stay
+        access.setEnabled("trading-systems", false, "test");                                 // the module: the source packs' templates and rules go with it
+        until("the trading-systems templates and rules to leave", () -> !resolution().templates().containsKey("trade-endur")
+                && !resolution().templates().containsKey("trade-murex") && !rulesOf("trading-systems"));
 
-        access.setEnabled("economy", true, "test");
-        access.setEnabled("source-endur", true, "test");
+        access.setEnabled("external-data", true, "test");
+        access.setEnabled("trading-systems", true, "test");
         until("world-economy back", () -> names().contains("world-economy"));
-        until("source-endur back", () -> resolution().templates().containsKey("trade-endur") && rulesOf("source-endur"));
+        until("trading-systems back", () -> resolution().templates().containsKey("trade-endur") && rulesOf("trading-systems"));
         assertThat(follower.followed()).isPositive();
     }
 }

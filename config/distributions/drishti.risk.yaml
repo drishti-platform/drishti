@@ -39,15 +39,9 @@ modules:
   - { id: market-data, required: true }
   # the parties and organisation (counterparties, books, desks, traders, calendars) the risk module reads
   - { id: reference-data, required: true }
-  # the trade blotter (the Trades menu: /live/trade); the source modules below require it
-  - { id: trading,     required: true }
-  # the source systems feeding the trade kind, each switchable on its own (config/modules/source-<system>.yaml)
-  - { id: source-endur,   required: false }
-  - { id: source-calypso, required: false }
-  - { id: source-murex,   required: false }
-  - { id: source-wss,     required: false }
-  - { id: source-swapone, required: false }
-  - { id: source-ici,     required: false }
+  # the trade kind, the live blotter (the Trades menu: /live/trade) and the six source-system packs (endur, calypso, murex, wss, swapone, ici),
+  # each pack off until the site switches it on (Admin -> Artifacts)
+  - { id: trading-systems, required: true }
 
 lenses:
   offered: [risk, trading, market]

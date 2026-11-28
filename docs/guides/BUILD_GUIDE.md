@@ -91,7 +91,7 @@ helpdesk/
     └── client.jsonl
 ```
 
-The largest shipped pack, `modules/banking/packs/trading/`, uses the same parts:
+The largest shipped pack, `modules/trading-systems/packs/trading/`, uses the same parts:
 
 ```text
 trading/
@@ -1039,7 +1039,7 @@ from the day before marked. `history:` only shapes it, per kind:
 
 ```yaml
 history:
-  trade:                                    # modules/banking/packs/trading/pack.yaml
+  trade:                                    # modules/trading-systems/packs/trading/pack.yaml
     exclude: [_meta]                        # never shown
     ignore-changes: [SOURCE_UPDATE_TIME, INPUT_DATE]   # shown, but a change here is not "a change"
     parts: [LEGS, EVENTS]                   # top-level lists shown as counts (default: every list or object)
@@ -3227,7 +3227,7 @@ when it is not true the panel is left out, with no empty box. The shipped `endur
 Without `layout:` panels flow (main column, `area: right` column, `span` and `height`); to place them yourself draw the screen as named areas, or group panels in folding sections, and give each heavy panel a phone tier: [Rachana, Writing Sutras, 9. Layout: placing panels](https://github.com/drishti-platform/drishti-rachana/blob/v1.0.1-ide4/docs/WRITING_SUTRAS.md#9-layout-placing-panels). `sutra lint` checks it (`DRS-2059`); the Drishti side is in [RACHANA_REFERENCE.md](RACHANA_REFERENCE.md#layout-the-grid-areas-split-tabs-sections) and [section 32](#32-designing-for-phones).
 
 Put the blocks of 14.2 to 14.6 under one `panels:` and you have a complete trade view. The [reference's annotated example](RACHANA_REFERENCE.md#a-complete-example-annotated)
-is the same layout with every line commented, and `modules/banking/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` is the one the server uses,
+is the same layout with every line commented, and `modules/trading-systems/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` is the one the server uses,
 built from shared blocks.
 
 ## 15. Matching several Sutras
@@ -3329,7 +3329,7 @@ directory is read recursively and Drishti infers nothing from a folder name ([Fo
 trading pack keeps:
 
 ```text
-modules/banking/packs/trading/sutras/
+modules/trading-systems/packs/trading/sutras/
   common/      deal-ticket, legs, flow-schedule, events, payments, deal-footer  (*.v1.block.yaml, shared panels)
   endur/       one Sutra per Endur product type (5): endur-comswap matches "$.SOURCE_SYSTEM == 'ENDUR' && $.PRODUCT_TYPE == 'ComSwap'"
   calypso/     one Sutra per Calypso product type (51): govt-bond, repo, fx-forward, cds-single …
@@ -3502,7 +3502,7 @@ the plain name, even for a pack's own); `since`.
 - **Generated Sutras use fragments.** The pack generators turn a panel into a kit fragment use only when the fragment draws it exactly (a plain line →
   `series-line@1`, plain bars → `ranked-bars@1`, a key/value list over an object → `field-list@1`, a curve's pillars → `curve-table@1`, provenance and
   links → `data-provenance@1` / `linked-entities@1`, the source and licence last → `source-footer@1`); anything else stays written in place. Lint a pack
-  (`sutra lint modules/banking/packs/trading`) or the whole root (`sutra lint config/packs`): each pack folder loads its fragments under its own
+  (`sutra lint modules/trading-systems/packs/trading`) or the whole root (`sutra lint config/packs`): each pack folder loads its fragments under its own
   namespace either way, and a pack may use another pack's fragment by its qualified name when both are linted together.
 - **Changing a fragment.** Never change what a released version draws: write `name.v2.fragment.yaml` and move Sutras one at a time; to prove a move
   changes nothing, compare the view models before and after for a full and a masked reader.
@@ -3602,7 +3602,7 @@ Previewed on `MX-20000001`, you should see four tabs, `NS-MERIDIAN-RE-FRA` to `N
 
 Pack screens are written with fragments that talk to each other through events
 ([Sutra Next](RACHANA_REFERENCE.md#sutra-next-fragments-events-children-sources-layout-and-forms)). The trading pack's book desk
-(`modules/banking/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`; open `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk`) shows all of it, shortened:
+(`modules/trading-systems/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`; open `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk`) shows all of it, shortened:
 
 ```yaml
 panels:
@@ -3967,7 +3967,7 @@ Edits and switching write-back on are in [ADMIN_GUIDE.md › 28 Write-back and a
 
 ### 28.1 A form beside the table
 
-The book desk's trades (`modules/banking/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`) carry this form. Open
+The book desk's trades (`modules/trading-systems/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`) carry this form. Open
 `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk` and click a trade.
 
 ![The form beside the book desk's trades: the counterparty locked, a warning under the notional and the Draft · not saved badge](img/designer/form-beside.jpg)
@@ -4466,8 +4466,8 @@ The banking and world-economy generators build documents with short internal nam
 
 **Never edit a generated file by hand.** A hand edit is lost the next time the generator runs, and before that it fails the build: every generator runs in
 check mode (`python3 tools/packgen/banking/make_packs.py --check` prints `5 pack manifests up to date (71 Calc snippets)`; `make_sutras.py --check`
-`186 Sutras up to date`). After a hand edit to `modules/banking/packs/trading/pack.yaml` the first stops with `pack manifests out of date; run
-make_packs.py: ['modules/banking/packs/trading/pack.yaml']`; the packbuild generators also refuse files they did not write
+`186 Sutras up to date`). After a hand edit to `modules/trading-systems/packs/trading/pack.yaml` the first stops with `pack manifests out of date; run
+make_packs.py: ['modules/trading-systems/packs/trading/pack.yaml']`; the packbuild generators also refuse files they did not write
 (`<pack> pack out of date; run tools/packgen/<area>/make.py. stale=[] extra=[…]`). A top-level section of a banking pack's manifest the taxonomy does not
 say (the `history:` sections, the trading pack's `ingest:`) is kept in `tools/packgen/banking/kept/<pack>.yaml` and appended as written.
 
@@ -4476,7 +4476,7 @@ say (the `history:` sections, the trading pack's `ingest:`) is kept in `tools/pa
 1. Find the generator named in the file's comment: `tools/packgen/banking/make_packs.py`.
 2. Change its input: add `"TRADER_ID"` after `"COUNTERPARTY"` in the trade columns of the `COLUMNS` table.
 3. Run the generator without `--check`: `python3 tools/packgen/banking/make_packs.py`.
-4. `git diff modules/banking/packs/trading/pack.yaml` shows `- TRADER_ID` added under `columns: trade:`.
+4. `git diff modules/trading-systems/packs/trading/pack.yaml` shows `- TRADER_ID` added under `columns: trade:`.
 5. Wait for the reload, type `TRD MX-200000`: the pick list has a *Trader ID* column (`•••` for a role without `raw`: the shipped setting masks it).
 6. Commit the generator **and** the files it wrote, together.
 
@@ -4762,7 +4762,7 @@ this table is the map. Seven packs are on by default; the others are turned on b
 |---|---|---|---|---|---|
 | `core` | `CORE` | — | `CPTY` `GRP` `ISS` `CCP` `LE` `BOOK` `DESK` `TRDR` `CAL` `CLR` | `CPTY CP-NORTHBRIDGE`, `LE LE-NY` | [core](../../modules/reference-data/packs/core/README.md) |
 | `market-data` | `MKT` | `core` | `CRV` `REPO` `FX` `FXF` `FXV` `IRV` `CPV` `EQ` `EQX` `DIV` `EQV` `CDS` `INF` `INFC` `CMD` `CMDC` `CMDV` `FIX` `BND` `CORR` | `CRV CRV-USD-OIS`, `FXV FXV-EURUSD` | [market-data](../../modules/market-data/packs/market-data/README.md) |
-| `trading` | `TRDS` | `core`, `market-data` | `TRD` (three source systems) · `CTRD` `PTRD` `LTRD` `ITRD` (derived) | `TRD MX-20000001`, `TRD 1000001`, `CTRD CP-ALDERSHOT` | [trading](../../modules/banking/packs/trading/README.md) |
+| `trading` | `TRDS` | `core`, `market-data` | `TRD` (three source systems) · `CTRD` `PTRD` `LTRD` `ITRD` (derived) | `TRD MX-20000001`, `TRD 1000001`, `CTRD CP-ALDERSHOT` | [trading](../../modules/trading-systems/packs/trading/README.md) |
 | `counterparty-risk` | `CCR` | `trading` | `AGR` `CSA` `NSET` `LIM` `EXP` `CVA` `SACCR` `COLL` `MC` `SIMM` | `AGR AGR-NORTHBRIDGE-ISDA`, `NSET NS-SUMMIT-NY` | [counterparty-risk](../../modules/banking/packs/counterparty-risk/README.md) |
 | `market-risk` | `MRSK` | `market-data`, `trading` | `VAR` `SCN` `STR` `FRTB` `PNL` `TVAL` | `VAR VAR-RATES`, `TVAL TVAL-MX-20000001` | [market-risk](../../modules/banking/packs/market-risk/README.md) |
 | `world-economy` | `WRLD` | — | `ECON` `MACRO` `FCST` `LABR` `FISC` `ECG` `REGE` `JUR` `PARTY` `OFFC` `ELEC` `REGN` `SOCI` (real public data; the IMF part is for internal demonstrations only) | `ECON ECON-IND` | [world-economy](../../modules/external-data/packs/world-economy/README.md) |

@@ -76,7 +76,7 @@
     <module>examples/connector</module>
     <module>kernel/drishti-server</module>
     <module>modules/banking</module>
-    <module>modules/trading</module>
+    <module>modules/trading-systems</module>
     <module>modules/market-data</module>
     <module>packaging/drishti-app</module>
     <module>packaging/dist</module>

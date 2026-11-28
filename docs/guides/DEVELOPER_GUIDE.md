@@ -3529,7 +3529,7 @@ A blotter is a declaration, not code: one live table of Rachana's engine ([Live 
 
 1. In your module, add `blotters/<name>.live.yaml`: `rachana: 1`, `live-table`, the `kind`, `snapshot` and `stream` (the kind), an optional
    `where` (Rachana-EL over the row), `key`, `version`, `columns`, `links`, `retention` and, for edits, `edit:` (a Rachana form with
-   `save:`; no key field: the table's key names the row). The trading module's [`trade.live.yaml`](../../modules/trading/blotters/trade.live.yaml)
+   `save:`; no key field: the table's key names the row). The trading module's [`trade.live.yaml`](../../modules/trading-systems/blotters/trade.live.yaml)
    is the worked example.
 2. List it in `module.yaml` (`blotters: {folder: blotters, list: [<name>]}`) and the kind in `data/needs.yaml`.
 3. The site binds the kind (`config/bindings.yaml`: `read:` the store, `live:` the messaging connector) and, for edits, gives the connector a

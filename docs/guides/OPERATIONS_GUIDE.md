@@ -932,7 +932,7 @@ and secrets and embedded applications declared in configuration; Python and Java
 
 A pack does not carry connection settings: it **names** the connectors it reads through (`connectors:` in `pack.yaml`) and says which answers
 each kind (`routes:`). A **connector** is a **template** shipped by a module (a file of a source module's `connectors/` folder, such as
-`modules/source-endur/connectors/`, or an entry of a pack's `connectors:` section: the plugin, a Delta lake, JSON Lines files, a database…,
+`modules/trading-systems/packs/endur/connectors/`, or an entry of a pack's `connectors:` section: the plugin, a Delta lake, JSON Lines files, a database…,
 and its settings), read where it is, with a site's **override** over it when there is one: a
 file in `config/connectors/` (`DRISHTI_CONNECTORS_DIR`) named after the connector that holds only the keys it changes, or a
 `[connector.<name>]` section of the settings file. The reference, with an
@@ -1152,7 +1152,7 @@ touched by `pack deploy`: copy during the day, switch at the moment you choose.
 ### 8.2 Make a bundle
 
 ```bash
-python3 tools/drishti.py pack bundle modules/banking/packs/trading --out dist
+python3 tools/drishti.py pack bundle modules/trading-systems/packs/trading --out dist
 ```
 
 ```text
@@ -1244,7 +1244,7 @@ rmdir ../stage
 What you tested is what you ship: build once, on CI, and copy the same file through the stages.
 
 ```text
-git (modules/banking/packs/trading, tag v1.0.1)
+git (modules/trading-systems/packs/trading, tag v1.0.1)
    │  CI: pack check, pack bundle
    ▼
 trading-1.0.1.tar.gz + .sha256        ← built ONCE, stored as a CI artifact
@@ -1280,7 +1280,7 @@ Never write into the folder the server reads while it is half-finished: write el
 - **Files root** (`<root>/<domain>/<business-date>/<kind>.jsonl`; the connector lists folders every 30 s):
 
   ```bash
-  python3 tools/drishti.py data ingest --from new-day.jsonl --pack modules/banking/packs/trading --store files --root /srv/stage/files
+  python3 tools/drishti.py data ingest --from new-day.jsonl --pack modules/trading-systems/packs/trading --store files --root /srv/stage/files
   cp -r /srv/stage/files/trading/2026-10-05 /srv/drishti/files/trading/.2026-10-05.part     # a dot name the connector skips
   mv /srv/drishti/files/trading/.2026-10-05.part /srv/drishti/files/trading/2026-10-05      # the rename is atomic
   ```
@@ -1341,8 +1341,8 @@ jobs:
         with: { python-version: "3.13" }
       - run: python -m pip install pyyaml
       - run: ./mvnw -q -DskipTests package -pl :drishti-app -am        # the exec jar that lint and test use
-      - run: python tools/drishti.py pack check modules/banking/packs/trading --strict --junit build/reports
-      - run: python tools/drishti.py pack bundle modules/banking/packs/trading --out dist
+      - run: python tools/drishti.py pack check modules/trading-systems/packs/trading --strict --junit build/reports
+      - run: python tools/drishti.py pack bundle modules/trading-systems/packs/trading --out dist
       - run: python tools/drishti.py pack verify dist/trading-*.tar.gz
       - uses: actions/upload-artifact@v4
         with: { name: trading-bundle, path: "dist/trading-*" }
@@ -2739,7 +2739,7 @@ the page on a console on the server's machine.
 
 ```cron
 # m  h  dom mon dow  command
-30 21 *   *   1-5  cd /opt/drishti && python3 tools/drishti.py lake build --from /srv/drop/endur-$(date +\%F).json.gz --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID --lake /srv/drishti/delta --as-of $(date +\%F) --partition-by PRODUCT_TYPE --signal http://localhost:18480 --token-file /etc/drishti/loads.token -q >> /var/log/drishti/lake-build.log 2>&1
+30 21 *   *   1-5  cd /opt/drishti && python3 tools/drishti.py lake build --from /srv/drop/endur-$(date +\%F).json.gz --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID --lake /srv/drishti/delta --as-of $(date +\%F) --partition-by PRODUCT_TYPE --signal http://localhost:18480 --token-file /etc/drishti/loads.token -q >> /var/log/drishti/lake-build.log 2>&1
 ```
 
 Or as a systemd timer (a missed run is caught up after a reboot; `systemctl status` shows the exit code):
@@ -2754,7 +2754,7 @@ After=network-online.target
 Type=oneshot
 User=drishti
 WorkingDirectory=/opt/drishti
-ExecStart=/bin/sh -c 'python3 tools/drishti.py lake build --from /srv/drop/endur-$(date +%%F).json.gz --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID --lake /srv/drishti/delta --as-of $(date +%%F) --partition-by PRODUCT_TYPE --signal http://localhost:18480 --token-file /etc/drishti/loads.token -q'
+ExecStart=/bin/sh -c 'python3 tools/drishti.py lake build --from /srv/drop/endur-$(date +%%F).json.gz --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID --lake /srv/drishti/delta --as-of $(date +%%F) --partition-by PRODUCT_TYPE --signal http://localhost:18480 --token-file /etc/drishti/loads.token -q'
 # 2 (written with rejects) is not a failure of the unit; alert on it from the summary instead
 SuccessExitStatus=2
 Environment=DRISHTI_LAKE_HEAP=2g

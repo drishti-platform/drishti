@@ -77,7 +77,13 @@ public record Pack(String name, String version, String title, String description
         return out;
     }
 
-    /** The source module a template of this pack came from ({@code modules/source-<system>/connectors/}), or empty for the pack's own. */
+    /** The source pack a template of this pack came from ({@code modules/trading-systems/packs/<system>/connectors/}), or empty. */
+    public java.util.Optional<String> packOfConnector(String name) {
+        Object m = connectorTemplates().getOrDefault(name, Map.of()).get("from-pack");
+        return m == null ? java.util.Optional.empty() : java.util.Optional.of(String.valueOf(m));
+    }
+
+    /** The module a template of this pack came from ({@code modules/<module>/connectors/}), or empty for the pack's own. */
     public java.util.Optional<String> moduleOfConnector(String name) {
         Object m = connectorTemplates().getOrDefault(name, Map.of()).get(com.ash.lake.config.ModuleConnectors.FROM_MODULE);
         return m == null ? java.util.Optional.empty() : java.util.Optional.of(String.valueOf(m));

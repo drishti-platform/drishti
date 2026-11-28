@@ -83,11 +83,11 @@ def test_build_all_is_one_maven_run_of_the_jar_and_the_modules_and_no_copy_insta
 
 
 def test_build_modules_stamps_for_the_jar_in_lib_and_takes_ids():
-    r = run("build", "modules", "--dry-run", "source-endur", "economy")
+    r = run("build", "modules", "--dry-run", "trading-systems", "external-data")
     assert r.returncode == 0, r.stderr
     assert "clean package -DskipTests -pl :drishti-modules -am" in r.stdout
     assert "-Pmodules-only" in r.stdout
-    assert "-Ddrishti.modules.ids=source-endur,economy" in r.stdout
+    assert "-Ddrishti.modules.ids=trading-systems,external-data" in r.stdout
     r = run("build", "modules", "--dry-run", "no-such-module")
     assert r.returncode == 2 and "no module no-such-module" in r.stderr
 

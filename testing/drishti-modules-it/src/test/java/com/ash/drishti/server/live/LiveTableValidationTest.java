@@ -41,9 +41,9 @@ import org.junit.jupiter.api.io.TempDir;
 class LiveTableValidationTest {
 
     static final Path ROOT = Path.of(TestRoots.repo()).toAbsolutePath().normalize();
-    static final Path TRADE = ROOT.resolve("modules/trading/blotters/trade.live.yaml");
-    static final Path CONTRACT = ROOT.resolve("modules/banking/packs/trading/contracts/trade.contract.yaml");
-    static final Formats FORMATS = Formats.load(null, List.of(ROOT.resolve("modules/banking/packs/trading/config/formats.yaml").toString()));
+    static final Path TRADE = ROOT.resolve("modules/trading-systems/blotters/trade.live.yaml");
+    static final Path CONTRACT = ROOT.resolve("modules/trading-systems/packs/trading/contracts/trade.contract.yaml");
+    static final Formats FORMATS = Formats.load(null, List.of(ROOT.resolve("modules/trading-systems/packs/trading/config/formats.yaml").toString()));
 
     @Test
     void theShippedTradeBlotterPassesAndItsEditRulesCarryThePattern() throws Exception {

@@ -33,7 +33,7 @@ provenance, entitlements, the reactive connector), this page refers to [VAR_GUID
 
 **Sources read for this contract (2026-10-25):** `modules/banking/packs/counterparty-risk/contracts/*.contract.yaml`, its `samples/`,
 `data/testdata/counterparty-risk/`, `config/packs/core/core/contracts/counterparty.contract.yaml` and `counterparty-group.contract.yaml`,
-`modules/banking/packs/market-risk/contracts/trade-valuation.contract.yaml`, `modules/banking/packs/trading/contracts/trade.contract.yaml`,
+`modules/banking/packs/market-risk/contracts/trade-valuation.contract.yaml`, `modules/trading-systems/packs/trading/contracts/trade.contract.yaml`,
 `tools/packgen/banking/data_results.py` (`credit_results`, `reference`), `tools/testdata/universe.py`, `tools/contracts.policy.yaml`.
 
 ## Contents

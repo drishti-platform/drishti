@@ -315,7 +315,7 @@ use. A field's type and unit (money, rate) come from the kind's data contract.
 The trades (`trade_murex`, `trade_endur`, `trade_calypso` under `data/testdata/trades/<system>/`): a stored kind read as a table; its
 text fields are the rows and columns, its numbers the measures. The record shows the fields a pivot of trades usually groups by.
 
-- **Data contract:** [`trade`](../../contracts/packs/trading.md#trd-trade-trade) (TRD), key `TRADE_ID`; 48 fields, 25 required; the file [`trade.contract.yaml`](../../../modules/banking/packs/trading/contracts/trade.contract.yaml).
+- **Data contract:** [`trade`](../../contracts/packs/trading.md#trd-trade-trade) (TRD), key `TRADE_ID`; 48 fields, 25 required; the file [`trade.contract.yaml`](../../../modules/trading-systems/packs/trading/contracts/trade.contract.yaml).
 - **Example:** [a real record of the test data](../../contracts/packs/trading.md#example-trades-murex) (files `data/testdata/trades/murex/trade_murex.*.jsonl.gz`).
 
 ### 5.3 `scenario-pv`: the VaR book's vectors

@@ -41,7 +41,7 @@ The file goes first and its `.ready` marker last: the marker says the file is co
 
 ```text
 Linux     cd /opt/drishti && python3.13 tools/drishti.py lake build --engine java --from /landing/endur-2026-11-27.jsonl.gz --as-of 2026-11-27 \
-              --lake demo --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID
+              --lake demo --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID
 Windows   cd C:\drishti && py -3.13 tools\drishti.py lake build --engine java --from C:\landing\endur-2026-11-27.jsonl.gz --as-of 2026-11-27 ^
               --lake demo --pack modules\banking\packs\trading --kind trade --connector trade-endur --key TRADE_ID
 ```
@@ -74,7 +74,7 @@ Schedule the job **after your extract lands** (the load does not wait for a file
 
 ```text
 SHELL=/bin/bash
-30 19 * * 1-5 cd /opt/drishti && d=$(date +\%F) && python3.13 tools/drishti.py lake build --engine java --from /landing/endur-$d.jsonl.gz --as-of $d --lake demo --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID --signal http://localhost:18480 --token-file $HOME/.drishti-token >> $HOME/drishti-trades.log 2>&1
+30 19 * * 1-5 cd /opt/drishti && d=$(date +\%F) && python3.13 tools/drishti.py lake build --engine java --from /landing/endur-$d.jsonl.gz --as-of $d --lake demo --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID --signal http://localhost:18480 --token-file $HOME/.drishti-token >> $HOME/drishti-trades.log 2>&1
 ```
 
 Cron starts with an empty environment: put the working folder (`cd /opt/drishti`) and any variable in the line or the crontab, as above. For the inbox way (A) schedule the copy, the `touch` and `dataload run --wait` in one script the same way.
@@ -108,7 +108,7 @@ The task's *Last Run Result* is the script's exit code. By hand: Task Scheduler 
   ```bash
   for d in 2026-11-24 2026-11-25 2026-11-26; do
     python3.13 tools/drishti.py lake build --engine java --from /landing/endur-$d.jsonl.gz --as-of $d --lake demo \
-      --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID || break
+      --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID || break
   done
   ```
 

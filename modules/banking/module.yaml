@@ -17,7 +17,7 @@
 format: 1
 id: banking
 version: 1.0.0
-title: Banking and risk
+title: Risk
 about: VaR and ES (historical, parametric, regulatory), exposure and CCR, FRTB-SA, ISDA SIMM, sensitivities, the MR cube, the official risk results
 domain: banking
 origin: first-party
@@ -34,14 +34,9 @@ elements: '>=3.3 <4'
 requires:
   market-data: '>=1.0 <2'
   reference-data: '>=1.0 <2'
+  trading-systems: '>=1.0 <2'
 provides:
   kinds:
-    trading:
-    - trade
-    - counterparty-trades
-    - portfolio-trades
-    - legal-entity-trades
-    - index-trades
     market-risk:
     - stress-scenario
     - stress-result
@@ -103,7 +98,6 @@ compute:
 packs:
   folder: packs
   list:
-  - trading
   - market-risk
   - counterparty-risk
 data:
@@ -116,38 +110,6 @@ console:
   # the module's own top menus, in the console sitemap's form (drishti-console/config/sitemap.yaml); a menu of another module's
   # id adds its columns to that menu (the one Markets menu). The one home of these menus.
   menus:
-  - id: blotter
-    domain: banking
-    label: Blotter
-    icon: journal-text
-    subject: true
-    columns:
-    - title: Trades
-      items:
-      - id: trd
-        cmd: TRD
-        icon: journal-text
-        label: Trades
-        desc: 'Every trade: pick one or filter'
-        requires: ['cmd:TRD']
-      - id: ctrd
-        cmd: CTRD
-        icon: building
-        label: By counterparty
-        desc: The trades of a counterparty
-        requires: ['cmd:CTRD']
-      - id: ptrd
-        cmd: PTRD
-        icon: folder2
-        label: By portfolio
-        desc: The trades of a portfolio
-        requires: ['cmd:PTRD']
-      - id: ltrd
-        cmd: LTRD
-        icon: bank
-        label: By legal entity
-        desc: The trades of a legal entity
-        requires: ['cmd:LTRD']
   - id: positions
     domain: banking
     label: Positions
@@ -434,11 +396,6 @@ functions:
   - /api/v1/risk/risk-factors
 - PLAY
 - CCUBE
-- TRD
-- CTRD
-- PTRD
-- LTRD
-- ITRD
 - SCN
 - STR
 - FRTB

@@ -46,7 +46,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * One table a trading system, always (the owner, after the daily-loads rehearsal): the committed first day of every source system
- * (data/testdata/trades/&lt;system&gt;/trade_&lt;system&gt;.2026-07-08.jsonl.gz) is loaded through its own module's inbox rule and connector
+ * (data/testdata/trades/&lt;system&gt;/trade_&lt;system&gt;.2026-07-08.jsonl.gz) is loaded through its own pack's inbox rule and connector
  * template into its own table, {@code trading.trade_<system>}, and the trade kind (what TRD lists) reads all six as one union with each
  * system's exact count; no shared table is written.
  */
@@ -60,7 +60,7 @@ class OneTablePerSystemTest {
 
     private static Path repo() {
         Path p = Path.of(com.ash.lake.tck.TestRoots.repo());   // the repository, absolute, never the working folder
-        assertThat(p.resolve("modules/source-swapone")).as("the repository root").isDirectory();
+        assertThat(p.resolve("modules/trading-systems/packs/swapone")).as("the repository root").isDirectory();
         return p;
     }
 
@@ -68,8 +68,8 @@ class OneTablePerSystemTest {
     void everySystemLoadsIntoItsOwnTableAndTheTradeKindListsAllSixExactly() throws Exception {
         Path root = repo();
         YAMLMapper yaml = new YAMLMapper();
-        Path pack = Files.createDirectories(tmp.resolve("modules/banking/packs/trading"));
-        Files.copy(root.resolve("modules/banking/packs/trading/pack.yaml"), pack.resolve("pack.yaml"));
+        Path pack = Files.createDirectories(tmp.resolve("modules/trading-systems/packs/trading"));
+        Files.copy(root.resolve("modules/trading-systems/packs/trading/pack.yaml"), pack.resolve("pack.yaml"));
         // what the committed test data says each system holds on the day
         Map<String, Long> expected = new TreeMap<>();
         for (JsonNode d : yaml.readTree(root.resolve("data/testdata/testdata.yaml").toFile()).path("datasets")) {
@@ -86,14 +86,14 @@ class OneTablePerSystemTest {
 
         Path lake = tmp.resolve("lake");
         // every source module on, as a site runs them: their packages, booted as the launch boots them
-        Map<String, String> booted = BootedPackages.boot(tmp.resolve("site"), SYSTEMS.stream().map(s -> "source-" + s).toArray(String[]::new));
+        Map<String, String> booted = BootedPackages.boot(tmp.resolve("site"), "reference-data", "market-data", "trading-systems");
         com.ash.drishti.api.resolution.ConfigResolution.install(com.ash.drishti.api.resolution.ConfigResolution.offline(
                 k -> booted.containsKey(k) ? booted.get(k) : k.equals("drishti.packs.site-dir")
                         ? tmp.resolve("config/packs").toString() : k.equals("drishti.data.dir") ? tmp.resolve("data").toString() : null));
         var cfgs = new LinkedHashMap<String, SourcesProperties.ConnectorSettings>();
         List<SourceSystems.System> installed = new ArrayList<>();
         for (String s : SYSTEMS) {
-            Path module = BootedPackages.dir(booted, "source-" + s);
+            Path module = BootedPackages.dir(booted, "trading-systems").resolve("packs/" + s);   // the source system's pack folder
             JsonNode rule = yaml.readTree(Files.readString(module.resolve("dataload.yaml"))).path("dataload").path("rules").get(0);
             String connector = rule.path("connector").asText();
             assertThat(connector).isEqualTo("trade-" + s);
@@ -132,7 +132,7 @@ class OneTablePerSystemTest {
             settings.put("id-map-disk.dir", tmp.resolve("cache/idmaps").toString());
             settings.put("doc-disk-cache.dir", tmp.resolve("cache/docs").toString());
             cfgs.put(connector, new SourcesProperties.ConnectorSettings("delta", true, List.of("trade"), settings));
-            installed.add(new SourceSystems.System(s.toUpperCase(java.util.Locale.ROOT), "source-" + s, java.util.Set.of("trade"), true));
+            installed.add(new SourceSystems.System(s.toUpperCase(java.util.Locale.ROOT), "trading-systems", java.util.Set.of("trade"), true));
         }
         try (Stream<Path> tables = Files.list(lake.resolve("trading"))) {
             assertThat(tables.map(p -> p.getFileName().toString()).sorted().toList()).as("six tables, no shared one")

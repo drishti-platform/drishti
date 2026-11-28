@@ -120,12 +120,12 @@ class DistributionsTest {
     @Test
     void riskCarriesTheTradeBlotterAndTheSixSources() throws Exception {
         List<String> mods = read("risk").modules();
-        assertThat(mods).contains("trading", "source-endur", "source-calypso", "source-murex", "source-wss", "source-swapone", "source-ici");
-        assertThat(read("risk").spec().path("modules").toString()).contains("\"trading\"");
+        assertThat(mods).contains("trading-systems").doesNotContain("trading", "source-endur", "source-calypso", "source-murex", "source-wss", "source-swapone", "source-ici");
+        assertThat(read("risk").spec().path("modules").toString()).contains("\"trading-systems\"");
         assertThat(java.util.stream.StreamSupport.stream(read("risk").spec().path("modules").spliterator(), false).anyMatch(
-                m -> "trading".equals(m.path("id").asText()) && m.path("required").asBoolean())).isTrue();
-        assertThat(java.nio.file.Files.readString(MODULES.resolve("trading/console/plugin.yaml"))).as("the Risk menu's Trade blotter, from the trading module").contains("Trade blotter", "/live/trade");
-        assertThat(read("finance").modules()).doesNotContain("banking", "trading");
+                m -> "trading-systems".equals(m.path("id").asText()) && m.path("required").asBoolean())).isTrue();
+        assertThat(java.nio.file.Files.readString(MODULES.resolve("trading-systems/console/plugin.yaml"))).as("the Risk menu's Trade blotter, from the trading module").contains("Trade blotter", "/live/trade");
+        assertThat(read("finance").modules()).doesNotContain("banking", "trading-systems");
     }
 
     /**

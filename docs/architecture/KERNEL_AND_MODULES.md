@@ -2812,13 +2812,13 @@ Each names the thing, both places, and what to do.
 |---|---|---|
 | DRS-1040 | the kernel's packs are missing (start refused) | *The kernel's pack 'core' is not in config/packs/core (drishti.kernel.packs-dir). The server cannot start without it.* |
 | DRS-1041 | a pack is not found | *No pack 'trding'. Looked in the site's packs (config/packs, data/packs/installed), the modules that are on (banking, market-data, economy) and the kernel's packs (config/packs/core). Did you mean 'trading' (module banking)?* |
-| DRS-1042 | one name in two places | *Pack 'trading' is in config/packs/banking/trading and in module banking (modules/banking/packs/trading). The module's is read. To use yours instead, add `replaces: trading` to its pack.yaml; otherwise the folder is safe to delete.* |
+| DRS-1042 | one name in two places | *Pack 'trading' is in config/packs/banking/trading and in module banking (modules/trading-systems/packs/trading). The module's is read. To use yours instead, add `replaces: trading` to its pack.yaml; otherwise the folder is safe to delete.* |
 | DRS-1043 | a pack's module is off | *Pack 'market-risk' belongs to module banking, which is off (switched off in config/modules/banking.yaml). Switch it on in Admin → Modules.* |
 | DRS-1044 | a module in two places | *Module market-data is in modules/market-data (1.0.0) and installed as data/modules/installed/market-data/1.1.0. The folder is read. Remove one.* |
 | DRS-1045 | two templates of one name | *Connector 'trade-endur' is declared by pack trading and by module source-endur. Neither is used. Remove one declaration.* |
 | DRS-1046 | a site connector file is not used | *config/connectors/trade-murex.yaml overrides the template of module source-murex, which is off (not in distribution drishti.risk). It is not used.* |
 | DRS-1047 | a setting names the wrong folder, or two names disagree (start refused) | *drishti.packs.site-dir is config/packs and drishti.packs.dir is site/packs: they name the same thing; keep one.* |
-| DRS-1048 | rules or bindings cannot be read | *The inbox rules of module source-endur (modules/source-endur/dataload.yaml) cannot be read: line 12, … Its files will not be matched.* |
+| DRS-1048 | rules or bindings cannot be read | *The inbox rules of module source-endur (modules/trading-systems/packs/endur/dataload.yaml) cannot be read: line 12, … Its files will not be matched.* |
 | DRS-1049 | two answers differ | *This console resolves pack 'trading' 2.9.10 from /opt/console/modules/…; the server serves 2.9.11 from /opt/drishti/modules/…* |
 | DRS-9308 | no write path | *Kind 'trade' (source ENDUR) has no write path: no connector that serves it offers writes. Module source-endur has an example, connectors/examples/kafka.yaml; or bind one in Admin → Data bindings (write).* |
 | DRS-9309 | more than one write path | *Kind 'trade' has two write paths, trade-endur-kafka and trade-murex-kafka, and the record names no source system. Name one in Admin → Data bindings (write).* |
@@ -2841,11 +2841,11 @@ the folder name `capital-markets/…` (refused, naming the id to use). One rule,
 | **When** | at start: change an override, restart the server (and the console). Removing the file and restarting restores the module's |
 
 **Example: change one Sutra and try it from outside.** The trading pack's Endur cash Sutra ships at
-`modules/banking/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml`. To try a change without touching the module:
+`modules/trading-systems/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml`. To try a change without touching the module:
 
 ```bash
 mkdir -p /home/me/drishti-overrides/banking/packs/trading/sutras/endur
-cp modules/banking/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml /home/me/drishti-overrides/banking/packs/trading/sutras/endur/
+cp modules/trading-systems/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml /home/me/drishti-overrides/banking/packs/trading/sutras/endur/
 # edit the copy (a title, a section, a field), then name the folder in your settings file:
 #   drishti.overrides.dir=/home/me/drishti-overrides
 python tools/drishti.py --settings /home/me/dev.ini stop server

@@ -12,7 +12,7 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 
-"""Every shipped source module's trading system is a value the trade contract allows: each connector of modules/source-*/connectors
+"""Every shipped source module's trading system is a value the trade contract allows: each connector of modules/trading-systems/packs/*/connectors
 sets ``SOURCE_SYSTEM`` (``set:``) and filters on it (``where:``); the trading pack's trade contract lists the allowed values, and the
 demo-trade generator's schema (tools/packgen/trades/schema.py ``ALLOWED``) checks the same list. A new source module that is not in the
 contract fails here."""
@@ -28,7 +28,7 @@ import yaml
 pytestmark = pytest.mark.static
 
 ROOT = Path(__file__).resolve().parents[2]
-CONTRACT = ROOT / "modules" / "banking" / "packs" / "trading" / "contracts" / "trade.contract.yaml"
+CONTRACT = ROOT / "modules" / "trading-systems" / "packs" / "trading" / "contracts" / "trade.contract.yaml"
 
 
 def _allowed() -> list[str]:
@@ -40,7 +40,7 @@ def _allowed() -> list[str]:
 def _systems() -> dict[str, set[str]]:
     """Source module -> the SOURCE_SYSTEM values its connectors set or filter on."""
     out: dict[str, set[str]] = {}
-    for f in sorted((ROOT / "modules").glob("source-*/connectors/*.yaml")):
+    for f in sorted((ROOT / "modules" / "trading-systems" / "packs").glob("*/connectors/*.yaml")):
         s = (yaml.safe_load(f.read_text(encoding="utf-8")) or {}).get("settings") or {}
         vals = out.setdefault(f.parts[-3], set())
         if (s.get("set") or {}).get("SOURCE_SYSTEM"):

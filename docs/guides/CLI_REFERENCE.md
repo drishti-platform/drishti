@@ -665,7 +665,7 @@ skip modules/banking/packs/market-risk/sutras/market-risk/trade-valuation.v1.sut
 ok   modules/banking/packs/market-risk/sutras/market-risk/var.v1.sutra.yaml (2 samples)
 ```
 
-`sutra lint modules/banking/packs/trading` prints `ok` for each of the pack's 134 Sutras (blocks expanded) in about seven seconds; `sutra test modules/banking/packs/trading` renders each against the samples in its
+`sutra lint modules/trading-systems/packs/trading` prints `ok` for each of the pack's 134 Sutras (blocks expanded) in about seven seconds; `sutra test modules/trading-systems/packs/trading` renders each against the samples in its
 `tests/` folder.
 
 #### The tests convention
@@ -1263,7 +1263,7 @@ The offline path: no server API and no token. Full guide with real output, promo
 [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md#8-deploy-promote-and-roll-back-by-copying).
 
 ```bash
-drishti.py pack bundle modules/banking/packs/trading --out dist                  # trading-1.0.0.tar.gz + .sha256 + .manifest.json (runs pack check first)
+drishti.py pack bundle modules/trading-systems/packs/trading --out dist                  # trading-1.0.0.tar.gz + .sha256 + .manifest.json (runs pack check first)
 drishti.py pack verify dist/trading-1.0.0.tar.gz                # sha256, manifest checksums, schema, server version, sutra lint + test
 drishti.py pack deploy dist/trading-1.0.0.tar.gz --to /opt/drishti/packs --backup /opt/drishti/backups [--dry-run]
 drishti.py pack rollback trading --to /opt/drishti/packs --backup /opt/drishti/backups [--version 1.0.0]
@@ -1739,7 +1739,7 @@ alone is the older form: the options and the pack decide. A table whose lake fil
 loader only (`--engine java --batch-id ID`: the batch recorded in each date's commit, never appended twice); the Python path refuses it.
 
 ```bash
-python3 tools/drishti.py lake build --from drop/endur-2026-10-28.jsonl.gz --as-of 2026-10-28 --pack modules/banking/packs/trading \
+python3 tools/drishti.py lake build --from drop/endur-2026-10-28.jsonl.gz --as-of 2026-10-28 --pack modules/trading-systems/packs/trading \
     --connector trade-endur --lake demo                  # partitioned by business_date and PRODUCT_TYPE, as config/lakes/demo.yaml says
 python3 tools/drishti.py lake show                       # every lake and table as the server reads them
 python3 tools/drishti.py lake check                      # connectors name known lakes; lake files match the tables on disk
@@ -2014,7 +2014,7 @@ connector (`settings.domain`, `settings.layout.<kind>.columns`), and the key, da
 `ingest.trade.flatten` adds `NOTIONAL` and `INDEX_NAME` from the first leg, [7.6](#76-the-lake-writers---engine)). Options on the command line win.
 
 ```yaml
-# modules/banking/packs/trading/pack.yaml (the parts lake build reads; one Delta connector per source system)
+# modules/trading-systems/packs/trading/pack.yaml (the parts lake build reads; one Delta connector per source system)
 pack: trading
 connectors:
   trade-endur:
@@ -2034,7 +2034,7 @@ The pack has three Delta connectors for `trade`, so the run names one with `--co
 sixteen promoted columns); captured as a dry run:
 
 ```bash
-python3 tools/drishti.py lake build --from data/testdata/trades/endur/trade_endur.2026-07-08.jsonl.gz --pack modules/banking/packs/trading \
+python3 tools/drishti.py lake build --from data/testdata/trades/endur/trade_endur.2026-07-08.jsonl.gz --pack modules/trading-systems/packs/trading \
     --kind trade --connector trade-endur --key TRADE_ID --as-of 2026-09-22 --partition-by PRODUCT_TYPE --lake lake3 --dry-run --json
 # "pack": "trading", "domain": "trading", "kind": "trade", "table": "lake3/trading/trade_endur", "promote": ["TRADE_ID", "SOURCE_SYSTEM",
 # "PRODUCT_TYPE", ... "TRADER_ID"] (16), "documents": 4407, "status": "dry-run", "exitCode": 0
@@ -2043,7 +2043,7 @@ python3 tools/drishti.py lake build --from data/testdata/trades/endur/trade_endu
 In production the same run names the real lake and tells the server (the ETL's last step):
 
 ```bash
-python3 tools/drishti.py lake build --from /srv/drop/endur-2026-10-16.json.gz --pack modules/banking/packs/trading --kind trade --connector trade-endur \
+python3 tools/drishti.py lake build --from /srv/drop/endur-2026-10-16.json.gz --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur \
     --key TRADE_ID --as-of 2026-10-16 --partition-by PRODUCT_TYPE --lake /srv/drishti/delta \
     --signal http://drishti.internal:18480 --token-file /etc/drishti/loads.token
 ```

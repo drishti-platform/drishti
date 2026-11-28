@@ -1537,7 +1537,7 @@ in `config/connectors.examples/` declares one.
 
 ### 9.4 Examples, one per store
 
-**Delta Lake** (a whole site connector of the shape the source modules' templates have, `modules/source-endur/connectors/trade-endur.yaml`):
+**Delta Lake** (a whole site connector of the shape the source modules' templates have, `modules/trading-systems/packs/endur/connectors/trade-endur.yaml`):
 
 ```yaml
 plugin: delta
@@ -1829,7 +1829,7 @@ on a deploy. The connector that runs is computed in memory from three layers (th
 
 | Layer | Where | What it holds |
 |---|---|---|
-| **Template** (read-only) | a loaded pack's `connectors:` entry, or a file directly in the connectors folder of a module that is on (`modules/source-endur/connectors/trade-endur.yaml`; files under `connectors/examples/` are examples to copy, not templates) | the whole connector as shipped; its name is the file's `name:` key, else the file's name |
+| **Template** (read-only) | a loaded pack's `connectors:` entry, or a file directly in the connectors folder of a module that is on (`modules/trading-systems/packs/endur/connectors/trade-endur.yaml`; files under `connectors/examples/` are examples to copy, not templates) | the whole connector as shipped; its name is the file's `name:` key, else the file's name |
 | **Site override** | `config/connectors/<name>.yaml` | only the keys the site changes, merged over the template key by key (a setting's dotted path is its key: `settings.set.SOURCE_SYSTEM`). Any key may change, the plugin included; every other key is still inherited; a key set to `null` removes the inherited one. Over a template that names a lake, `settings.root` alone keeps the lake and reads its tables under that root; with `domain`, `table.<kind>` or `layout.<kind>` the file is the older form and the template's lake keys are dropped. A file with no template of its name is a complete **site connector** and names its plugin |
 | **Secrets** | `${VAR}` and `file:` references in the file | resolved when the connector starts; a template never holds one |
 

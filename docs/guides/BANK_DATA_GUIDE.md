@@ -889,7 +889,7 @@ python3 tools/loaders/mrloader/pvf_fx_scenario.py  --date 2026-11-18 --fx tools/
 
 ## Trading pack
 
-The pack's commands, connectors, kinds, roles and data contracts are generated into [its README](../../modules/banking/packs/trading/README.md) and its [contract page](../contracts/packs/trading.md); nothing is copied here: [data contracts](../../modules/banking/packs/trading/README.md#data-contracts), [data retrieval](../../modules/banking/packs/trading/README.md#data-retrieval). The next section lists its products.
+The pack's commands, connectors, kinds, roles and data contracts are generated into [its README](../../modules/trading-systems/packs/trading/README.md) and its [contract page](../contracts/packs/trading.md); nothing is copied here: [data contracts](../../modules/trading-systems/packs/trading/README.md#data-contracts), [data retrieval](../../modules/trading-systems/packs/trading/README.md#data-retrieval). The next section lists its products.
 
 ## Trading products
 

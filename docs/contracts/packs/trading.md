@@ -17,7 +17,7 @@
 
 # Data contracts of the trading pack
 
-One section per command of the pack: the shape of its data, how it is stored and checked, and what a person still has to confirm. The rules every contract shares are in [the contracts README](../README.md); the index of every command is [packs/README.md](README.md). The pack's README, [modules/banking/packs/trading/README.md](../../../modules/banking/packs/trading/README.md), links each kind here and to its example (tools/packgen/common/guide_data.py) next to where each kind's data comes from (*Data retrieval*).
+One section per command of the pack: the shape of its data, how it is stored and checked, and what a person still has to confirm. The rules every contract shares are in [the contracts README](../README.md); the index of every command is [packs/README.md](README.md). The pack's README, [modules/trading-systems/packs/trading/README.md](../../../modules/trading-systems/packs/trading/README.md), links each kind here and to its example (tools/packgen/common/guide_data.py) next to where each kind's data comes from (*Data retrieval*).
 
 | Command | Kind | Class | Status | Fields | To review |
 |---|---|---|---|---|---|
@@ -33,7 +33,7 @@ A booked trade as its source system (ENDUR, CALYPSO, MUREX, WSS, SWAPONE or ICI)
 
 |  |  |
 |---|---|
-| Contract | [trade.contract.yaml](../../../modules/banking/packs/trading/contracts/trade.contract.yaml) · version 1.1 |
+| Contract | [trade.contract.yaml](../../../modules/trading-systems/packs/trading/contracts/trade.contract.yaml) · version 1.1 |
 | Class | fundamental |
 | Status | active |
 | Source | murex, calypso |
@@ -892,7 +892,7 @@ Every trade with a counterparty, from every source system: its trades (every sta
 
 |  |  |
 |---|---|
-| Contract | [counterparty-trades.contract.yaml](../../../modules/banking/packs/trading/contracts/counterparty-trades.contract.yaml) · version 1.0 |
+| Contract | [counterparty-trades.contract.yaml](../../../modules/trading-systems/packs/trading/contracts/counterparty-trades.contract.yaml) · version 1.0 |
 | Class | computed |
 | Status | active |
 | Source | computed by Drishti: the derived connector trade-pages over the kind trade |
@@ -964,7 +964,7 @@ Every trade of a portfolio (book), from every source system: its trades (every s
 
 |  |  |
 |---|---|
-| Contract | [portfolio-trades.contract.yaml](../../../modules/banking/packs/trading/contracts/portfolio-trades.contract.yaml) · version 1.0 |
+| Contract | [portfolio-trades.contract.yaml](../../../modules/trading-systems/packs/trading/contracts/portfolio-trades.contract.yaml) · version 1.0 |
 | Class | computed |
 | Status | active |
 | Source | computed by Drishti: the derived connector trade-pages over the kind trade |
@@ -1036,7 +1036,7 @@ Every trade a legal entity of the bank booked, from every source system: its tra
 
 |  |  |
 |---|---|
-| Contract | [legal-entity-trades.contract.yaml](../../../modules/banking/packs/trading/contracts/legal-entity-trades.contract.yaml) · version 1.0 |
+| Contract | [legal-entity-trades.contract.yaml](../../../modules/trading-systems/packs/trading/contracts/legal-entity-trades.contract.yaml) · version 1.0 |
 | Class | computed |
 | Status | active |
 | Source | computed by Drishti: the derived connector trade-pages over the kind trade |
@@ -1108,7 +1108,7 @@ Every trade with a leg on an index (the first leg that names one): its trades (e
 
 |  |  |
 |---|---|
-| Contract | [index-trades.contract.yaml](../../../modules/banking/packs/trading/contracts/index-trades.contract.yaml) · version 1.0 |
+| Contract | [index-trades.contract.yaml](../../../modules/trading-systems/packs/trading/contracts/index-trades.contract.yaml) · version 1.0 |
 | Class | computed |
 | Status | active |
 | Source | computed by Drishti: the derived connector trade-pages over the kind trade |

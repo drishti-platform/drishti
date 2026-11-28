@@ -1,0 +1,38 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The Calypso source pack (docs/plans/MODULE_RATIONALISATION.md, S3): one trading system feeding the one canonical `trade` kind
+# (SOURCE_SYSTEM = CALYPSO). It owns no kind: it extends `trading` and brings what is the system's own, in this folder: its connector
+# templates (connectors/), the mapping of its native fields to the canonical ones (mappings/), its inbox routing rule (dataload.yaml)
+# and its deal screens (sutras/). The pack is the switch (Admin -> Artifacts): off, the system's trades leave the trade kind, its
+# connectors stop, its screens and Help page are not offered and nothing else changes. Who sees its trades is a row rule on SOURCE_SYSTEM.
+pack: calypso
+domain: banking
+version: 1.0.0
+code: CLYP
+title: Calypso
+description: Calypso trades (rates, credit, structured), one table of their own
+extends:
+- trading
+kinds: []
+sutras: sutras
+roles:                         # an example role of this system: who sees its trades is a row rule on SOURCE_SYSTEM (KERNEL_AND_MODULES.md section 19.10)
+  trader-calypso:
+    kinds:
+    - trade
+    edit: true
+    rows:
+      trade: "SOURCE_SYSTEM = 'CALYPSO'"
+    edit-systems:
+    - CALYPSO

@@ -760,7 +760,7 @@ options win over it):
 
 ```bash
 python3 tools/drishti.py lake build --from trade_endur.2026-11-05.jsonl.gz --lake risklake \
-    --pack modules/banking/packs/trading --connector trade-endur --key TRADE_ID --mode overwrite-dates
+    --pack modules/trading-systems/packs/trading --connector trade-endur --key TRADE_ID --mode overwrite-dates
 ```
 
 ```text
@@ -880,7 +880,7 @@ without `id:` takes it, else the kind's key), or the loader alone from the serve
 
 ```bash
 python3 tools/drishti.py lake build --from trade_endur.2026-11-05.jsonl.gz --lake demo \
-    --pack modules/banking/packs/trading --connector trade-endur --mode overwrite-dates --engine java
+    --pack modules/trading-systems/packs/trading --connector trade-endur --mode overwrite-dates --engine java
 ```
 
 ```text
@@ -2306,7 +2306,7 @@ the official capture. With 509 values a vector the gzip, the lake and the hot fi
 **What this loads.** The trades of Endur, Calypso, Murex, WSS, SwapOne and ICI, as JSON Lines in each system's own field names (`UPPER_SNAKE`, as
 Endur names them), into the one canonical `trade` kind (`TRD`). A source system is a **module** (`modules/source-<system>/`) that brings a
 connector template, a field map (`mappings/<system>-trade.yaml`), a routing rule for the inbox (`dataload.yaml`) and its own on/off switch. The trade's
-contract is [`trade.contract.yaml`](../../modules/banking/packs/trading/contracts/trade.contract.yaml), published as
+contract is [`trade.contract.yaml`](../../modules/trading-systems/packs/trading/contracts/trade.contract.yaml), published as
 [TRD](../contracts/packs/trading.md#trd-trade-trade). **Trades reach VaR only at trade grain, which is not used now**: VaR is fed by position-level scenario PVs
 (16.1) and is unchanged by anything in this section, including switching a source off.
 
@@ -2377,7 +2377,7 @@ day's changes: *no source holds trade/1000001 … for 2026-07-09*). Send each da
 **4. The CLI alternative** (`--engine java`, never the Python writer; one run over a system's files, one commit a date):
 
 ```bash
-python3 tools/drishti.py lake build --engine java --from /landing/endur-2026-07-08 --as-of 2026-07-08 --lake demo --pack modules/banking/packs/trading \
+python3 tools/drishti.py lake build --engine java --from /landing/endur-2026-07-08 --as-of 2026-07-08 --lake demo --pack modules/trading-systems/packs/trading \
    --kind trade --connector trade-endur --key TRADE_ID --signal $DRISHTI_SERVER --token-file ~/.drishti-token \
    --loader-set parallel.writers=16 --loader-set memory.budget-mb=20480 --loader-set memory.spill-dir=/fast/spill        # DRISHTI_LAKE_LOADER_HEAP=24g
 ```

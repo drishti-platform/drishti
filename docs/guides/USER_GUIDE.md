@@ -1494,7 +1494,7 @@ node answering, the embedding app) is in [The engine: snapshot, deltas, scale, r
 `blotters/<name>.live.yaml` in a module, or `config/blotters/` for a site's own: a Rachana live-table declaration
 ([LIVE_TABLES.md](https://github.com/drishti-platform/drishti-rachana/blob/main/docs/guides/LIVE_TABLES.md) section 2) with Drishti's profile
 keys (`kind`, `links`, the edit's `roles`, `save` and `editable-by`). The trading module's
-[`trade.live.yaml`](../../modules/trading/blotters/trade.live.yaml) in short:
+[`trade.live.yaml`](../../modules/trading-systems/blotters/trade.live.yaml) in short:
 
 ```yaml
 rachana: 1

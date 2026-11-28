@@ -36,7 +36,7 @@ import modulesbuild  # noqa: E402
 from procs import LaunchError  # noqa: E402
 
 MODULES = ROOT / "modules"
-CONTENT = ["external-data", "news-and-events", "reference-data", "source-calypso", "source-endur", "source-ici", "source-murex", "source-swapone", "source-wss"]
+CONTENT = ["external-data", "news-and-events", "reference-data"]
 
 # a module with a java: block that packaging/dist does NOT pack: the reason (none today: every one is shipped)
 NOT_SHIPPED: dict[str, str] = {}

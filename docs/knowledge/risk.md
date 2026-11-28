@@ -530,7 +530,7 @@ grouped when asked (computed, never stored):
    index-trades         ITRD <index name>     every trade on one floating index
 ```
 
-The links are the trading pack's contract link columns (`modules/banking/packs/trading/contracts/trade.contract.yaml`): `COUNTERPARTY` and
+The links are the trading pack's contract link columns (`modules/trading-systems/packs/trading/contracts/trade.contract.yaml`): `COUNTERPARTY` and
 `ORIGINAL_COUNTERPARTY → counterparty`, `LEGAL_ENTITY → legal-entity`, `PORTFOLIO` and `TT_BOOK → book`, `TRADER_ID → trader`,
 `TT_GROUP → desk`. The arrows marked `◄` are other kinds that point at the trade (`TRADE_ID`, `TRADE_IDS`).
 

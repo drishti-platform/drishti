@@ -16,9 +16,9 @@
 
 # H2 conversion: inline table, record and tabs panels on the Rachana Core fragments
 
-Inline table, kv and tabs panels in the non-risk Sutras: 143; converted: 115; left inline: 28.
+Inline table, kv and tabs panels in the non-risk Sutras: 143; converted: 116 (115 before `sic-directory`, whose `where` is now a `core/data-table` parameter); left inline: 27.
 (Risk packs move with R2. BI LiveTables move to the live engine in i10. The `hbar`, `ladder`, `metric`, `line`, `links`, `provenance`, `surface`, `candlestick`, `pivot`-only, `graph`, `scatter`, `map`, `status` and `area` panels have no Core fragment of this shape and are not part of this pass.)
-The conversion is `tools/packgen/common/corefrag.py`, called from `sutradoc.enrich` (every generator) and run once over the hand-written Sutras; a table becomes `core/data-table@1`, a kv `core/record-card@1` (record `$`, a title: a plain record view), a tabs `core/tabbed-views@1`. The panel id becomes `as:`.
+The conversion is `tools/packgen/common/corefrag.py`, called from `sutradoc.enrich` (every generator) and run once over the hand-written Sutras; a table becomes `core/data-table@1`, a kv `core/record-card@1` (record `$`, a title: a plain record view), a tabs `core/tabbed-views@1`. The panel keeps its old id: the use passes it as `with: { id: <old id> }` (Rachana 1.1.1, `panel-id`) and also writes it as `as:`; ids, function keys, `maskedPanels`, events and `panel:` references are unchanged, and the equivalence tests compare the ids exactly.
 
 | generator / file | panel | fragment | converted? | why not |
 |---|---|---|---|---|
@@ -166,24 +166,18 @@ The conversion is `tools/packgen/common/corefrag.py`, called from `sutradoc.enri
 | modules/market-data/packs/market-data/sutras/market-data/ir-vol-cube.v1.sutra.yaml | grid | core/data-table | yes |  |
 | modules/market-data/packs/market-data/sutras/market-data/repo-curve.v1.sutra.yaml | points | core/data-table | yes |  |
 
-## Missing in the fragments (for the lead)
+## Left inline (Rachana 1.1.1 has no parameter for it)
 
-- `core/data-table`: `pivot` (host profile feature), `moreLabel`, tree rows (`children`, `expand`, `highlight`: use core/tree-table, which has no key/code/source), `emits`, `phone`.
-- `core/record-card`: a kv with `rows:` and no `columns:` (the record's own fields as they are) needs `facts` optional; `phone` tiers.
-- `core/tabbed-views`: the slot holds at most 6 panels (the fund `views` tab has 12 and a per-tab `when`).
+- `core/data-table`: `pivot` (host profile feature), `moreLabel`, tree rows (`children`, `expand`, `highlight`; `core/tree-table` has no key/code/source), `emits`, `form`, `phone`.
+- `core/record-card`: `facts` is still required, so a kv with `rows:` and no `columns:` (the record's own fields as they are) stays a `kv` panel (path-book `stamp`, correlation-matrix `stamp`, fund and finance flow-form kv panels); `phone` tiers.
+- `core/tabbed-views`: the slot holds at most 6 panels; the fund `views` tab has 12 panels and a per-tab `when`, so it and the panels inside it stay inline. No bespoke workaround.
+- Panels written in YAML flow form (`{ id: x, kind: kv, ... }`) are not converted by the script (listed-future `contract`, netting-set `csa` and `collateral`).
+- A record-card also draws a `state` status panel (`<as>-state`) when the record has a `status` field: not seen in the samples.
 
-## Where this stopped (2026-11-28 09:20, paused by the lead to free build slots)
+## Proof state (2026-11-28)
 
-- Converted and committed: 115 of 143 inline table, record and tabs panels (list above); the converter is `tools/packgen/common/corefrag.py`,
-  called from `sutradoc.enrich`, so every generator writes the converted form. The generators' `--check` was NOT run (it needs the exec jar
-  in `lib/`); the hand-written Sutras were converted by the same function, so a regenerate is expected to match (to prove on resume).
-- Proof so far: `DocumentedSutrasTest` green; `CoreSutraNextEquivalenceTest` ran twice: the only differences left were the panel id scoping
-  (below); the last normalisation (also `maskedPanels`) is committed but NOT re-run. `H2LakePanelEquivalenceTest` and
-  `H2SamplePanelEquivalenceTest` (modules-it, run with `verify`: tests run in the integration-test phase) are written, never run.
-  Not run either: the other equivalence tests, GleifPackTest, UsEquitiesPackTest, FundsPackTest (they read panel ids), the Economics 404 check.
-- Decision for the lead: a Core fragment scopes its panel ids as `<as>-table`, `-card`, `-views` (TypedFragment.scoped). Every converted panel
-  therefore changes id (`holidays` -> `holidays-table`), and so do the function-key targets, `maskedPanels`, events, `panel:` references of
-  controls, and any test or console code naming the id (FundsPackTest: fund-ownership, held-by-funds; GleifPackTest: identifiers, listed).
-  Either Rachana lets a use keep the id (an `id` pass-through or an unscoped `as`), or the references move. The equivalence tests ignore the suffix.
-- A record-card also draws a `state` status panel when the record has a `status` field: not seen in the samples, check on a kind with one.
-- Maven copy `~/drishti-bench-scratch/i8-m2-h2` still exists (removed at the end).
+Done on this lane (no build): generators' `--check` green for banking (183 Sutras), genomics showcase and protein engineering, liquidity,
+climate, economics, oprisk, politics, publicsector, world, gleif, funds and us-equities (genomics and retail regenerated: one doc-text
+capitalisation each); every changed YAML parses. Not yet run (the proof run): DocumentedSutrasTest, CoreSutraNextEquivalenceTest,
+H2LakePanelEquivalenceTest, H2SamplePanelEquivalenceTest, Rachana conformance in Drishti, pack-Sutra parity, FundsPackTest, GleifPackTest.
+`config/homes/*` already used the Core fragments before H2 and keep their `<as>-table` ids (no `id` passed).

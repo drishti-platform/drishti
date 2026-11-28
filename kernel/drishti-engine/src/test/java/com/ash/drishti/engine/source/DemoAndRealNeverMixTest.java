@@ -15,6 +15,7 @@
  */
 package com.ash.drishti.engine.source;
 
+import com.ash.rachana.bind.SourceFailures;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ash.drishti.api.AsOf;

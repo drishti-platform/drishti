@@ -219,7 +219,7 @@ public class NetDataController {
             @RequestAttribute(Principal.ATTRIBUTE) Principal p, @RequestAttribute(value = NetCallFilter.CLAIMS, required = false) Object claims) {
         Principal user = forUser(p, claims);
         entitlements.requireOpen(user, kind);
-        var failures = new com.ash.drishti.engine.source.SourceFailures();
+        var failures = new com.ash.rachana.bind.SourceFailures();
         var listing = router.list(kind, "", Math.max(1, Math.min(limit, LIST_MAX)), java.time.Duration.ofSeconds(5), asOf, failures);
         java.util.List<Map<String, Object>> hits = new java.util.ArrayList<>();
         for (var h : listing.hits()) {

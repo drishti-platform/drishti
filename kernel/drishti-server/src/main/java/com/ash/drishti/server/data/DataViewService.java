@@ -163,7 +163,7 @@ public class DataViewService {
     private List<Column> sample(String kind) {
         try {
             List<com.ash.drishti.api.EntityHit> hits = router.list(kind, "", SAMPLE, readBudget, AsOf.LATEST,
-                    new com.ash.drishti.engine.source.SourceFailures()).hits();
+                    new com.ash.rachana.bind.SourceFailures()).hits();
             Map<String, Column> cols = new LinkedHashMap<>();       // the fields of a few entities, in the order first seen
             router.fetchAll(hits.stream().map(h -> h.ref()).toList(), readBudget, AsOf.LATEST).values().forEach(doc -> {
                 if (doc != null && doc.data() instanceof DataNode.Obj o) {
@@ -396,7 +396,7 @@ public class DataViewService {
 
     /** Every entity the kind's listing names on the date (at most {@code drishti.data-view.list-limit}), fetched {@link #CHUNK} at a time. */
     private void listed(String kind, AsOf asOf, java.util.function.Consumer<com.ash.drishti.api.EntityDocument> each) {
-        com.ash.drishti.engine.source.SourceFailures failures = new com.ash.drishti.engine.source.SourceFailures();
+        com.ash.rachana.bind.SourceFailures failures = new com.ash.rachana.bind.SourceFailures();
         List<com.ash.drishti.api.EntityHit> hits = router.list(kind, "", listLimit, readBudget, asOf, failures).hits();
         if (hits.isEmpty() && !failures.asMap().isEmpty()) {
             throw new DrishtiException(ErrorCode.SOURCE_FAILED, "could not list " + kind + ": " + failures.asMap());

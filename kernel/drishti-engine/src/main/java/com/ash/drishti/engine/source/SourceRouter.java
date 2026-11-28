@@ -15,6 +15,7 @@
  */
 package com.ash.drishti.engine.source;
 
+import com.ash.rachana.bind.SourceFailures;
 import com.ash.drishti.api.AsOf;
 import com.ash.drishti.api.DateCoverage;
 import com.ash.drishti.api.EntityDocument;

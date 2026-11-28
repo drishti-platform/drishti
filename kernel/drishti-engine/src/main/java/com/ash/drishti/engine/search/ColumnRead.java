@@ -97,7 +97,7 @@ public final class ColumnRead {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "not kept as columns for " + kind + ": " + missing + "; these are: "
                     + kept.stream().sorted().toList());
         }
-        com.ash.drishti.engine.source.SourceFailures failures = new com.ash.drishti.engine.source.SourceFailures();
+        com.ash.rachana.bind.SourceFailures failures = new com.ash.rachana.bind.SourceFailures();
         Optional<ColumnSet> got = router.columns(kind, plain, asOf, budget, failures);
         if (got.isEmpty()) {
             String why = failures.asMap().entrySet().stream().map(e -> e.getKey() + " " + e.getValue()).reduce((a, b) -> a + "; " + b).orElse(null);

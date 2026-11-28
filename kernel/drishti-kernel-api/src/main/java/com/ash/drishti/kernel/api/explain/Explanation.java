@@ -15,8 +15,6 @@
  */
 package com.ash.drishti.kernel.api.explain;
 
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -258,8 +256,7 @@ public final class Explanation {
         if (Double.isNaN(v) || Double.isInfinite(v)) {
             return "—";
         }
-        DecimalFormat f = new DecimalFormat(Math.abs(v) >= 100 ? "#,##0" : "#,##0.####", DecimalFormatSymbols.getInstance(Locale.US));
-        return f.format(v);
+        return com.ash.drishti.common.NumberText.grouped(v, Math.abs(v) >= 100 ? 0 : 4, Locale.US);
     }
 
     /** A signed amount (+1,234 or −1,234). */

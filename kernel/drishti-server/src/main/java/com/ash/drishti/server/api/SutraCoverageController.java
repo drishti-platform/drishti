@@ -23,7 +23,7 @@ import com.ash.drishti.api.EntityHit;
 import com.ash.drishti.api.EntityRef;
 import com.ash.drishti.api.error.DrishtiException;
 import com.ash.drishti.api.error.ErrorCode;
-import com.ash.drishti.engine.source.SourceFailures;
+import com.ash.rachana.bind.SourceFailures;
 import com.ash.drishti.engine.source.SourceRouter;
 import com.ash.drishti.packs.Pack;
 import com.ash.drishti.packs.PackRegistry;

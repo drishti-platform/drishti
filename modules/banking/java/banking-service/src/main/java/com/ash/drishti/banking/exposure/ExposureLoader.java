@@ -557,7 +557,7 @@ final class ExposureLoader {
         try {
             boolean whole = router.documents(kind, asOf, (EntityDocument d) -> out.put(d.ref().id(), d.data()));
             if (!whole) {
-                var listing = router.listAcross(kind, 100_000, java.time.Duration.ofSeconds(30), asOf, new com.ash.drishti.engine.source.SourceFailures());
+                var listing = router.listAcross(kind, 100_000, java.time.Duration.ofSeconds(30), asOf, new com.ash.rachana.bind.SourceFailures());
                 var refs = listing.hits().stream().map(h -> h.ref()).toList();
                 router.fetchAll(refs, java.time.Duration.ofSeconds(30), asOf).forEach((ref, d) -> out.put(ref.id(), d.data()));
             }

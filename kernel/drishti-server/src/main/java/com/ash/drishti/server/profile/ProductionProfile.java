@@ -211,9 +211,10 @@ public final class ProductionProfile {
                 }
             }
         } catch (java.io.IOException | RuntimeException e) {
-            return null;
+            return "an address node.yaml does not say (it could not be read: " + e.getMessage() + ")";
         }
-        return null;
+        // no advertise-url: the node advertises this machine's address with the server's own scheme (NetConfiguration), http without server.ssl
+        return bool(env, "server.ssl.enabled", false) ? null : "http://<this machine>:" + env.getProperty("server.port", "18480") + " (node.yaml names no advertise-url)";
     }
 
     private static boolean clustered(PropertyResolver env) {

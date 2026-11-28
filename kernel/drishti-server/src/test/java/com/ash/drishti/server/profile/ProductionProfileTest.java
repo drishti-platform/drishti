@@ -210,12 +210,14 @@ class ProductionProfileTest {
         }));
         Files.writeString(net.resolve("node.yaml"), "enabled: true\nadvertise-url: https://node1.bank.internal:18480\n");
         assertEquals(List.of(), refusals(m -> m.put("drishti.net.dir", net.toString())));
+        Files.writeString(net.resolve("node.yaml"), "enabled: true\n");            // pre-gate S6: no advertise-url advertises http without server.ssl
+        assertOne(refusals(m -> m.put("drishti.net.dir", net.toString())), "no advertise-url");
     }
 
     @Test
     void sqliteWithAClusterIsRefused() throws IOException {
         Path net = Files.createDirectories(dir.resolve("net"));
-        Files.writeString(net.resolve("node.yaml"), "enabled: true\n");
+        Files.writeString(net.resolve("node.yaml"), "enabled: true\nadvertise-url: https://node1.bank.internal:18480\n");
         assertOne(refusals(m -> {
             m.put("drishti.identity.database-url", "jdbc:sqlite:/x/drishti.db");
             m.put("drishti.net.dir", net.toString());

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: development-series
 version: 1
+libraries: [core@1]
 description: "One World Development Indicator of one country by year: the history, the latest value and the change."
 doc:
   summary: "One World Bank indicator of one country: its history by year, the latest value, the change, the definition."
@@ -50,13 +51,15 @@ strip:
   - { label: Change, bind: $.CHANGE, fmt: signed2 }
 panels:
   - { use: series-line@1, with: { id: history, title: "History by year", key: F2, rows: $.HISTORY, x: YEAR, y: VALUE, fmt: amount2 } }
-  - id: about
-    kind: kv
-    title: About this indicator
+  - use: core/record-card@1
+    as: about
     area: right
-    columns:
-      - { label: Country, bind: "link($.WDI_PROFILE, 'development-profile', $.COUNTRY_NAME)" }
-      - { label: World Bank code, bind: $.INDICATOR_CODE }
-      - { label: Definition, bind: $.DEFINITION }
+    with:
+      record: "$"
+      title: About this indicator
+      facts:
+        - { label: Country, bind: "link($.WDI_PROFILE, 'development-profile', $.COUNTRY_NAME)" }
+        - { label: World Bank code, bind: $.INDICATOR_CODE }
+        - { label: Definition, bind: $.DEFINITION }
   - { use: source-footer@1 }
 keys: { F7: "link($.WDI_PROFILE, 'development-profile')", F9: raw }

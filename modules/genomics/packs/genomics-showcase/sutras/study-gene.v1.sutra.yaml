@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: study-gene
 version: 1
+libraries: [core@1]
 description: 'Study gene: One gene of the synthetic genome: where it sits, what it does, how long its protein is and how many samples of the cohort
   carry a damaging change in it.'
 doc:
@@ -58,35 +59,37 @@ strip:
   bind: $.ALTERED_FRACTION
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Study gene
-  columns:
-  - label: Gene
-    bind: $.GENE
-  - label: Chrom
-    bind: $.CHROM
-  - label: Start
-    bind: $.START
-    fmt: amount0
-  - label: End
-    bind: $.END
-    fmt: amount0
-  - label: Strand
-    bind: $.STRAND
-  - label: Role
-    bind: $.ROLE
-  - label: Protein length
-    bind: $.PROTEIN_LENGTH
-  - label: Driver
-    bind: $.DRIVER
-  - label: Variants
-    bind: $.VARIANTS
-    fmt: amount0
-  - label: Altered samples
-    bind: $.ALTERED_SAMPLES
-    fmt: amount0
-  - label: Altered fraction
-    bind: $.ALTERED_FRACTION
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Study gene
+    facts:
+    - label: Gene
+      bind: $.GENE
+    - label: Chrom
+      bind: $.CHROM
+    - label: Start
+      bind: $.START
+      fmt: amount0
+    - label: End
+      bind: $.END
+      fmt: amount0
+    - label: Strand
+      bind: $.STRAND
+    - label: Role
+      bind: $.ROLE
+    - label: Protein length
+      bind: $.PROTEIN_LENGTH
+    - label: Driver
+      bind: $.DRIVER
+    - label: Variants
+      bind: $.VARIANTS
+      fmt: amount0
+    - label: Altered samples
+      bind: $.ALTERED_SAMPLES
+      fmt: amount0
+    - label: Altered fraction
+      bind: $.ALTERED_FRACTION
 keys:
   F9: raw

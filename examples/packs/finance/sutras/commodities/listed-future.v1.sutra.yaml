@@ -15,6 +15,7 @@
 rachana: 1.2
 sutra: listed-future
 version: 1
+libraries: [core@1]
 description: Exchange-traded future with daily settlement and variation margin (mockup drishti-commodity-future.png).
 doc:
   summary: "Exchange-traded future with daily settlement and variation margin."
@@ -62,16 +63,18 @@ panels:
       - { label: Change, bind: "@.change", fmt: signed2, tone: sign }
       - { label: Variation margin (USD), bind: "@.variationMargin", fmt: signed0, tone: sign, total: true }
       - { label: Cumulative (USD), bind: "@.cumulative", fmt: signed0, tone: sign }
-  - id: margin
-    kind: kv
-    title: Margin
-    code: MRG
-    key: F3
-    columns:
-      - { label: Initial margin, bind: $.margin.initialMargin }
-      - { label: Variation margin today, bind: $.margin.variationMarginToday, fmt: signed0 }
-      - { label: Delta (bbl), bind: $.margin.deltaBbl, fmt: signed0 }
-      - { label: USD per $1 move, bind: $.margin.usdPerDollarMove, fmt: amount0 }
+  - use: core/record-card@1
+    as: margin
+    with:
+      record: "$"
+      title: Margin
+      code: MRG
+      key: F3
+      facts:
+        - { label: Initial margin, bind: $.margin.initialMargin }
+        - { label: Variation margin today, bind: $.margin.variationMarginToday, fmt: signed0 }
+        - { label: Delta (bbl), bind: $.margin.deltaBbl, fmt: signed0 }
+        - { label: USD per $1 move, bind: $.margin.usdPerDollarMove, fmt: amount0 }
   - { id: built, kind: provenance, title: How this view was built }
   - id: curve
     kind: line

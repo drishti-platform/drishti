@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: association
 version: 1
+libraries: [core@1]
 description: 'Association of a variant with a trait: One variant tested against one trait: the p-value, its negative log, the effect and its error
   and how strongly the variant is linked to the peak''s lead.'
 doc:
@@ -60,32 +61,34 @@ strip:
   bind: $.BETA
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Association of a variant with a trait
-  columns:
-  - label: Assoc id
-    bind: $.ASSOC_ID
-  - label: Trait
-    bind: $.TRAIT
-  - label: Variant id
-    bind: link($.VARIANT_ID, 'study-variant')
-  - label: Chrom
-    bind: $.CHROM
-  - label: Pos
-    bind: $.POS
-    fmt: amount0
-  - label: Gene
-    bind: link($.GENE, 'study-gene')
-  - label: P
-    bind: $.P
-  - label: Neg log10 p
-    bind: $.NEG_LOG10_P
-  - label: Beta
-    bind: $.BETA
-  - label: Se
-    bind: $.SE
-  - label: R2 lead
-    bind: $.R2_LEAD
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Association of a variant with a trait
+    facts:
+    - label: Assoc id
+      bind: $.ASSOC_ID
+    - label: Trait
+      bind: $.TRAIT
+    - label: Variant id
+      bind: link($.VARIANT_ID, 'study-variant')
+    - label: Chrom
+      bind: $.CHROM
+    - label: Pos
+      bind: $.POS
+      fmt: amount0
+    - label: Gene
+      bind: link($.GENE, 'study-gene')
+    - label: P
+      bind: $.P
+    - label: Neg log10 p
+      bind: $.NEG_LOG10_P
+    - label: Beta
+      bind: $.BETA
+    - label: Se
+      bind: $.SE
+    - label: R2 lead
+      bind: $.R2_LEAD
 keys:
   F9: raw

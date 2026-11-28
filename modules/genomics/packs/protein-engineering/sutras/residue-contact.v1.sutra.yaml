@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: residue-contact
 version: 1
+libraries: [core@1]
 description: 'Residue contact: Two positions of a protein that sit close in space though they are not neighbours in the chain: the contact map''s
   cells.'
 doc:
@@ -61,21 +62,23 @@ strip:
   bind: $.DISTANCE
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Residue contact
-  columns:
-  - label: Contact id
-    bind: $.CONTACT_ID
-  - label: Protein
-    bind: link($.PROTEIN, 'protein')
-  - label: Pos a
-    bind: $.POS_A
-    fmt: amount0
-  - label: Pos b
-    bind: $.POS_B
-    fmt: amount0
-  - label: Distance
-    bind: $.DISTANCE
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Residue contact
+    facts:
+    - label: Contact id
+      bind: $.CONTACT_ID
+    - label: Protein
+      bind: link($.PROTEIN, 'protein')
+    - label: Pos a
+      bind: $.POS_A
+      fmt: amount0
+    - label: Pos b
+      bind: $.POS_B
+      fmt: amount0
+    - label: Distance
+      bind: $.DISTANCE
 keys:
   F9: raw

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: oecd-country
 version: 1
+libraries: [core@1]
 description: "One OECD member: the latest leading indicator, unemployment, inflation and growth, and the members on a map shaded by inflation."
 doc:
   summary: "An OECD member's cycle, jobs, prices and growth: the latest of each measure, the members on a map by inflation, each series a click away."
@@ -49,19 +50,20 @@ strip:
   - { label: "GDP growth, % q/q", bind: $.GDP_GROWTH, fmt: price2 }
   - { label: Inflation period, bind: $.INFLATION_PERIOD }
 panels:
-  - id: measures
-    kind: table
-    title: "Measures, latest period (a row opens its history)"
-    key: F2
-    code: MEAS
-    rows: $.MEASURES
-    search: false
-    columns:
-      - { label: Measure, bind: "link(@.OECD_SERIES, 'oecd-series', @.TITLE)" }
-      - { label: Latest, bind: "@.LATEST", fmt: amount2 }
-      - { label: Unit, bind: "@.UNIT" }
-      - { label: Period, bind: "@.PERIOD" }
-      - { label: Change, bind: "@.CHANGE", fmt: signed2 }
+  - use: core/data-table@1
+    as: measures
+    with:
+      title: "Measures, latest period (a row opens its history)"
+      key: F2
+      code: MEAS
+      rows: $.MEASURES
+      search: false
+      columns:
+        - { label: Measure, bind: "link(@.OECD_SERIES, 'oecd-series', @.TITLE)" }
+        - { label: Latest, bind: "@.LATEST", fmt: amount2 }
+        - { label: Unit, bind: "@.UNIT" }
+        - { label: Period, bind: "@.PERIOD" }
+        - { label: Change, bind: "@.CHANGE", fmt: signed2 }
   - use: region-map@1
     with: { id: members, title: "Consumer price inflation by member, % (a member opens its page)", key: F3, highlight: $.ISO3,
             link-kind: oecd-country, link-id: "OECD-{iso3}", shade-kind: oecd-country, shade-field: $.INFLATION, shade-by: $.ISO3,

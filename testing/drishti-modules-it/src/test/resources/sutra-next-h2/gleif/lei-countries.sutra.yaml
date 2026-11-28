@@ -1,0 +1,62 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Hand-written from the Drishti UI kit (config/ui-kit/fragments). Matches the one lei-country record ALL, before the country page.
+rachana: 1.2
+sutra: lei-countries
+version: 99
+description: "Every country of the pack's legal entities, by the number of entities."
+doc:
+  summary: "Every country of the entities' legal addresses with its entity count, groups headquartered and lapsed registrations."
+  description: >-
+    The directory of countries (LEIC ALL), computed from the entities when it is opened (since 2.9.2): one row a country of the
+    entities' legal addresses with its number of entities, largest first; the code opens the country's page, where the groups
+    headquartered and the lapsed registrations are. The right column charts the twenty largest by name.
+  params: {}
+  emits: []
+  expects: []
+  examples:
+    - "/v/lei-country/ALL"
+    - "LEIC ALL"
+  category: "GLEIF"
+  tags: ["lei-country", "gleif", "table"]
+  use-when: "You have one countries (its id, or a link from another screen) and want to read it in full: every country of the entities' legal addresses with its entity count, groups headquartered and lapsed registrations."
+  avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
+  data:
+    in-words: "One countries record (kind lei-country, COUNTRY = ALL); the page reads COUNTRY, NAME, COUNTRIES, ENTITIES, GROUPS_HEADQUARTERED, LAPSED, COUNTRY_ROWS, BY_COUNTRY, PROVENANCE."
+  example: "LEIC ALL"
+  see-also: ["lei-group"]
+  keywords: ["lei country", "countries", "gleif"]
+  since: "2.7.0"
+match: { kind: lei-country, where: "$.COUNTRY == 'ALL'", priority: 20 }
+title: { pill: GLEIF · Countries, id: $.COUNTRY, with: $.NAME }
+strip:
+  - { label: Countries, bind: $.COUNTRIES, emphasis: true }
+  - { label: Entities, bind: $.ENTITIES, fmt: entities0 }
+  - { label: Groups headquartered, bind: $.GROUPS_HEADQUARTERED }
+  - { label: Lapsed, bind: $.LAPSED }
+panels:
+  - id: countries
+    kind: table
+    title: Countries by entities
+    key: F2
+    rows: $.COUNTRY_ROWS
+    limit: 300
+    columns:
+      - { label: Country, bind: "link(@.label, 'lei-country')" }
+      - { label: Entities, bind: "@.value", fmt: entities0, total: true }
+  - { use: ranked-bars@1, with: { id: by-country, title: Entities by country (top 20), rows: $.BY_COUNTRY, label: label, value: value, fmt: entities0, area: right, key: F3 } }
+  - { use: field-list@1, with: { id: source, title: Data source and licence, rows: $.PROVENANCE, area: right } }
+  - { use: data-provenance@1 }
+keys: { F5: "link('ALL', 'lei-group', 'Every group')", F9: raw }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: mortgage
 version: 1
+libraries: [core@1]
 description: "A residential mortgage: balance, rate, loan-to-value, amortisation and arrears."
 doc:
   summary: "A residential mortgage: balance, rate, loan-to-value, amortisation and arrears."
@@ -52,16 +53,17 @@ strip:
 panels:
   - { use: series-line@1, with: { id: amortisation, title: Scheduled balance, key: F2, rows: $.amortisation, x: year, y: balance, fmt: compact } }
   - { use: field-list@1, with: { id: property, title: Property, key: F3, area: right, rows: $.property } }
-  - id: payments
-    kind: table
-    title: Last payments
-    key: F4
-    rows: $.payments
-    columns:
-      - { label: Due, bind: "@.due", fmt: date }
-      - { label: Amount, bind: "@.amount", fmt: amount2 }
-      - { label: Paid, bind: "@.paid", fmt: date }
-      - { label: Status, bind: "@.status", tone: status }
+  - use: core/data-table@1
+    as: payments
+    with:
+      title: Last payments
+      key: F4
+      rows: $.payments
+      columns:
+        - { label: Due, bind: "@.due", fmt: date }
+        - { label: Amount, bind: "@.amount", fmt: amount2 }
+        - { label: Paid, bind: "@.paid", fmt: date }
+        - { label: Status, bind: "@.status", tone: status }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.customer, 'customer')", F8: impact, F9: raw }

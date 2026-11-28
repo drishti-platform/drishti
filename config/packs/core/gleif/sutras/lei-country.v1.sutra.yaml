@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-country
 version: 1
+libraries: [core@1]
 description: "A country's legal entities in the pack, computed from the entities when asked: the entities, the groups present, legal forms and cities."
 doc:
   summary: "The pack's entities with a legal address in one country (a click opens one beside), the groups present, legal forms, cities."
@@ -58,21 +59,24 @@ panels:
         waits: Pick an entity to see its key facts
         panels:
           - { use: gleif/entity-card@1, with: { id: picked, title: "${@parent.open.id}", rec: $src } }
-  - id: groups
-    kind: table
-    title: Groups present (entities here)
-    key: F3
-    rows: $.GROUP_ROWS
-    columns:
-      - { label: Group (ultimate parent LEI), bind: "link(@.label, 'lei-group')" }
-      - { label: Entities here, bind: "@.value", fmt: entities0, total: true }
-  - id: note
-    kind: kv
-    title: The list
+  - use: core/data-table@1
+    as: groups
+    with:
+      title: Groups present (entities here)
+      key: F3
+      rows: $.GROUP_ROWS
+      columns:
+        - { label: Group (ultimate parent LEI), bind: "link(@.label, 'lei-group')" }
+        - { label: Entities here, bind: "@.value", fmt: entities0, total: true }
+  - use: core/record-card@1
+    as: note
     area: right
-    columns:
-      - { label: Entities listed, bind: "'Every entity of the country in the lake (' + $.ENTITIES + ')'" }
-      - { label: Directory, bind: "link('ALL', 'lei-country', 'Every country')" }
+    with:
+      record: "$"
+      title: The list
+      facts:
+        - { label: Entities listed, bind: "'Every entity of the country in the lake (' + $.ENTITIES + ')'" }
+        - { label: Directory, bind: "link('ALL', 'lei-country', 'Every country')" }
   - { use: ranked-bars@1, with: { id: by-form, title: Entities by legal form, rows: $.BY_LEGAL_FORM, label: label, value: value, fmt: entities0, area: right, key: F4 } }
   - { use: ranked-bars@1, with: { id: by-city, title: Entities by city, rows: $.BY_CITY, label: label, value: value, fmt: entities0, area: right } }
   - { use: field-list@1, with: { id: source, title: Data source and licence, rows: $.PROVENANCE, area: right } }

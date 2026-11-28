@@ -1,0 +1,67 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Built from the Drishti UI kit only (config/ui-kit/fragments): no screen code of its own.
+rachana: 1.2
+sutra: statistics-series
+version: 99
+description: "One Statistics Canada series by vector: the latest value, the change on the period and the year, the history."
+doc:
+  summary: "A national statistic: its latest value and period, the change on the period and on the year, the release time, the history."
+  description: >-
+    One page per Statistics Canada vector the national-statistics feed follows (prices, labour, output, population, housing, money
+    markets): the strip gives the latest value with its period and unit, the change on the previous period in units and per cent, the
+    change on the year in per cent and the release time; the chart draws the history; the table and the source close the page.
+  params: {}
+  emits: []
+  expects: []
+  examples:
+    - "/v/statistics-series/NSTAT-V41690973"
+    - "NSTAT NSTAT-V41690973"
+  category: "Public sector"
+  tags: ["statistics-series", "public-sector", "record"]
+  use-when: "You have one national statistic (its id, or a link from another screen) and want to read it in full: A national statistic: its latest value and period, the change on the period and on the year, the release time, the history."
+  avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
+  data:
+    in-words: "One national statistic record (kind statistics-series); the page reads SERIES_ID, TITLE, LATEST, UNIT, LATEST_PERIOD, CHANGE, CHANGE_PCT, YEAR_ON_YEAR_PCT, RELEASED, HISTORY, TOPIC, TABLE_ID."
+    sample-row: {"CHANGE": 80343.0, "CHANGE_PCT": 0.1926, "FREQUENCY": "quarterly", "GEOGRAPHY": "Canada", "LATEST": 41798407.0, "LATEST_PERIOD": "2026-07-01", "NAME": "Population of Canada", "PREVIOUS": 41718064.0}
+  example: "NSTAT NSTAT-V41690973"
+  keywords: ["statistics series", "national statistic", "public sector"]
+  since: "2.9.11"
+match: { kind: statistics-series, priority: 10 }
+title: { pill: Public sector · National statistic, id: $.SERIES_ID, with: $.TITLE }
+strip:
+  - { label: Latest, bind: $.LATEST, fmt: amount2, emphasis: true }
+  - { label: Unit, bind: $.UNIT }
+  - { label: Period, bind: $.LATEST_PERIOD }
+  - { label: Change, bind: $.CHANGE, fmt: signed2 }
+  - { label: "Change, %", bind: $.CHANGE_PCT, fmt: signed2 }
+  - { label: "On the year, %", bind: $.YEAR_ON_YEAR_PCT, fmt: signed2 }
+  - { label: Released, bind: $.RELEASED }
+panels:
+  - { use: series-line@1, with: { id: history, title: History, key: F2, rows: $.HISTORY, x: PERIOD, y: VALUE, fmt: amount2 } }
+  - id: about
+    kind: kv
+    title: About this series
+    area: right
+    columns:
+      - { label: Topic, bind: $.TOPIC }
+      - { label: Table, bind: $.TABLE_ID }
+      - { label: Table title, bind: $.TABLE_TITLE }
+      - { label: Members, bind: $.MEMBERS }
+      - { label: Vector, bind: $.VECTOR }
+      - { label: Frequency, bind: $.FREQUENCY }
+      - { label: Scale, bind: $.SCALE }
+  - { use: source-footer@1 }
+keys: { F9: raw }

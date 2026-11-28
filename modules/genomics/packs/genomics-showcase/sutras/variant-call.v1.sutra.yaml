@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: variant-call
 version: 1
+libraries: [core@1]
 description: 'Variant call: One sample carrying one variant: the genotype, the fraction of reads that show it and the read depth.'
 doc:
   summary: One variant call, as a record.
@@ -58,24 +59,26 @@ strip:
   bind: $.VAF
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Variant call
-  columns:
-  - label: Call id
-    bind: $.CALL_ID
-  - label: Sample id
-    bind: link($.SAMPLE_ID, 'study-sample')
-  - label: Variant id
-    bind: link($.VARIANT_ID, 'study-variant')
-  - label: Gene
-    bind: link($.GENE, 'study-gene')
-  - label: Genotype
-    bind: $.GENOTYPE
-  - label: Vaf
-    bind: $.VAF
-  - label: Depth
-    bind: $.DEPTH
-    fmt: amount0
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Variant call
+    facts:
+    - label: Call id
+      bind: $.CALL_ID
+    - label: Sample id
+      bind: link($.SAMPLE_ID, 'study-sample')
+    - label: Variant id
+      bind: link($.VARIANT_ID, 'study-variant')
+    - label: Gene
+      bind: link($.GENE, 'study-gene')
+    - label: Genotype
+      bind: $.GENOTYPE
+    - label: Vaf
+      bind: $.VAF
+    - label: Depth
+      bind: $.DEPTH
+      fmt: amount0
 keys:
   F9: raw

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: development-profile
 version: 1
+libraries: [core@1]
 description: "One country's World Development Indicators: the latest of each, the world map shaded by GDP per head, each series one click away."
 doc:
   summary: "A country's development profile: the latest value of each World Bank indicator, the world map by GDP per head, the series."
@@ -51,18 +52,19 @@ strip:
   - { label: Population, bind: $.POPULATION, fmt: compact }
   - { label: "GDP per head, USD", bind: $.GDP_PER_CAPITA, fmt: amount0 }
 panels:
-  - id: indicators
-    kind: table
-    title: "Indicators, latest year (a row opens its series)"
-    key: F2
-    code: IND
-    rows: $.INDICATORS
-    search: false
-    columns:
-      - { label: Indicator, bind: "link(@.WDI_SERIES, 'development-series', @.INDICATOR)" }
-      - { label: Latest, bind: "@.LATEST", fmt: amount2 }
-      - { label: Unit, bind: "@.UNIT" }
-      - { label: Year, bind: "@.YEAR" }
+  - use: core/data-table@1
+    as: indicators
+    with:
+      title: "Indicators, latest year (a row opens its series)"
+      key: F2
+      code: IND
+      rows: $.INDICATORS
+      search: false
+      columns:
+        - { label: Indicator, bind: "link(@.WDI_SERIES, 'development-series', @.INDICATOR)" }
+        - { label: Latest, bind: "@.LATEST", fmt: amount2 }
+        - { label: Unit, bind: "@.UNIT" }
+        - { label: Year, bind: "@.YEAR" }
   - use: region-map@1
     with: { id: world, title: "GDP per head by country, USD (a country opens its profile)", key: F3, highlight: $.ISO3,
             link-kind: development-profile, link-id: "WDI-{iso3}", shade-kind: development-profile, shade-field: $.GDP_PER_CAPITA,

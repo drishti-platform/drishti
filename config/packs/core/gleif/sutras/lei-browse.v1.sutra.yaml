@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-browse
 version: 1
+libraries: [core@1]
 description: "Search and browse the pack's legal entities: a search box over every entity, every ownership group, groups by segment and entities by country."
 doc:
   summary: "Search the legal entities by name or LEI, and browse every ownership group (a click opens the group's summary beside)."
@@ -52,21 +53,22 @@ strip:
   - { label: Lapsed, bind: $.LAPSED }
   - { label: Late renewals, bind: "$.LATE_RENEWALS + ' late: renewal failed'", tone: status }
 panels:
-  - id: found
-    kind: table
-    title: "Entities found${ctl.q ? ' for ' + ctl.q : ''} (the first 50)"
-    key: F2
-    code: FIND
+  - use: core/data-table@1
+    as: found
     source: { kind: lei-entity, search: "ctl.q", limit: 50 }
-    rows: $src
-    empty: Nothing found; try part of a legal name, a city or an LEI
-    columns:
-      - { label: Legal name, bind: "link(@.LEI, 'lei-entity', @.NAME)" }
-      - { label: Country, bind: "@.LEI_COUNTRY" }
-      - { label: City, bind: "@.LEGAL_CITY" }
-      - { label: Legal form, bind: "@.LEGAL_FORM" }
-      - { label: Registration, bind: "@.REGISTRATION_STATUS" }
-      - { label: Group, bind: "link(@.LEI_GROUP, 'lei-group')" }
+    with:
+      title: "Entities found${ctl.q ? ' for ' + ctl.q : ''} (the first 50)"
+      key: F2
+      code: FIND
+      rows: $src
+      empty: Nothing found; try part of a legal name, a city or an LEI
+      columns:
+        - { label: Legal name, bind: "link(@.LEI, 'lei-entity', @.NAME)" }
+        - { label: Country, bind: "@.LEI_COUNTRY" }
+        - { label: City, bind: "@.LEGAL_CITY" }
+        - { label: Legal form, bind: "@.LEGAL_FORM" }
+        - { label: Registration, bind: "@.REGISTRATION_STATUS" }
+        - { label: Group, bind: "link(@.LEI_GROUP, 'lei-group')" }
   - id: groups
     kind: table
     title: Every ownership group, largest in GLEIF first (a click opens it beside)

@@ -19,6 +19,7 @@
 rachana: 1.2
 sutra: country-group
 version: 1
+libraries: [core@1]
 description: "A World Bank region or income group (or the world), computed from its member economies when asked: output, population, growth, inflation and its largest economies."
 doc:
   summary: "A World Bank region or income group computed from its member economies: output, population, growth and inflation, and its largest economies."
@@ -59,18 +60,19 @@ panels:
   - use: measure-table@1
     with: { id: topEconomies, title: Largest economies, key: F3, rows: $.TOP_ECONOMIES, name-label: Economy, name: ECONOMY,
             first-label: GDP (USD bn), first: GDP_USD_BN, first-fmt: amount0, second-label: "Growth, %", second: GROWTH, second-fmt: pc2, second-tone: sign }
-  - id: members
-    kind: table
-    title: Every member economy (largest first)
-    key: F2
-    rows: $.ROWS
-    columns:
-      - { label: Economy, bind: "link(@.ECONOMY_ID, 'economy', @.ECONOMY)" }
-      - { label: GDP (USD bn), bind: "@.GDP_USD_BN", fmt: amount0, total: true }
-      - { label: Population (m), bind: "@.POPULATION_M", fmt: price2, total: true }
-      - { label: Real growth, bind: "@.GROWTH", fmt: pc2, tone: sign }
-      - { label: Inflation, bind: "@.INFLATION", fmt: pc2 }
-      - { label: Year, bind: "@.YEAR" }
+  - use: core/data-table@1
+    as: members
+    with:
+      title: Every member economy (largest first)
+      key: F2
+      rows: $.ROWS
+      columns:
+        - { label: Economy, bind: "link(@.ECONOMY_ID, 'economy', @.ECONOMY)" }
+        - { label: GDP (USD bn), bind: "@.GDP_USD_BN", fmt: amount0, total: true }
+        - { label: Population (m), bind: "@.POPULATION_M", fmt: price2, total: true }
+        - { label: Real growth, bind: "@.GROWTH", fmt: pc2, tone: sign }
+        - { label: Inflation, bind: "@.INFLATION", fmt: pc2 }
+        - { label: Year, bind: "@.YEAR" }
   - { use: series-line@1, with: { id: gdpPath, title: "GDP, USD bn (the members summed)", area: right, rows: $.GDP_PATH, x: label, y: value, fmt: amount0 } }
   - use: explainer-note@1
     with:

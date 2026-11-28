@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-group
 version: 1
+libraries: [core@1]
 description: "An ownership group, computed from the entities when asked: the ultimate parent with its whole tree, every member, and counts by country and legal form."
 doc:
   summary: "An ownership group computed from the entities: the ultimate parent's tree (a tree table), its members (a click opens one beside), counts by country and legal form."
@@ -74,31 +75,34 @@ panels:
         waits: Pick a member to see its key facts
         panels:
           - { use: gleif/entity-card@1, with: { id: member, title: "${@parent.open.id}", rec: $src } }
-  - id: facts
-    kind: kv
-    title: The group
+  - use: core/record-card@1
+    as: facts
     area: right
-    columns:
-      - { label: Ultimate parent, bind: "link($.ENTITY_LEI, 'lei-entity', $.NAME)" }
-      - { label: Legal form, bind: $.LEGAL_FORM }
-      - { label: Segment, bind: $.SEGMENT }
-      - { label: Listed company, bind: "link($.US_COMPANY, 'us-company')" }
-      - { label: Members, bind: $.MEMBERS, fmt: entities0 }
-      - { label: Members in GLEIF, bind: $.MEMBERS_IN_GLEIF, fmt: entities0 }
-      - { label: Lapsed, bind: $.LAPSED }
-      - { label: Cap, bind: "$.CAPPED ? 'GLEIF has ' + $.MEMBERS_IN_GLEIF + ' entities in the group; the committed data keeps ' + $.MEMBERS : 'The whole group is in the lake'" }
+    with:
+      record: "$"
+      title: The group
+      facts:
+        - { label: Ultimate parent, bind: "link($.ENTITY_LEI, 'lei-entity', $.NAME)" }
+        - { label: Legal form, bind: $.LEGAL_FORM }
+        - { label: Segment, bind: $.SEGMENT }
+        - { label: Listed company, bind: "link($.US_COMPANY, 'us-company')" }
+        - { label: Members, bind: $.MEMBERS, fmt: entities0 }
+        - { label: Members in GLEIF, bind: $.MEMBERS_IN_GLEIF, fmt: entities0 }
+        - { label: Lapsed, bind: $.LAPSED }
+        - { label: Cap, bind: "$.CAPPED ? 'GLEIF has ' + $.MEMBERS_IN_GLEIF + ' entities in the group; the committed data keeps ' + $.MEMBERS : 'The whole group is in the lake'" }
   - { use: ranked-bars@1, with: { id: by-country, title: Members by country, rows: $.BY_COUNTRY, label: label, value: value, fmt: entities0, area: right, key: F4 } }
   - { use: ranked-bars@1, with: { id: by-form, title: Members by legal form, rows: $.BY_LEGAL_FORM, label: label, value: value, fmt: entities0, area: right } }
-  - id: seeds
-    kind: table
-    title: Why the group is in the pack (its seeded entities)
+  - use: core/data-table@1
+    as: seeds
     area: right
-    rows: "$.ROWS[?nonblank(@.SEGMENT)]"
-    search: false
-    columns:
-      - { label: Entity, bind: "link(@.LEI, 'lei-entity', @.NAME)" }
-      - { label: Segment, bind: "@.SEGMENT" }
-      - { label: Ticker, bind: "link(@.US_COMPANY, 'us-company')" }
+    with:
+      title: Why the group is in the pack (its seeded entities)
+      rows: "$.ROWS[?nonblank(@.SEGMENT)]"
+      search: false
+      columns:
+        - { label: Entity, bind: "link(@.LEI, 'lei-entity', @.NAME)" }
+        - { label: Segment, bind: "@.SEGMENT" }
+        - { label: Ticker, bind: "link(@.US_COMPANY, 'us-company')" }
   - use: explainer-note@1
     with:
       title: How this group is computed

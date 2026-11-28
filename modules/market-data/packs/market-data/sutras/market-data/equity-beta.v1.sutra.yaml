@@ -18,6 +18,7 @@
 rachana: 1.2
 sutra: equity-beta
 version: 1
+libraries: [core@1]
 description: "An equity's beta, alpha, correlation and R squared against its index, computed from both price histories when asked."
 doc:
   summary: "An equity's beta against its index, computed from both price histories when the page opens."
@@ -51,27 +52,31 @@ strip:
   - { label: R squared, bind: $.R_SQUARED, fmt: price2 }
   - { label: Returns, bind: $.AVAILABLE, fmt: amount0 }
 panels:
-  - id: regression
-    kind: kv
-    title: The regression of the daily log returns
-    key: F2
-    columns:
-      - { label: Equity, bind: $.EQUITY }
-      - { label: Index, bind: $.INDEX }
-      - { label: Beta, bind: $.BETA, fmt: price4 }
-      - { label: "Alpha (a daily log return)", bind: $.ALPHA, fmt: pct4 }
-      - { label: Correlation, bind: $.CORRELATION, fmt: price4 }
-      - { label: R squared, bind: $.R_SQUARED, fmt: price4 }
-      - { label: "Volatility (annualised)", bind: $.VOLATILITY, fmt: pct2 }
-      - { label: "Index volatility (annualised)", bind: $.INDEX_VOLATILITY, fmt: pct2 }
-  - id: window
-    kind: kv
-    title: The window
+  - use: core/record-card@1
+    as: regression
+    with:
+      record: "$"
+      title: The regression of the daily log returns
+      key: F2
+      facts:
+        - { label: Equity, bind: $.EQUITY }
+        - { label: Index, bind: $.INDEX }
+        - { label: Beta, bind: $.BETA, fmt: price4 }
+        - { label: "Alpha (a daily log return)", bind: $.ALPHA, fmt: pct4 }
+        - { label: Correlation, bind: $.CORRELATION, fmt: price4 }
+        - { label: R squared, bind: $.R_SQUARED, fmt: price4 }
+        - { label: "Volatility (annualised)", bind: $.VOLATILITY, fmt: pct2 }
+        - { label: "Index volatility (annualised)", bind: $.INDEX_VOLATILITY, fmt: pct2 }
+  - use: core/record-card@1
+    as: window
     area: right
-    columns:
-      - { label: "Window (0: every return)", bind: $.WINDOW, fmt: amount0 }
-      - { label: Returns available, bind: $.AVAILABLE, fmt: amount0 }
-      - { label: From, bind: $.FROM, fmt: date }
-      - { label: To, bind: $.TO, fmt: date }
+    with:
+      record: "$"
+      title: The window
+      facts:
+        - { label: "Window (0: every return)", bind: $.WINDOW, fmt: amount0 }
+        - { label: Returns available, bind: $.AVAILABLE, fmt: amount0 }
+        - { label: From, bind: $.FROM, fmt: date }
+        - { label: To, bind: $.TO, fmt: date }
   - { use: data-provenance@1 }
 keys: { F9: raw }

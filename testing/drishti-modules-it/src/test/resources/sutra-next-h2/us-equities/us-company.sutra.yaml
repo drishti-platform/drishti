@@ -1,0 +1,121 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Hand-written from the Drishti UI kit (config/ui-kit/fragments) and the pack's own fragments (sutras/common).
+rachana: 1.2
+sutra: us-company
+version: 99
+description: "A US listed company: key facts, ten years of annual financials, recent SEC filings and index memberships, from public data."
+doc:
+  summary: "A US listed company: key facts, financials over ten years, recent filings (a click opens one beside) and its indexes."
+  description: >-
+    One page per company of the Dow 30, the Nasdaq-100 and the S&P 500, and per bank of the pack's bank lists (major US, Canadian
+    and UK banks that file with the SEC). The strip gives the ticker, exchange, SIC industry, the
+    latest fiscal year's revenue, net income, net margin and growth, and diluted EPS. Revenue and net income over up to ten fiscal
+    years as a chart and every annual figure in a table (SEC XBRL, 10-K; a foreign bank's 20-F or 40-F, in
+    the currency it reports in); the latest SEC filings, where a click opens the filing
+    beside the table with its links to the document and its EDGAR index; key facts (CIK, LEI, SIC, headquarters, founded,
+    website); the indexes the company belongs to; where the data comes from. F5 opens its LEI record (the gleif pack), F7 the SIC sector, F6 the live price history
+    (off as shipped, internal use only).
+  params: {}
+  emits: []
+  expects: []
+  examples:
+    - "/v/us-company/AAPL"
+    - "USEQ JPM"
+  category: "US equities"
+  tags: ["us-company", "us-equities", "record", "table"]
+  use-when: "You have one company (its id, or a link from another screen) and want to read it in full: A US listed company: key facts, financials over ten years, recent filings (a click opens one beside) and its indexes."
+  avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
+  data:
+    in-words: "One company record (kind us-company); the page reads TICKER, NAME, SIC_DESCRIPTION, FISCAL_YEAR, REVENUE, NET_INCOME, FINANCIALS, EPS_DILUTED, INDEXES, LEI, PRICE_HISTORY, SIC_SECTOR."
+    sample-row: {"TICKER": "AAPL", "NAME": "Apple Inc.", "SEC_NAME": "Apple Inc.", "CIK": "0000320193", "EXCHANGE": "Nasdaq", "LISTING": "Nasdaq Global Select Market", "SIC": "3571", "SIC_DESCRIPTION": "Electronic Computers"}
+  example: "USEQ JPM"
+  see-also: ["lei-entity", "price-history", "sic-sector", "fund", "fund-holder", "index-membership"]
+  keywords: ["us company", "company", "us equities"]
+  since: "2.7.0"
+match: { kind: us-company, priority: 10 }
+title: { pill: US equities · Company, id: $.TICKER, with: $.NAME }
+strip:
+  - { label: Ticker, bind: $.TICKER, emphasis: true }
+  - { label: Industry (SIC), bind: $.SIC_DESCRIPTION }
+  - { label: Fiscal year, bind: $.FISCAL_YEAR }
+  - { label: Revenue, bind: $.REVENUE, fmt: compact }
+  - { label: Net income, bind: $.NET_INCOME, fmt: compact, tone: sign }
+  - { label: Net margin, bind: "$.REVENUE ? $.NET_INCOME / $.REVENUE * 100 : null", fmt: margin1, tone: sign }
+  - { label: Revenue growth, bind: "first($.FINANCIALS[?@.YEAR == $.FISCAL_YEAR - 1]).REVENUE ? ($.REVENUE - first($.FINANCIALS[?@.YEAR == $.FISCAL_YEAR - 1]).REVENUE) / abs(first($.FINANCIALS[?@.YEAR == $.FISCAL_YEAR - 1]).REVENUE) * 100 : null", fmt: growth1, tone: sign }
+  - { label: Diluted EPS, bind: $.EPS_DILUTED, fmt: price2 }
+layout:                        # the funds pack's reverse look-through as tabs under the company (since 2.9.2); empty while it is off
+  areas:
+    - "main right"
+    - "funds right"
+  columns: [8, 4]
+  tabs: [funds]
+  phone: [main, funds, right]
+panels:
+  - { use: us-equities/annual-financials@1, with: { chart-key: F2, key: F3 } }
+  - use: us-equities/filing-list@1
+    with: { key: F4, code: FIL, title: "Recent SEC filings (a click opens one beside)" }
+    children:
+      - place: detail-right
+        source: { kind: filing, id: "@parent.open.id" }
+        waits: Pick a filing to see its details and EDGAR links
+        panels:
+          - { use: us-equities/filing-card@1, with: { id: picked-filing, title: "Filing ${@parent.open.id}", rec: $src } }
+  - id: held-by-funds
+    kind: table
+    title: "Held by funds (a fund opens its page)"
+    area: funds
+    key: F8
+    code: HLD
+    source: { pack: funds, kind: fund-holder, id: $.TICKER }
+    rows: $src.HOLDERS
+    empty: No fund of the funds pack holds this company (or the pack is off)
+    columns:
+      - { label: Fund, bind: "link(@.FUND, 'fund', @.FUND_NAME)" }
+      - { label: Type, bind: "@.TYPE" }
+      - { label: Weight in the fund, bind: "@.PCT", fmt: amount2 }
+      - { label: Value, bind: "@.VALUE", fmt: compact, total: true }
+      - { label: Shares, bind: "@.SHARES", fmt: compact, total: true }
+      - { label: Report date, bind: "@.REPORT_DATE", fmt: date }
+  - id: fund-ownership
+    kind: kv
+    title: Fund ownership
+    area: funds
+    source: { pack: funds, kind: fund-holder, id: $.TICKER }
+    columns:
+      - { label: Funds holding it, bind: "link($src.TICKER, 'fund-holder', fmt($src.FUNDS, 'amount0') + ' of the 200 largest')" }
+      - { label: of which ETFs, bind: $src.ETFS, fmt: amount0 }
+      - { label: Value held, bind: $src.TOTAL_VALUE, fmt: compact }
+      - { label: "Share of its shares (%)", bind: $src.PCT_OF_SHARES, fmt: amount2 }
+      - { label: "Average weight in a fund (%)", bind: $src.AVG_WEIGHT, fmt: amount2 }
+      - { label: Largest holder, bind: "link($src.TOP_HOLDER, 'fund', $src.TOP_HOLDER)" }
+  - { use: us-equities/company-card@1, with: { area: right, code: CO } }
+  - id: indexes
+    kind: table
+    title: Index memberships
+    area: right
+    rows: $.INDEXES
+    search: false
+    empty: Not a member of the Dow 30, the Nasdaq-100, the S&P 500 or a bank list
+    columns:
+      - { label: Index, bind: "link(@.INDEX, 'index-membership', @.NAME)" }
+      - { label: Member since, bind: "@.SINCE", fmt: date }
+  - use: explainer-note@1
+    with:
+      title: About this page
+      area: right
+      text: "Public data. The company, its SIC industry and its filings come from SEC EDGAR (public domain); the financials are the annual values of its 10-K XBRL filings (a foreign bank's 20-F or 40-F, in the currency it reports in, under key facts), a fiscal year being the calendar year its period ends in. Index membership, headquarters and founding come from Wikidata (CC0), the LEI from GLEIF (CC0). No index weights, no GICS and no prices: the price history (F6) is read live, off as shipped, for internal use only."
+  - { use: source-footer@1 }
+keys: { F5: "link($.LEI, 'lei-entity', 'LEI record')", F6: "link($.PRICE_HISTORY, 'price-history')", F7: "link($.SIC_SECTOR, 'sic-sector')", F9: raw }

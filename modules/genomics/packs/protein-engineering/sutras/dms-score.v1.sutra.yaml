@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: dms-score
 version: 1
+libraries: [core@1]
 description: 'Deep mutational scan score: One measurement of the scan: what changing one position of a protein to one amino acid did to one assay.'
 doc:
   summary: One deep mutational scan score, as a record.
@@ -58,31 +59,33 @@ strip:
   bind: $.SE
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Deep mutational scan score
-  columns:
-  - label: Score id
-    bind: $.SCORE_ID
-  - label: Protein
-    bind: link($.PROTEIN, 'protein')
-  - label: Pos
-    bind: $.POS
-    fmt: amount0
-  - label: Aa ref
-    bind: $.AA_REF
-  - label: Aa
-    bind: $.AA
-  - label: Mutation
-    bind: $.MUTATION
-  - label: Assay
-    bind: $.ASSAY
-  - label: Score
-    bind: $.SCORE
-  - label: Se
-    bind: $.SE
-  - label: Replicates
-    bind: $.REPLICATES
-    fmt: amount0
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Deep mutational scan score
+    facts:
+    - label: Score id
+      bind: $.SCORE_ID
+    - label: Protein
+      bind: link($.PROTEIN, 'protein')
+    - label: Pos
+      bind: $.POS
+      fmt: amount0
+    - label: Aa ref
+      bind: $.AA_REF
+    - label: Aa
+      bind: $.AA
+    - label: Mutation
+      bind: $.MUTATION
+    - label: Assay
+      bind: $.ASSAY
+    - label: Score
+      bind: $.SCORE
+    - label: Se
+      bind: $.SE
+    - label: Replicates
+      bind: $.REPLICATES
+      fmt: amount0
 keys:
   F9: raw

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: credit-curve
 version: 1
+libraries: [core@1]
 description: "CDS par spreads by tenor, recovery and implied default probabilities."
 doc:
   summary: "CDS par spreads by tenor, recovery and implied default probabilities."
@@ -51,16 +52,17 @@ strip:
   - { label: "1Y PD", bind: $.PD_1Y, fmt: pct2 }
 panels:
   - { use: series-line@1, with: { id: spreads, title: Par spreads (bp), key: F2, y: SPREAD } }
-  - id: points
-    kind: table
-    title: Term structure
-    key: F3
-    rows: $.POINTS
-    columns:
-      - { label: Tenor, bind: "@.TENOR" }
-      - { label: Spread (bp), bind: "@.SPREAD", fmt: price2 }
-      - { label: Hazard, bind: "@.HAZARD", fmt: pct2 }
-      - { label: Survival, bind: "@.SURVIVAL", fmt: df4 }
+  - use: core/data-table@1
+    as: points
+    with:
+      title: Term structure
+      key: F3
+      rows: $.POINTS
+      columns:
+        - { label: Tenor, bind: "@.TENOR" }
+        - { label: Spread (bp), bind: "@.SPREAD", fmt: price2 }
+        - { label: Hazard, bind: "@.HAZARD", fmt: pct2 }
+        - { label: Survival, bind: "@.SURVIVAL", fmt: df4 }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.ISSUER, 'issuer')", F8: impact, F9: raw }

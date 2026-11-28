@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: design-mutation
 version: 1
+libraries: [core@1]
 description: 'Design change: One amino acid change of one design: the position, what it was and what it became.'
 doc:
   summary: One design change, as a record.
@@ -57,27 +58,29 @@ strip:
   fmt: amount0
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Design change
-  columns:
-  - label: Design mutation id
-    bind: $.DESIGN_MUTATION_ID
-  - label: Design id
-    bind: link($.DESIGN_ID, 'design')
-  - label: Protein
-    bind: link($.PROTEIN, 'protein')
-  - label: Round
-    bind: $.ROUND
-    fmt: amount0
-  - label: Pos
-    bind: $.POS
-    fmt: amount0
-  - label: Aa from
-    bind: $.AA_FROM
-  - label: Aa to
-    bind: $.AA_TO
-  - label: Mutation
-    bind: $.MUTATION
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Design change
+    facts:
+    - label: Design mutation id
+      bind: $.DESIGN_MUTATION_ID
+    - label: Design id
+      bind: link($.DESIGN_ID, 'design')
+    - label: Protein
+      bind: link($.PROTEIN, 'protein')
+    - label: Round
+      bind: $.ROUND
+      fmt: amount0
+    - label: Pos
+      bind: $.POS
+      fmt: amount0
+    - label: Aa from
+      bind: $.AA_FROM
+    - label: Aa to
+      bind: $.AA_TO
+    - label: Mutation
+      bind: $.MUTATION
 keys:
   F9: raw

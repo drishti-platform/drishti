@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: card-account
 version: 1
+libraries: [core@1]
 description: "A credit card: limit, utilisation, spend by category and statements."
 doc:
   summary: "A credit card: limit, utilisation, spend by category and statements."
@@ -52,16 +53,17 @@ strip:
   - { label: Status, bind: $.status, tone: status }
 panels:
   - { use: ranked-bars@1, with: { id: spend, title: Spend by category (this cycle), key: F2, rows: $.spend, label: category, value: amount, fmt: amount2 } }
-  - id: statements
-    kind: table
-    title: Statements
-    key: F3
-    rows: $.statements
-    columns:
-      - { label: Closing, bind: "@.closing", fmt: date }
-      - { label: Balance, bind: "@.balance", fmt: amount2 }
-      - { label: Minimum, bind: "@.minimum", fmt: amount2 }
-      - { label: Paid, bind: "@.paid", fmt: amount2 }
+  - use: core/data-table@1
+    as: statements
+    with:
+      title: Statements
+      key: F3
+      rows: $.statements
+      columns:
+        - { label: Closing, bind: "@.closing", fmt: date }
+        - { label: Balance, bind: "@.balance", fmt: amount2 }
+        - { label: Minimum, bind: "@.minimum", fmt: amount2 }
+        - { label: Paid, bind: "@.paid", fmt: amount2 }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.customer, 'customer')", F8: impact, F9: raw }

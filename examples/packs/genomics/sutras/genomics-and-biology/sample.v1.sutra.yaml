@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: sample
 version: 1
+libraries: [core@1]
 description: "A sequenced specimen: tissue, diagnosis, variants called with allele fraction and depth, and QC."
 doc:
   summary: "A sequenced specimen: tissue, diagnosis, variants called with allele fraction and depth, and QC."
@@ -51,17 +52,18 @@ strip:
   - { label: Mean coverage, bind: $.meanCoverage, fmt: amount0 }
   - { label: Collected, bind: $.collected, fmt: date }
 panels:
-  - id: calls
-    kind: table
-    title: Variant calls
-    key: F2
-    rows: $.calls
-    columns:
-      - { label: Variant, bind: "@.variant" }
-      - { label: Gene, bind: "@.gene" }
-      - { label: VAF, bind: "@.vaf", fmt: pct2, total: true }
-      - { label: Depth, bind: "@.depth", fmt: amount0 }
-      - { label: Filter, bind: "@.filter", tone: status }
+  - use: core/data-table@1
+    as: calls
+    with:
+      title: Variant calls
+      key: F2
+      rows: $.calls
+      columns:
+        - { label: Variant, bind: "@.variant" }
+        - { label: Gene, bind: "@.gene" }
+        - { label: VAF, bind: "@.vaf", fmt: pct2, total: true }
+        - { label: Depth, bind: "@.depth", fmt: amount0 }
+        - { label: Filter, bind: "@.filter", tone: status }
   - { use: field-list@1, with: { id: qc, title: Quality control, key: F3, area: right, rows: $.qc } }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }

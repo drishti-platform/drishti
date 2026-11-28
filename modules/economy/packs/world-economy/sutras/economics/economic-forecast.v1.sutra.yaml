@@ -19,6 +19,7 @@
 rachana: 1.2
 sutra: economic-forecast
 version: 1
+libraries: [core@1]
 description: "The IMF World Economic Outlook: growth, inflation, unemployment, external balance and debt, outturn and projections to 2031."
 doc:
   summary: "An economy's IMF World Economic Outlook: growth, prices, jobs, external balance and debt, outturn and projections."
@@ -53,21 +54,22 @@ strip:
   - { label: Inflation 2027, bind: $.INFLATION_2027, fmt: pc2 }
   - { label: Debt / GDP 2030, bind: $.DEBT_2030, fmt: pc1 }
 panels:
-  - id: projections          # nine columns of one source: written in place (a fragment's columns are fixed)
-    kind: table
-    title: IMF series by year
-    key: F2
-    rows: $.PROJECTIONS
-    columns:
-      - { label: Year, bind: "@.YEAR" }
-      - { label: Basis, bind: "@.BASIS" }
-      - { label: "Growth, %", bind: "@.GROWTH", fmt: pc2, tone: sign }
-      - { label: "Inflation, %", bind: "@.INFLATION", fmt: pc2 }
-      - { label: "Unemployment, %", bind: "@.UNEMPLOYMENT", fmt: pc2 }
-      - { label: "Current account, % GDP", bind: "@.CURRENT_ACCOUNT", fmt: pc2, tone: sign }
-      - { label: "Debt, % GDP", bind: "@.DEBT", fmt: pc1 }
-      - { label: "Net lending, % GDP", bind: "@.NET_LENDING", fmt: pc2, tone: sign }
-      - { label: "GDP, USD bn", bind: "@.GDP", fmt: amount0 }
+  - use: core/data-table@1
+    as: projections          # nine columns of one source: written in place (a fragment's columns are fixed)
+    with:
+      title: IMF series by year
+      key: F2
+      rows: $.PROJECTIONS
+      columns:
+        - { label: Year, bind: "@.YEAR" }
+        - { label: Basis, bind: "@.BASIS" }
+        - { label: "Growth, %", bind: "@.GROWTH", fmt: pc2, tone: sign }
+        - { label: "Inflation, %", bind: "@.INFLATION", fmt: pc2 }
+        - { label: "Unemployment, %", bind: "@.UNEMPLOYMENT", fmt: pc2 }
+        - { label: "Current account, % GDP", bind: "@.CURRENT_ACCOUNT", fmt: pc2, tone: sign }
+        - { label: "Debt, % GDP", bind: "@.DEBT", fmt: pc1 }
+        - { label: "Net lending, % GDP", bind: "@.NET_LENDING", fmt: pc2, tone: sign }
+        - { label: "GDP, USD bn", bind: "@.GDP", fmt: amount0 }
   - { use: series-line@1, with: { id: path, title: "Real GDP growth, % a year (to 2031)", area: right, rows: $.PATH, x: YEAR, y: GROWTH, fmt: pc2 } }
   - { use: source-footer@1 }
 keys: { F7: "link($.ECONOMY, 'economy')", F8: impact, F9: raw }

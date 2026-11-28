@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: design-round
 version: 1
+libraries: [core@1]
 description: 'Design round: One round of the campaign: how the designs were made, how many, and how well the round did.'
 doc:
   summary: One design round, as a record.
@@ -59,35 +60,37 @@ strip:
   bind: $.MEDIAN_ACTIVITY
   emphasis: true
 panels:
-- id: record
-  kind: kv
-  title: Design round
-  columns:
-  - label: Round id
-    bind: $.ROUND_ID
-  - label: Protein
-    bind: link($.PROTEIN, 'protein')
-  - label: Round
-    bind: $.ROUND
-    fmt: amount0
-  - label: Method
-    bind: $.METHOD
-  - label: Started
-    bind: $.STARTED
-    fmt: date
-  - label: Designs
-    bind: $.DESIGNS
-    fmt: amount0
-  - label: Best design
-    bind: link($.BEST_DESIGN, 'design')
-  - label: Best activity
-    bind: $.BEST_ACTIVITY
-  - label: Median activity
-    bind: $.MEDIAN_ACTIVITY
-  - label: Trapped
-    bind: $.TRAPPED
-    fmt: amount0
-  - label: Note
-    bind: $.NOTE
+- use: core/record-card@1
+  as: record
+  with:
+    record: "$"
+    title: Design round
+    facts:
+    - label: Round id
+      bind: $.ROUND_ID
+    - label: Protein
+      bind: link($.PROTEIN, 'protein')
+    - label: Round
+      bind: $.ROUND
+      fmt: amount0
+    - label: Method
+      bind: $.METHOD
+    - label: Started
+      bind: $.STARTED
+      fmt: date
+    - label: Designs
+      bind: $.DESIGNS
+      fmt: amount0
+    - label: Best design
+      bind: link($.BEST_DESIGN, 'design')
+    - label: Best activity
+      bind: $.BEST_ACTIVITY
+    - label: Median activity
+      bind: $.MEDIAN_ACTIVITY
+    - label: Trapped
+      bind: $.TRAPPED
+      fmt: amount0
+    - label: Note
+      bind: $.NOTE
 keys:
   F9: raw

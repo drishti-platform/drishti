@@ -15,6 +15,7 @@
 rachana: 1.2
 sutra: fx-swap
 version: 2
+libraries: [core@1]
 description: FX swap, near and far legs (mockup drishti-fx-swap.png).
 doc:
   summary: "FX swap, near and far legs."
@@ -48,35 +49,39 @@ strip:
   - { label: MTM (USD), bind: $.mtm, fmt: signed0, tone: sign, emphasis: true }
   - { label: Book, bind: "link($.book, 'book')" }
 panels:
-  - id: legs
-    kind: tabs
-    title: Legs
-    key: F2
-    each: $.legs
-    layout: columns
-    tabTitle: "@.leg + ' leg · ' + @.valueDate"
-    body:
-      kind: kv
+  - use: core/tabbed-views@1
+    as: legs
+    with:
+      title: Legs
+      key: F2
+      each: $.legs
+      layout: columns
+      tab-title: "lambda t: t.leg + ' leg · ' + t.valueDate"
+    slots:
+      body:
+        - id: leg
+          kind: kv
+          columns:
+            - { label: "We buy", bind: "@.buy.ccy + ' ' + fmt(@.buy.amount, 'amount2')", tone: pos }
+            - { label: "We sell", bind: "@.sell.ccy + ' ' + fmt(@.sell.amount, 'amount2')", tone: neg }
+            - { label: Rate, bind: "@.rate", fmt: rate5 }
+            - { label: Settlement, bind: "@.settlement" }
+  - use: core/data-table@1
+    as: cashflows
+    with:
+      title: Cashflows
+      code: CF · by currency
+      key: F3
+      rows: $.cashflows
+      total-label: Net PV
       columns:
-        - { label: "We buy", bind: "@.buy.ccy + ' ' + fmt(@.buy.amount, 'amount2')", tone: pos }
-        - { label: "We sell", bind: "@.sell.ccy + ' ' + fmt(@.sell.amount, 'amount2')", tone: neg }
-        - { label: Rate, bind: "@.rate", fmt: rate5 }
-        - { label: Settlement, bind: "@.settlement" }
-  - id: cashflows
-    kind: table
-    title: Cashflows
-    code: CF · by currency
-    key: F3
-    rows: $.cashflows
-    totalLabel: Net PV
-    columns:
-      - { label: Pay date, bind: "@.payDate", fmt: date }
-      - { label: Leg, bind: "@.leg" }
-      - { label: Currency, bind: "@.currency" }
-      - { label: Direction, bind: "@.direction" }
-      - { label: Amount, bind: "@.amount", fmt: signed2, tone: sign }
-      - { label: DF, bind: "@.df", fmt: df4 }
-      - { label: PV (USD), bind: "@.pvUsd", fmt: signed0, tone: sign, total: true }
+        - { label: Pay date, bind: "@.payDate", fmt: date }
+        - { label: Leg, bind: "@.leg" }
+        - { label: Currency, bind: "@.currency" }
+        - { label: Direction, bind: "@.direction" }
+        - { label: Amount, bind: "@.amount", fmt: signed2, tone: sign }
+        - { label: DF, bind: "@.df", fmt: df4 }
+        - { label: PV (USD), bind: "@.pvUsd", fmt: signed0, tone: sign, total: true }
   - id: confirmation
     kind: status
     title: Confirmation and settlement

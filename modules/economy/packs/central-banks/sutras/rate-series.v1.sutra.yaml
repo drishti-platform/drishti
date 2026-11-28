@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: rate-series
 version: 1
+libraries: [core@1]
 description: "One central-bank or market series from FRED or the Bank of Canada: the history, the latest value, the change on the day and on the year."
 doc:
   summary: "A policy-rate or market series: its history over the window, the latest value, the change on the day and the year, the range."
@@ -53,16 +54,18 @@ strip:
   - { label: Low, bind: $.LOW, fmt: amount2 }
 panels:
   - { use: series-line@1, with: { id: history, title: History, key: F2, rows: $.HISTORY, x: DATE, y: VALUE, fmt: amount2 } }
-  - id: about
-    kind: kv
-    title: About this series
+  - use: core/record-card@1
+    as: about
     area: right
-    columns:
-      - { label: Bank, bind: "link($.CENTRAL_BANK, 'central-bank')" }
-      - { label: Source, bind: $.SOURCE }
-      - { label: Code, bind: $.CODE }
-      - { label: Frequency, bind: $.FREQUENCY }
-      - { label: Observations, bind: $.OBSERVATIONS, fmt: amount0 }
-      - { label: What it is, bind: $.DESCRIPTION }
+    with:
+      record: "$"
+      title: About this series
+      facts:
+        - { label: Bank, bind: "link($.CENTRAL_BANK, 'central-bank')" }
+        - { label: Source, bind: $.SOURCE }
+        - { label: Code, bind: $.CODE }
+        - { label: Frequency, bind: $.FREQUENCY }
+        - { label: Observations, bind: $.OBSERVATIONS, fmt: amount0 }
+        - { label: What it is, bind: $.DESCRIPTION }
   - { use: source-footer@1 }
 keys: { F7: "link($.CENTRAL_BANK, 'central-bank')", F9: raw }

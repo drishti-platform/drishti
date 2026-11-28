@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: counterparty-group
 version: 1
+libraries: [core@1]
 description: Economic group of related counterparties (obligor group).
 doc:
   summary: "Economic group of related counterparties (obligor group)."
@@ -46,14 +47,15 @@ strip:
   - { label: Group limit, bind: $.LIMIT, fmt: compact }
   - { label: Utilisation, bind: $.UTILISATION, fmt: pct0, emphasis: true }
 panels:
-  - id: members
-    kind: table
-    title: Members
-    key: F2
-    rows: $.MEMBERS
-    columns:
-      - { label: Counterparty, bind: "@.ID", link: true }
-      - { label: Name, bind: "@.NAME" }
-      - { label: Rating, bind: "@.RATING" }
+  - use: core/data-table@1
+    as: members
+    with:
+      title: Members
+      key: F2
+      rows: $.MEMBERS
+      columns:
+        - { label: Counterparty, bind: "@.ID", link: true }
+        - { label: Name, bind: "@.NAME" }
+        - { label: Rating, bind: "@.RATING" }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

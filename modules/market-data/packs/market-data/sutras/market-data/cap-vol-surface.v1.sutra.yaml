@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: cap-vol-surface
 version: 1
+libraries: [core@1]
 description: Cap vols by maturity and strike.
 doc:
   summary: "Cap vols by maturity and strike."
@@ -57,18 +58,19 @@ panels:
       - { label: "3%", bind: "@.K_3", fmt: price2 }
       - { label: "4%", bind: "@.K_4", fmt: price2 }
       - { label: "5%", bind: "@.K_5", fmt: price2 }
-  - id: grid
-    kind: table
-    title: Cap vols (bp)
-    key: F2
-    rows: $.GRID
-    columns:
-      - { label: Maturity, bind: "@.MATURITY" }
-      - { label: ATM, bind: "@.ATM", fmt: price2 }
-      - { label: "2%", bind: "@.K_2", fmt: price2 }
-      - { label: "3%", bind: "@.K_3", fmt: price2 }
-      - { label: "4%", bind: "@.K_4", fmt: price2 }
-      - { label: "5%", bind: "@.K_5", fmt: price2 }
+  - use: core/data-table@1
+    as: grid
+    with:
+      title: Cap vols (bp)
+      key: F2
+      rows: $.GRID
+      columns:
+        - { label: Maturity, bind: "@.MATURITY" }
+        - { label: ATM, bind: "@.ATM", fmt: price2 }
+        - { label: "2%", bind: "@.K_2", fmt: price2 }
+        - { label: "3%", bind: "@.K_3", fmt: price2 }
+        - { label: "4%", bind: "@.K_4", fmt: price2 }
+        - { label: "5%", bind: "@.K_5", fmt: price2 }
   - { use: series-line@1, with: { id: atm, title: ATM by maturity, area: right, rows: $.GRID, x: MATURITY, y: ATM } }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

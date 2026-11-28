@@ -141,6 +141,16 @@ def extra_lines(path: Path, y: dict) -> list[str]:
 
 
 def enrich(text: str, path: Path) -> str:
+    """The Sutra's text with the structured doc fields (_enrich), and its inline table, record and tabs panels written as uses of the
+    Rachana Core fragments (corefrag.py, H2): the one place every generator passes a non-risk Sutra through."""
+    text = _enrich(text, path)
+    if skipped(path) or not str(path).endswith(".sutra.yaml"):
+        return text
+    import corefrag
+    return corefrag.convert(text, where=str(path))
+
+
+def _enrich(text: str, path: Path) -> str:
     """The Sutra's text with the structured doc fields written before `since:`; the text unchanged when it has none to add."""
     if skipped(path) or re.search(r"(?m)^  use-when:", text) or not re.search(r"(?m)^doc:", text):
         return text

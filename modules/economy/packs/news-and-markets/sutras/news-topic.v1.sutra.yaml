@@ -15,6 +15,7 @@
 rachana: 1.2
 sutra: news-topic
 version: 1
+libraries: [core@1]
 description: "A topic and the news about it: headlines (newest first) with their publishers and links, a count by source, and how the headlines were chosen. The headlines are computed on demand by the news connector."
 doc:
   summary: "A news topic: its headlines newest first, a count by source, how they were chosen and everything the feed returned."
@@ -50,18 +51,19 @@ strip:
   - { label: Edition, bind: $.EDITION }
   - { label: Headlines, bind: "link($.NEWS_ID, 'news')" }
 panels:
-  - id: headlines
-    kind: table
-    title: "Headlines, newest first"
-    code: NEWS
-    key: F2
+  - use: core/data-table@1
+    as: headlines
     source: "link($.NEWS_ID, 'news')"
-    rows: $.ITEMS
-    columns:
-      - { label: Published, bind: "@.PUBLISHED" }
-      - { label: Source, bind: "@.SOURCE" }
-      - { label: Headline, bind: "@.TITLE" }
-      - { label: Link, bind: "@.LINK" }
+    with:
+      title: "Headlines, newest first"
+      code: NEWS
+      key: F2
+      rows: $.ITEMS
+      columns:
+        - { label: Published, bind: "@.PUBLISHED" }
+        - { label: Source, bind: "@.SOURCE" }
+        - { label: Headline, bind: "@.TITLE" }
+        - { label: Link, bind: "@.LINK" }
   - id: bySource
     kind: hbar
     title: "Headlines by source"
@@ -72,28 +74,30 @@ panels:
     label: SOURCE
     value: COUNT
     fmt: amount0
-  - id: pipeline
-    kind: table
-    title: "How the headlines were chosen"
-    key: F4
+  - use: core/data-table@1
+    as: pipeline
     area: right
     source: "link($.NEWS_ID, 'news')"
-    rows: $.PIPELINE
-    columns:
-      - { label: Step, bind: "@.STEP" }
-      - { label: Kept, bind: "@.KEPT", fmt: amount0 }
-      - { label: Dropped, bind: "@.DROPPED", fmt: amount0 }
-  - id: everything
-    kind: table
-    title: "Everything the feed returned for this name (no relevance filter)"
-    key: F5
+    with:
+      title: "How the headlines were chosen"
+      key: F4
+      rows: $.PIPELINE
+      columns:
+        - { label: Step, bind: "@.STEP" }
+        - { label: Kept, bind: "@.KEPT", fmt: amount0 }
+        - { label: Dropped, bind: "@.DROPPED", fmt: amount0 }
+  - use: core/data-table@1
+    as: everything
     source: "link($.NEWS_ALL_ID, 'news')"
-    rows: $.ITEMS
-    columns:
-      - { label: Published, bind: "@.PUBLISHED" }
-      - { label: Source, bind: "@.SOURCE" }
-      - { label: Headline, bind: "@.TITLE" }
-      - { label: Link, bind: "@.LINK" }
+    with:
+      title: "Everything the feed returned for this name (no relevance filter)"
+      key: F5
+      rows: $.ITEMS
+      columns:
+        - { label: Published, bind: "@.PUBLISHED" }
+        - { label: Source, bind: "@.SOURCE" }
+        - { label: Headline, bind: "@.TITLE" }
+        - { label: Link, bind: "@.LINK" }
   - use: explainer-note@1
     with: { title: "About these headlines", area: right,
             text: "Sample pack. Headlines are fetched when this page opens, by the news connector, from Google News; turning it on (Admin, Connectors: news) sends the name of this topic to Google. While the connector is off (its shipped state) or the server runs in offline mode (DRISHTI_OFFLINE=true), the demo lake serves a captured snapshot of the same headlines (the news page, F7, says when it was captured), and without a lake the tables above stay empty." }

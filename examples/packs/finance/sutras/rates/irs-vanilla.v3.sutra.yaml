@@ -15,6 +15,7 @@
 rachana: 1.2
 sutra: irs-vanilla
 version: 3
+libraries: [core@1]
 description: Vanilla fixed/float interest rate swap (mockup drishti-irs.png).
 doc:
   summary: "Vanilla fixed/float interest rate swap."
@@ -48,49 +49,55 @@ strip:
   - { label: DV01 (USD), bind: $.dv01, fmt: signed0, tone: sign }
   - { label: Book, bind: "link($.book, 'book')" }
 panels:
-  - id: legs
-    kind: tabs
-    title: Legs
-    key: F2
-    each: $.legs
-    tabTitle: "'Leg ' + @.leg + ' · ' + @.label"
-    body:
-      kind: kv
+  - use: core/tabbed-views@1
+    as: legs
+    with:
+      title: Legs
+      key: F2
+      each: $.legs
+      tab-title: "lambda t: 'Leg ' + t.leg + ' · ' + t.label"
+    slots:
+      body:
+        - id: leg
+          kind: kv
+          columns:
+            - { label: Currency, bind: "@.currency" }
+            - { label: Notional, bind: "@.notional", fmt: amount0 }
+            - { label: Rate, bind: "@.type == 'FIXED' ? fmt(@.rate, 'pct4') + ' fixed' : @.index + ' compounded'" }
+            - { label: Day count, bind: "@.dayCount" }
+            - { label: Frequency, bind: "@.frequency" }
+            - { label: Business day, bind: "@.businessDay" }
+            - { label: Calendar, bind: "@.calendar" }
+            - { label: Payment lag, bind: "@.paymentLag" }
+  - use: core/data-table@1
+    as: cashflows
+    with:
+      title: Cashflows · Leg 1
+      code: CF · ladder
+      key: F3
+      rows: $.legs[0].cashflows
+      total-label: Total
       columns:
-        - { label: Currency, bind: "@.currency" }
+        - { label: "#", bind: "@.n" }
+        - { label: Accrual start, bind: "@.accrualStart", fmt: date }
+        - { label: Accrual end, bind: "@.accrualEnd", fmt: date }
+        - { label: Pay date, bind: "@.payDate", fmt: date }
         - { label: Notional, bind: "@.notional", fmt: amount0 }
-        - { label: Rate, bind: "@.type == 'FIXED' ? fmt(@.rate, 'pct4') + ' fixed' : @.index + ' compounded'" }
-        - { label: Day count, bind: "@.dayCount" }
-        - { label: Frequency, bind: "@.frequency" }
-        - { label: Business day, bind: "@.businessDay" }
-        - { label: Calendar, bind: "@.calendar" }
-        - { label: Payment lag, bind: "@.paymentLag" }
-  - id: cashflows
-    kind: table
-    title: Cashflows · Leg 1
-    code: CF · ladder
-    key: F3
-    rows: $.legs[0].cashflows
-    totalLabel: Total
-    columns:
-      - { label: "#", bind: "@.n" }
-      - { label: Accrual start, bind: "@.accrualStart", fmt: date }
-      - { label: Accrual end, bind: "@.accrualEnd", fmt: date }
-      - { label: Pay date, bind: "@.payDate", fmt: date }
-      - { label: Notional, bind: "@.notional", fmt: amount0 }
-      - { label: Rate, bind: "@.rate", fmt: pct4 }
-      - { label: Amount (USD), bind: "@.amount", fmt: signed2, tone: sign, total: true }
-      - { label: DF, bind: "@.df", fmt: df4 }
-      - { label: PV (USD), bind: "@.pv", fmt: signed2, tone: sign, total: true }
-  - id: leg2
-    kind: kv
-    title: "Leg 2 · ${$.legs[1].label}"
-    code: collapsed
-    columns:
-      - { label: Projected flows, bind: "$.legs[1].projectedFlows" }
-      - { label: Spread, bind: "$.legs[1].spread", fmt: pct4 }
-      - { label: Next reset, bind: "$.legs[1].nextReset", fmt: date }
-      - { label: PV (USD), bind: "$.legs[1].pv", fmt: signed2, tone: sign }
+        - { label: Rate, bind: "@.rate", fmt: pct4 }
+        - { label: Amount (USD), bind: "@.amount", fmt: signed2, tone: sign, total: true }
+        - { label: DF, bind: "@.df", fmt: df4 }
+        - { label: PV (USD), bind: "@.pv", fmt: signed2, tone: sign, total: true }
+  - use: core/record-card@1
+    as: leg2
+    with:
+      record: "$"
+      title: "Leg 2 · ${$.legs[1].label}"
+      code: collapsed
+      facts:
+        - { label: Projected flows, bind: "$.legs[1].projectedFlows" }
+        - { label: Spread, bind: "$.legs[1].spread", fmt: pct4 }
+        - { label: Next reset, bind: "$.legs[1].nextReset", fmt: date }
+        - { label: PV (USD), bind: "$.legs[1].pv", fmt: signed2, tone: sign }
   - { id: built, kind: provenance, title: How this view was built }
   - id: curve
     kind: line

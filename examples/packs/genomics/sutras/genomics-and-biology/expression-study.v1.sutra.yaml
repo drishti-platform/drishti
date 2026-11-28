@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: expression-study
 version: 1
+libraries: [core@1]
 description: "A differential-expression (RNA-seq) comparison: fold changes and adjusted p-values."
 doc:
   summary: "A differential-expression (RNA-seq) comparison: fold changes and adjusted p-values."
@@ -47,15 +48,16 @@ strip:
   - { label: Significant genes, bind: $.significant, fmt: amount0, emphasis: true }
 panels:
   - { use: ranked-bars@1, with: { id: foldChange, title: log2 fold change, key: F2, rows: $.results, label: gene, value: log2fc, fmt: price2, tone: sign } }
-  - id: results
-    kind: table
-    title: Results
-    key: F3
-    rows: $.results
-    columns:
-      - { label: Gene, bind: "@.gene" }
-      - { label: log2 FC, bind: "@.log2fc", fmt: signed2, tone: sign, total: true }
-      - { label: Mean expression, bind: "@.baseMean", fmt: amount0 }
-      - { label: Adjusted p, bind: "@.padj" }
+  - use: core/data-table@1
+    as: results
+    with:
+      title: Results
+      key: F3
+      rows: $.results
+      columns:
+        - { label: Gene, bind: "@.gene" }
+        - { label: log2 FC, bind: "@.log2fc", fmt: signed2, tone: sign, total: true }
+        - { label: Mean expression, bind: "@.baseMean", fmt: amount0 }
+        - { label: Adjusted p, bind: "@.padj" }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

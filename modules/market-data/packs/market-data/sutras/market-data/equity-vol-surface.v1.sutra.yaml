@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: equity-vol-surface
 version: 1
+libraries: [core@1]
 description: Implied vols by expiry and moneyness.
 doc:
   summary: "Implied vols by expiry and moneyness."
@@ -60,18 +61,19 @@ panels:
       - { label: "100%", bind: "@.M_100", fmt: price2 }
       - { label: "110%", bind: "@.M_110", fmt: price2 }
       - { label: "120%", bind: "@.M_120", fmt: price2 }
-  - id: grid
-    kind: table
-    title: Vol (%) by moneyness
-    key: F2
-    rows: $.GRID
-    columns:
-      - { label: Expiry, bind: "@.EXPIRY" }
-      - { label: "80%", bind: "@.M_80", fmt: price2 }
-      - { label: "90%", bind: "@.M_90", fmt: price2 }
-      - { label: "100%", bind: "@.M_100", fmt: price2 }
-      - { label: "110%", bind: "@.M_110", fmt: price2 }
-      - { label: "120%", bind: "@.M_120", fmt: price2 }
+  - use: core/data-table@1
+    as: grid
+    with:
+      title: Vol (%) by moneyness
+      key: F2
+      rows: $.GRID
+      columns:
+        - { label: Expiry, bind: "@.EXPIRY" }
+        - { label: "80%", bind: "@.M_80", fmt: price2 }
+        - { label: "90%", bind: "@.M_90", fmt: price2 }
+        - { label: "100%", bind: "@.M_100", fmt: price2 }
+        - { label: "110%", bind: "@.M_110", fmt: price2 }
+        - { label: "120%", bind: "@.M_120", fmt: price2 }
   - { use: series-line@1, with: { id: atm, title: ATM term structure, area: right, rows: $.GRID, x: EXPIRY, y: M_100 } }
   - { use: data-provenance@1 }
 keys: { F8: impact, F9: raw }

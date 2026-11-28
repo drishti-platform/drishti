@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: trader
 version: 1
+libraries: [core@1]
 description: A trader and their books.
 doc:
   summary: "A trader and their books."
@@ -46,13 +47,14 @@ strip:
   - { label: Desk, bind: $.DESK_NAME }
   - { label: Trades, bind: $.TRADE_COUNT, emphasis: true }
 panels:
-  - id: books
-    kind: table
-    title: Books
-    key: F2
-    rows: $.BOOKS
-    columns:
-      - { label: Book, bind: "@.ID", link: true }
+  - use: core/data-table@1
+    as: books
+    with:
+      title: Books
+      key: F2
+      rows: $.BOOKS
+      columns:
+        - { label: Book, bind: "@.ID", link: true }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.DESK, 'desk')", F8: impact, F9: raw }

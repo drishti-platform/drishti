@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: filing
 version: 1
+libraries: [core@1]
 description: "One SEC filing: its company, form, dates, 8-K items and its links on EDGAR (metadata only; the document stays on sec.gov)."
 doc:
   summary: "One SEC filing: company, form, dates, 8-K items and links to the document and its EDGAR index."
@@ -49,15 +50,16 @@ strip:
   - { label: Report date, bind: $.REPORT_DATE, fmt: date }
 panels:
   - { use: us-equities/filing-card@1, with: { key: F2 } }
-  - id: items
-    kind: table
-    title: Items reported (8-K)
-    rows: $.ITEMS
-    search: false
-    empty: No items (only a current report, 8-K, lists items)
-    columns:
-      - { label: Item, bind: "@.ITEM" }
-      - { label: What it reports, bind: "@.DESCRIPTION" }
+  - use: core/data-table@1
+    as: items
+    with:
+      title: Items reported (8-K)
+      rows: $.ITEMS
+      search: false
+      empty: No items (only a current report, 8-K, lists items)
+      columns:
+        - { label: Item, bind: "@.ITEM" }
+        - { label: What it reports, bind: "@.DESCRIPTION" }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }
 keys: { F7: "link($.COMPANY, 'us-company')", F9: raw }

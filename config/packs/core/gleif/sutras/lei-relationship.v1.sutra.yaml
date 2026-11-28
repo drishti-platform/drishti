@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: lei-relationship
 version: 1
+libraries: [core@1]
 description: "One consolidation relationship from GLEIF's level 2 data: the child, its direct or ultimate parent, status and periods."
 doc:
   summary: "A child and its direct or ultimate accounting consolidation parent: status, periods, accounting standard, registration."
@@ -49,28 +50,31 @@ strip:
   - { label: Accounting standard, bind: $.ACCOUNTING_STANDARD }
   - { label: Record, bind: "$.REGISTRATION_STATUS == 'LAPSED' ? 'LAPSED: renewal failed' : $.REGISTRATION_STATUS", tone: status }
 panels:
-  - id: relationship
-    kind: kv
-    title: The relationship
-    key: F2
-    columns:
-      - { label: Child, bind: "link($.CHILD_ENTITY, 'lei-entity')" }
-      - { label: Is consolidated by, bind: "link($.PARENT_ENTITY, 'lei-entity')" }
-      - { label: Level, bind: "$.LEVEL + ' accounting consolidation parent'" }
-      - { label: Relationship status, bind: $.RELATIONSHIP_STATUS }
-      - { label: Relationship start, bind: $.START, fmt: date }
-      - { label: Relationship end, bind: "nonblank($.END, 'Open')" }
-      - { label: Ownership group, bind: "link($.LEI_GROUP, 'lei-group')" }
-  - id: periods
-    kind: table
-    title: Accounting and filing periods the record names
-    rows: $.PERIODS
-    when: "size($.PERIODS) > 0"
-    search: false
-    columns:
-      - { label: Period, bind: "@.TYPE" }
-      - { label: From, bind: "@.START", fmt: date }
-      - { label: To, bind: "nonblank(@.END, 'Open')" }
+  - use: core/record-card@1
+    as: relationship
+    with:
+      record: "$"
+      title: The relationship
+      key: F2
+      facts:
+        - { label: Child, bind: "link($.CHILD_ENTITY, 'lei-entity')" }
+        - { label: Is consolidated by, bind: "link($.PARENT_ENTITY, 'lei-entity')" }
+        - { label: Level, bind: "$.LEVEL + ' accounting consolidation parent'" }
+        - { label: Relationship status, bind: $.RELATIONSHIP_STATUS }
+        - { label: Relationship start, bind: $.START, fmt: date }
+        - { label: Relationship end, bind: "nonblank($.END, 'Open')" }
+        - { label: Ownership group, bind: "link($.LEI_GROUP, 'lei-group')" }
+  - use: core/data-table@1
+    as: periods
+    with:
+      title: Accounting and filing periods the record names
+      rows: $.PERIODS
+      when: "size($.PERIODS) > 0"
+      search: false
+      columns:
+        - { label: Period, bind: "@.TYPE" }
+        - { label: From, bind: "@.START", fmt: date }
+        - { label: To, bind: "nonblank(@.END, 'Open')" }
   - id: record
     kind: status
     title: The relationship record

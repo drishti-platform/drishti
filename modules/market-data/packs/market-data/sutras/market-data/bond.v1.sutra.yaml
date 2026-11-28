@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: bond
 version: 1
+libraries: [core@1]
 description: "A listed bond: terms, price, yield, spreads and analytics."
 doc:
   summary: "A listed bond: terms, price, yield, spreads and analytics."
@@ -53,14 +54,15 @@ strip:
   - { label: Rating, bind: $.RATING }
 panels:
   - { use: field-list@1, with: { id: terms, title: Terms, key: F2, rows: $.TERMS } }
-  - id: coupons
-    kind: table
-    title: Coupons
-    key: F3
-    rows: $.COUPONS
-    columns:
-      - { label: Date, bind: "@.DATE", fmt: date }
-      - { label: Coupon, bind: "@.AMOUNT", fmt: amount2 }
+  - use: core/data-table@1
+    as: coupons
+    with:
+      title: Coupons
+      key: F3
+      rows: $.COUPONS
+      columns:
+        - { label: Date, bind: "@.DATE", fmt: date }
+        - { label: Coupon, bind: "@.AMOUNT", fmt: amount2 }
   - { use: series-line@1, with: { id: history, title: "Price, last 30 days", area: right, rows: $.HISTORY, x: DATE, y: PRICE } }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }

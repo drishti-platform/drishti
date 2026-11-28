@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: statistics-series
 version: 1
+libraries: [core@1]
 description: "One Statistics Canada series by vector: the latest value, the change on the period and the year, the history."
 doc:
   summary: "A national statistic: its latest value and period, the change on the period and on the year, the release time, the history."
@@ -51,17 +52,19 @@ strip:
   - { label: Released, bind: $.RELEASED }
 panels:
   - { use: series-line@1, with: { id: history, title: History, key: F2, rows: $.HISTORY, x: PERIOD, y: VALUE, fmt: amount2 } }
-  - id: about
-    kind: kv
-    title: About this series
+  - use: core/record-card@1
+    as: about
     area: right
-    columns:
-      - { label: Topic, bind: $.TOPIC }
-      - { label: Table, bind: $.TABLE_ID }
-      - { label: Table title, bind: $.TABLE_TITLE }
-      - { label: Members, bind: $.MEMBERS }
-      - { label: Vector, bind: $.VECTOR }
-      - { label: Frequency, bind: $.FREQUENCY }
-      - { label: Scale, bind: $.SCALE }
+    with:
+      record: "$"
+      title: About this series
+      facts:
+        - { label: Topic, bind: $.TOPIC }
+        - { label: Table, bind: $.TABLE_ID }
+        - { label: Table title, bind: $.TABLE_TITLE }
+        - { label: Members, bind: $.MEMBERS }
+        - { label: Vector, bind: $.VECTOR }
+        - { label: Frequency, bind: $.FREQUENCY }
+        - { label: Scale, bind: $.SCALE }
   - { use: source-footer@1 }
 keys: { F9: raw }

@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: endur-cash
 version: 1
+libraries: [core@1]
 description: "An Endur cash deal: a payment or a fee in one currency, on one date."
 doc:
   summary: "An Endur cash deal: a payment or a fee in one currency, on one date."
@@ -60,16 +61,18 @@ controls:                       # the events by leg and by date: a trader's 'wha
   - { id: when, kind: date-range, label: Between, placement: header, panel: event-list }
 panels:
   - { use: trading/deal-ticket@1, with: { rate-fmt: price4, product: "Cash payment" } }
-  - id: payment
-    kind: kv
-    title: "Cash payment"
-    code: CSH
-    when: "$.PRODUCT_SUB_TYPE == 'CASH'"
-    columns:
-      - { label: "Amount", bind: "$.CURRENCY + ' ' + fmt(first($.LEGS).NOTIONAL, 'amount2')" }
-      - { label: "Paid on", bind: "first($.LEGS).CASH_FLOWS[0].PAYMENT_DATE", fmt: date }
-      - { label: "Direction", bind: "$.BUY_SELL_CODE == 'B' ? 'Paid' : 'Received'" }
-      - { label: "Settlement", bind: "nonblank(first($.LEGS).SETTLEMENT_TYPE, '–')" }
+  - use: core/record-card@1
+    as: payment
+    with:
+      record: "$"
+      title: "Cash payment"
+      code: CSH
+      when: "$.PRODUCT_SUB_TYPE == 'CASH'"
+      facts:
+        - { label: "Amount", bind: "$.CURRENCY + ' ' + fmt(first($.LEGS).NOTIONAL, 'amount2')" }
+        - { label: "Paid on", bind: "first($.LEGS).CASH_FLOWS[0].PAYMENT_DATE", fmt: date }
+        - { label: "Direction", bind: "$.BUY_SELL_CODE == 'B' ? 'Paid' : 'Received'" }
+        - { label: "Settlement", bind: "nonblank(first($.LEGS).SETTLEMENT_TYPE, '–')" }
   - { use: trading/legs@1, with: { rate-fmt: price4 } }
   - { use: trading/flow-schedule@1, with: { rate-fmt: price4 } }
   - { use: trading/events@1 }

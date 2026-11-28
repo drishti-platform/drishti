@@ -16,6 +16,7 @@
 rachana: 1.2
 sutra: retail-portfolio
 version: 1
+libraries: [core@1]
 description: "A retail portfolio segment: exposure and expected credit loss by IFRS 9 stage, and delinquency."
 doc:
   summary: "A retail portfolio segment: exposure and expected credit loss by IFRS 9 stage, and delinquency."
@@ -49,17 +50,18 @@ strip:
   - { label: Coverage, bind: $.coverage, fmt: pct2 }
   - { label: "30+ DPD rate", bind: $.dpd30, fmt: pct2 }
 panels:
-  - id: stages
-    kind: table
-    title: By IFRS 9 stage
-    key: F2
-    rows: $.stages
-    columns:
-      - { label: Stage, bind: "@.stage" }
-      - { label: Exposure, bind: "@.exposure", fmt: compact, total: true }
-      - { label: PD (12m), bind: "@.pd", fmt: pct2 }
-      - { label: LGD, bind: "@.lgd", fmt: pct0 }
-      - { label: ECL, bind: "@.ecl", fmt: compact, total: true }
+  - use: core/data-table@1
+    as: stages
+    with:
+      title: By IFRS 9 stage
+      key: F2
+      rows: $.stages
+      columns:
+        - { label: Stage, bind: "@.stage" }
+        - { label: Exposure, bind: "@.exposure", fmt: compact, total: true }
+        - { label: PD (12m), bind: "@.pd", fmt: pct2 }
+        - { label: LGD, bind: "@.lgd", fmt: pct0 }
+        - { label: ECL, bind: "@.ecl", fmt: compact, total: true }
   - { use: series-line@1, with: { id: delinquency, title: "30+ days past due rate", area: right, rows: $.delinquency, x: month, y: rate, fmt: pct2 } }
   - { use: data-provenance@1 }
   - { use: linked-entities@1 }

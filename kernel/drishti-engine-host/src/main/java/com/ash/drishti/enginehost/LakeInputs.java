@@ -149,8 +149,12 @@ final class LakeInputs implements Inputs {
         private final InputBinder.Bound bound;
         private final List<String> declared;
         private final List<String> kinds;
+        /** The rows while a scan reads them; released when it ends (ENGINE_SPEC 5.2 rule 9: the source's column cache is the one copy). */
         private volatile Loaded loaded;
-        private final Map<List<String>, Loaded> openLoads = new ConcurrentHashMap<>();
+        /** What a read showed, kept without the rows: whether the input is there, its columns and row count. */
+        private volatile Shape shape;
+        /** The input's stamp, composed from the sources' data versions without reading a row, fixed once taken (5.2 rule 8). */
+        private volatile String stamp;
 
         Table(String name, Descriptor.Input input, InputBinder.Bound bound, List<String> declared) {
             this.name = name;
@@ -169,6 +173,9 @@ final class LakeInputs implements Inputs {
             }
         }
 
+        /** A read's outline: kept after its rows are released. */
+        private record Shape(boolean present, Set<String> columns, int count) {}
+
         private RowRule rule(String kind) {
             return viewer == null ? RowRule.ALL : viewer.rows(kind);
         }
@@ -186,6 +193,7 @@ final class LakeInputs implements Inputs {
                         if (l == null) {
                             l = read(declared);
                             loaded = l;
+                            shape = new Shape(l.present(), l.columns().keySet(), l.count());
                         }
                     }
                 }
@@ -194,14 +202,9 @@ final class LakeInputs implements Inputs {
             return null;
         }
 
+        /** An open input's columns, read for one scan (never kept: 5.2 rule 9). */
         private Loaded openLoad(List<String> columns) throws EngineException {
-            List<String> key = List.copyOf(new TreeSet<>(columns));
-            Loaded l = openLoads.get(key);
-            if (l == null) {
-                l = read(key);
-                openLoads.put(key, l);
-            }
-            return l;
+            return read(List.copyOf(new TreeSet<>(columns)));
         }
 
         /**
@@ -302,10 +305,25 @@ final class LakeInputs implements Inputs {
             return name;
         }
 
+        /** The outline of the input, read once (the rows then released unless a scan holds them). */
+        private Shape shape() throws EngineException {
+            Shape s = shape;
+            if (s == null) {
+                load();
+                s = shape;
+            }
+            return s;
+        }
+
+        /** Releases the rows a finished scan read: a later scan reads the source again (the kernel's column cache is the one copy). */
+        private void release() {
+            loaded = null;
+        }
+
         @Override
         public boolean present() {
             try {
-                return input.open() ? !kinds.isEmpty() && kinds.stream().anyMatch(data::serves) : load().present();
+                return input.open() ? !kinds.isEmpty() && kinds.stream().anyMatch(data::serves) : shape().present();
             } catch (EngineException e) {
                 return false;
             }
@@ -317,11 +335,11 @@ final class LakeInputs implements Inputs {
                 if (input.open()) {
                     return Set.of();
                 }
-                Loaded l = load();
+                Shape l = shape();
                 if (!l.present()) {
                     return Set.of();
                 }
-                LinkedHashSet<String> cols = new LinkedHashSet<>(l.columns().keySet());
+                LinkedHashSet<String> cols = new LinkedHashSet<>(l.columns());
                 if (input.vector() != null) {
                     cols.add(input.vector());                          // read with vectors(); there when the table is
                 }
@@ -330,9 +348,6 @@ final class LakeInputs implements Inputs {
                 return Set.of();
             }
         }
-
-        /** The stamp, fixed the first time it is asked (a session's input stamps never change under it: a moved one makes it stale). */
-        private volatile String stamp;
 
         /**
          * The input's data versions (each bound kind's lake commit for the date) without reading a row (engine specification 5.2 rule 8):
@@ -376,7 +391,7 @@ final class LakeInputs implements Inputs {
 
         @Override
         public long rows() {
-            Loaded l = loaded;
+            Shape l = shape;
             return l == null ? -1 : l.count();
         }
 
@@ -394,7 +409,14 @@ final class LakeInputs implements Inputs {
 
         @Override
         public void scan(Scan scan, BatchSink sink) throws EngineException {
-            Loaded l = forScan(scan.columns());
+            try {
+                scanLoaded(forScan(scan.columns()), scan, sink);
+            } finally {
+                release();
+            }
+        }
+
+        private void scanLoaded(Loaded l, Scan scan, BatchSink sink) throws EngineException {
             if (!l.present()) {
                 return;
             }
@@ -546,9 +568,13 @@ final class LakeInputs implements Inputs {
             if (!offers(scan)) {
                 throw new EngineException("ENG-2003", Kind.REFUSED, "a grouped scan that was not offered was asked of " + name);
             }
-            Loaded l = load();
-            GroupedScan.run(scan, l.columns(), l.visible(), l.size(), sink, LakeInputs::check);
-            rowsIn.addAndGet(l.count());
+            try {
+                Loaded l = load();
+                GroupedScan.run(scan, l.columns(), l.visible(), l.size(), sink, LakeInputs::check);
+                rowsIn.addAndGet(l.count());
+            } finally {
+                release();
+            }
         }
     }
 }

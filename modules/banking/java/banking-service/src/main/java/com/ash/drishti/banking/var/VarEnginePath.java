@@ -1149,8 +1149,7 @@ public class VarEnginePath {
         }
         VarService.Scoped s = svc.scoped(p, partScope(res), date, currency);
         if (res.node() == null && new VarSelection(svc).byTerms(p, s)) {   // an expression of two or more terms: its parts are the terms
-            throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path answers the parts of a node or of an ad-hoc scope of positions for "
-                    + "now: ask it in-tree (path=in-tree); the parts of " + res.canonical() + " are its terms");
+            return termParts(p, svc, book, res, s, date, currency);
         }
         com.ash.drishti.banking.compute.var.VarBook b = s.date().book();
         if (!s.view().seesPositions(s.set())) {
@@ -1182,6 +1181,52 @@ public class VarEnginePath {
             pt.attrs().forEach((k, v) -> attrs.put(k, v != null && svc.access().masked(p, k) ? com.ash.drishti.api.DataNode.MASK : v));
             parts.add(new VarViews.Part(pt.key(), pt.scope(), pt.label(), pt.kind(), null, pt.size(), attrs));
             rows.add(own);
+        }
+        return new HostPositions(parts, rows);
+    }
+
+    /**
+     * The parts of an expression of two or more terms to add (R2 lane A2), as the in-tree route lists them ({@code VarSelection.parts}):
+     * each positive term's rows inside the scope, the rows not in an earlier term its part (the components add up), its words the host's
+     * (the term, its word, its trades and those allocated to it, its label); the term alone ({@code alone}, {@code aloneEs}) is the engine's
+     * {@code scope-var} over the term's rows in the scope, the part's figures the engine's {@code scope-contributions} over the allocated rows.
+     */
+    private HostPositions termParts(Principal p, VarService svc, EngineScopeBook book, ScopeResolver.Resolution res, VarService.Scoped s, LocalDate date,
+            String currency) {
+        VarSelection sel = new VarSelection(svc);
+        OrdinalSet taken = OrdinalSet.empty();
+        List<VarViews.Part> parts = new ArrayList<>();
+        List<List<Integer>> rows = new ArrayList<>();
+        for (VarSelection.Term t : sel.terms(p, s.res().canonical())) {
+            if (!t.op().equals("+")) {
+                continue;
+            }
+            String text = t.expr().toString();
+            OrdinalSet full;
+            try {
+                full = resolve(p, book, text, date).set().and(res.set());
+            } catch (DrishtiException | IllegalArgumentException e) {
+                full = OrdinalSet.empty();
+            }
+            OrdinalSet mine = full.andNot(taken);
+            taken = taken.or(full);
+            Map<String, Object> params = params(dateWindow(), currency);
+            params.put("rows", ordinals(full));
+            params.put("node", "");
+            List<Map<String, Object>> sv = rows(ask(p, List.of("scope-var"), params, Map.of("date", date.toString())), "scope-var");
+            if (sv.isEmpty()) {
+                throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " answered no VaR for the term " + text + " of "
+                        + res.canonical() + " on " + date);
+            }
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("term", text);
+            a.put("word", t.expr() instanceof com.ash.drishti.banking.compute.var.ScopeExpr.Ref r ? r.word() : "SCOPE");
+            a.put("trades", full.size());
+            a.put("allocated", mine.size());
+            a.put("alone", VarViews.round(num(sv.get(0).get("VAR"))));
+            a.put("aloneEs", VarViews.round(num(sv.get(0).get("ES"))));
+            parts.add(new VarViews.Part(text, text, sel.label(p, s.date(), t.expr()), "part", null, Double.NaN, a));
+            rows.add(ordinals(mine));
         }
         return new HostPositions(parts, rows);
     }

@@ -318,7 +318,7 @@ public final class ArtifactService {
     /** Tells the running server to look: the watchers would, but the answer should not wait for them. */
     private void settle(String kind) {
         switch (kind) {
-            case "pack" -> reloader.check();
+            case "pack" -> reloader.checkNow();
             case "connector" -> connectors.scan();
             default -> folder.reload();
         }

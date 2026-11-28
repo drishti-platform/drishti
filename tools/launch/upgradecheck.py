@@ -30,6 +30,7 @@ from pathlib import Path
 
 import procs
 import pylibs
+import settingsfile  # noqa: E402  (tools/, on the path through procs)
 from procs import LaunchError, say
 
 OK, TODO, FAIL = "ok", "todo", "fail"
@@ -102,20 +103,12 @@ def same_prefix(a: str, b: str) -> bool:
     return prefix(a) == prefix(b)
 
 
-#: the one list of profile names (shared with the server and the console), under a release's home
-NAMES = Path("config") / "profiles" / "profile-names.json"
-
-
 def profile(add, keys: dict, new: Path) -> str:
     """The profile name of the site's settings (``drishti.profile``, ``DRISHTI_PROFILE``) by the new release's one list of names (this tool's
     own when the new release has none): ``production``, ``demo`` or ``development``; a name outside the list is a FAIL (the new release refuses
     to start with it) and counts as production here, so its production checks still run."""
     raw = (keys.get("drishti.profile") or os.environ.get("DRISHTI_PROFILE") or "").strip().lower()
-    f = new / NAMES if (new / NAMES).is_file() else Path(__file__).resolve().parents[2] / NAMES
-    spelt = {}
-    for name, other in json.loads(f.read_text(encoding="utf-8"))["names"].items():
-        spelt[name.lower()] = name.lower()
-        spelt.update({str(x).strip().lower(): name.lower() for x in other})
+    spelt = settingsfile.profile_spellings(new)
     if raw not in spelt:
         add(FAIL, f"drishti.profile is {raw!r}, which is not a profile name: the new release refuses to start with it. Known: "
                   f"{', '.join(sorted(set(spelt.values())))} (and {', '.join(repr(k) for k in sorted(spelt) if k not in spelt.values())}). Fix it in the site settings")

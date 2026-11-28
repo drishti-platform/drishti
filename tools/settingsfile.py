@@ -38,6 +38,30 @@ profile_path, pop_profile, with_profiles, home_value = _INI.profile_path, _INI.p
 server_url = _INI.server_url
 names_home = _INI.names_home   # the one test of "this settings file is this checkout's" (the tools and the console)
 
+#: the one list of profile names (shared with the server, built into its jar, and the console), under an install's home
+PROFILE_NAMES = Path("config") / "profiles" / "profile-names.json"
+
+
+def profile_spellings(home: Path | None = None) -> dict[str, str]:
+    """Every accepted spelling of a profile name (lower case) to the name, from ``<home>/config/profiles/profile-names.json`` (this
+    checkout's when ``home`` has none): the tools' one reader of the list."""
+    import json
+    f = Path(home) / PROFILE_NAMES if home is not None and (Path(home) / PROFILE_NAMES).is_file() else Path(__file__).resolve().parents[1] / PROFILE_NAMES
+    out: dict[str, str] = {}
+    for name, other in json.loads(f.read_text(encoding="utf-8"))["names"].items():
+        out[name.lower()] = name.lower()
+        out.update({str(x).strip().lower(): name.lower() for x in other})
+    return out
+
+
+def profile_of(keys: dict) -> str:
+    """The profile the settings name (``drishti.profile``, else ``DRISHTI_PROFILE``): its name by the one list, or the text as typed when the
+    list does not know it (the server and the console refuse it)."""
+    import os
+    raw = (keys.get("drishti.profile") or os.environ.get("DRISHTI_PROFILE") or "").strip().lower()
+    return profile_spellings().get(raw, raw)
+
+
 #: what a command that talks to a server says when nothing names one: there is no implicit server (owner rule: no implicit targets)
 NO_SERVER = ("no server named: give --server, set DRISHTI_SERVER, or name it in the settings file (console.backend.url, or a profile's "
              "server.port); there is no default server")

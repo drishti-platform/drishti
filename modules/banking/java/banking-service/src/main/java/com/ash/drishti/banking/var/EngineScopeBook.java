@@ -17,6 +17,8 @@ package com.ash.drishti.banking.var;
 
 import com.ash.drishti.banking.compute.var.ScopeResolver;
 import com.ash.drishti.compute.vector.OrdinalSet;
+import com.ash.drishti.kernel.api.services.EngineAnswer;
+import com.ash.drishti.kernel.api.services.EngineTable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -31,7 +33,7 @@ import java.util.Map;
  * host's resolver reads. The scope grammar, the saved and system baskets and the resolution are Drishti's; the rows, their order and the
  * positions the rules derive are the engine's. The ordinals the resolver gives are the row set the engine path asks with.
  */
-final class EngineScopeBook implements ScopeResolver.Book {
+final class EngineScopeBook implements ScopeResolver.Book, EngineAnswer.Sized {
 
     private final String[] trades;
     private final int[] positionOf;
@@ -55,96 +57,108 @@ final class EngineScopeBook implements ScopeResolver.Book {
     final Map<String, String> levels = new HashMap<>();
     final Map<String, List<String>> children = new HashMap<>();
 
-    EngineScopeBook(Map<String, Object> answer) {
-        List<Map<String, Object>> idx = VarEnginePath.rows(answer, "scope-index");
-        int n = idx.size();
+    /** About the bytes the book holds (the host's answer cache counts it with the index answer it is shaped from). */
+    private final long bytes;
+
+    /** The book of an index answer, its tables read in place (no row boxed). */
+    EngineScopeBook(EngineAnswer answer) {
+        EngineTable idx = answer.table("scope-index");
+        int n = idx == null ? 0 : idx.rows();
         trades = new String[n];
         positionOf = new int[n];
         supplied = new boolean[n];
         cancelled = new boolean[n];
         String[] cpty = new String[n];
         String[] le = new String[n];
-        for (Map<String, Object> r : idx) {
-            int o = ((Number) r.get("ORDINAL")).intValue();
-            trades[o] = String.valueOf(r.get("TRADE_ID"));
-            positionOf[o] = ((Number) r.get("POSITION")).intValue();
-            supplied[o] = Boolean.TRUE.equals(r.get("SUPPLIED"));
-            cancelled[o] = Boolean.TRUE.equals(r.get("CANCELLED"));
-            cpty[o] = (String) r.get("COUNTERPARTY");
-            le[o] = (String) r.get("LEGAL_ENTITY");
+        for (int r = 0; r < n; r++) {
+            int o = (int) idx.integer("ORDINAL", r);
+            trades[o] = String.valueOf(idx.value("TRADE_ID", r));
+            positionOf[o] = (int) idx.integer("POSITION", r);
+            supplied[o] = !idx.isNull("SUPPLIED", r) && idx.flag("SUPPLIED", r);
+            cancelled[o] = !idx.isNull("CANCELLED", r) && idx.flag("CANCELLED", r);
+            cpty[o] = idx.text("COUNTERPARTY", r);
+            le[o] = idx.text("LEGAL_ENTITY", r);
         }
         tradeTexts.put("COUNTERPARTY", cpty);
         tradeTexts.put("LEGAL_ENTITY", le);
+        long b = 256 + 120L * n;
         for (int o = 0; o < n; o++) {
             tradeExact.putIfAbsent(trades[o], o);
             tradeUpper.putIfAbsent(trades[o].toUpperCase(Locale.ROOT), o);
         }
-        List<Map<String, Object>> pos = VarEnginePath.rows(answer, "scope-positions");
-        positionIds = new String[pos.size()];
-        positionRuns = new int[pos.size()][];
-        for (Map<String, Object> r : pos) {
-            int p = ((Number) r.get("POSITION")).intValue();
-            positionIds[p] = String.valueOf(r.get("POSITION_ID"));
-            positionRuns[p] = ints(r.get("RUNS"));
+        EngineTable pos = answer.table("scope-positions");
+        int np = pos == null ? 0 : pos.rows();
+        positionIds = new String[np];
+        positionRuns = new int[np][];
+        for (int r = 0; r < np; r++) {
+            int p = (int) pos.integer("POSITION", r);
+            positionIds[p] = String.valueOf(pos.value("POSITION_ID", r));
+            positionRuns[p] = ints(pos.list("RUNS", r));
             positionExact.putIfAbsent(positionIds[p], p);
             positionUpper.putIfAbsent(positionIds[p].toUpperCase(Locale.ROOT), p);
+            b += 160 + 4L * positionRuns[p].length;
         }
-        positionValues = new ArrayList<>();
-        for (int p = 0; p < positionIds.length; p++) {
+        positionValues = new ArrayList<>(np);
+        for (int p = 0; p < np; p++) {
             positionValues.add(new HashMap<>());
         }
-        for (Map<String, Object> r : VarEnginePath.rows(answer, "scope-position-values")) {
-            int p = ((Number) r.get("POSITION")).intValue();
-            String c = String.valueOf(r.get("COLUMN"));
-            Object v = r.get("TEXT") != null ? r.get("TEXT") : r.get("NUMBER") == null ? null : ((Number) r.get("NUMBER")).doubleValue();
+        EngineTable pv = answer.table("scope-position-values");
+        for (int r = 0; pv != null && r < pv.rows(); r++) {
+            int p = (int) pv.integer("POSITION", r);
+            String c = String.valueOf(pv.value("COLUMN", r));
+            Object v = !pv.isNull("TEXT", r) ? pv.text("TEXT", r) : pv.isNull("NUMBER", r) ? null : (Object) pv.number("NUMBER", r);
             if (v instanceof String t && c.equals("TAGS")) {              // a list column, written a|b|c (Columns.value)
                 v = t.isEmpty() ? List.of() : List.of(t.split("\\|"));
             }
             positionValues.get(p).put(c, v);
+            b += 96;
         }
-        for (Map<String, Object> r : VarEnginePath.rows(answer, "scope-nodes")) {
-            String id = String.valueOf(r.get("NODE_ID"));
-            int[] runs = ints(r.get("RUNS"));
-            OrdinalSet.Builder b = new OrdinalSet.Builder();
+        EngineTable nodeTable = answer.table("scope-nodes");
+        for (int r = 0; nodeTable != null && r < nodeTable.rows(); r++) {
+            String id = String.valueOf(nodeTable.value("NODE_ID", r));
+            int[] runs = ints(nodeTable.list("RUNS", r));
+            OrdinalSet.Builder ob = new OrdinalSet.Builder();
             for (int i = 0; i + 1 < runs.length; i += 2) {
-                b.addRange(runs[i], runs[i + 1]);
+                ob.addRange(runs[i], runs[i + 1]);
             }
-            nodes.put(id, b.build());
-            if (r.get("LIMIT") instanceof Number l) {
-                nodeLimits.put(id, l.doubleValue());
+            nodes.put(id, ob.build());
+            if (!nodeTable.isNull("LIMIT", r)) {
+                nodeLimits.put(id, nodeTable.number("LIMIT", r));
             }
-            names.put(id, r.get("NAME") == null ? id : String.valueOf(r.get("NAME")));
-            if (r.get("LEVEL") != null) {
-                levels.put(id, String.valueOf(r.get("LEVEL")));
+            names.put(id, nodeTable.isNull("NAME", r) ? id : String.valueOf(nodeTable.value("NAME", r)));
+            if (!nodeTable.isNull("LEVEL", r)) {
+                levels.put(id, String.valueOf(nodeTable.value("LEVEL", r)));
             }
-            if (r.get("PARENT") != null) {
-                children.computeIfAbsent(String.valueOf(r.get("PARENT")), k -> new ArrayList<>()).add(id);
+            if (!nodeTable.isNull("PARENT", r)) {
+                children.computeIfAbsent(String.valueOf(nodeTable.value("PARENT", r)), k -> new ArrayList<>()).add(id);
+            } else {
+                roots.putIfAbsent(String.valueOf(nodeTable.value("HIERARCHY", r)), id);
             }
-            if (r.get("PARENT") == null) {
-                roots.putIfAbsent(String.valueOf(r.get("HIERARCHY")), id);
-            }
+            b += 400 + 4L * runs.length;
         }
-        for (Map<String, Object> r : VarEnginePath.rows(answer, "scope-words")) {
-            words.put(String.valueOf(r.get("WORD")), String.valueOf(r.get("HIERARCHY")));
+        EngineTable w = answer.table("scope-words");
+        for (int r = 0; w != null && r < w.rows(); r++) {
+            words.put(String.valueOf(w.value("WORD", r)), String.valueOf(w.value("HIERARCHY", r)));
         }
-        for (Map<String, Object> r : VarEnginePath.rows(answer, "scope-limits")) {
-            basketLimits.put(String.valueOf(r.get("BASKET_ID")), r.get("LIMIT") instanceof Number l ? l.doubleValue() : Double.NaN);
+        EngineTable lim = answer.table("scope-limits");
+        for (int r = 0; lim != null && r < lim.rows(); r++) {
+            basketLimits.put(String.valueOf(lim.value("BASKET_ID", r)), lim.isNull("LIMIT", r) ? Double.NaN : lim.number("LIMIT", r));
         }
+        this.bytes = b;
     }
 
-    private static int[] ints(Object list) {
-        if (list instanceof double[] d) {
-            int[] out = new int[d.length];
-            for (int i = 0; i < d.length; i++) {
-                out[i] = (int) d[i];
-            }
-            return out;
+    @Override
+    public long bytes() {
+        return bytes;
+    }
+
+    private static int[] ints(double[] d) {
+        if (d == null) {
+            return new int[0];
         }
-        Collection<?> c = list instanceof Collection<?> l ? l : List.of();
-        int[] out = new int[c.size()];
-        int i = 0;
-        for (Object x : c) {
-            out[i++] = ((Number) x).intValue();
+        int[] out = new int[d.length];
+        for (int i = 0; i < d.length; i++) {
+            out[i] = (int) d[i];
         }
         return out;
     }

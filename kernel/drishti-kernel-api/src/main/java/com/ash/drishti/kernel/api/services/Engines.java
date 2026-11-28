@@ -20,8 +20,8 @@ import java.util.Map;
 
 /**
  * The hosted engines (docs/architecture/ENGINES_IN_DRISHTI.md), asked in process as {@code POST /api/v1/engines/{id}/output} answers
- * them: the same access, row rules, masks, licence and audit, for {@code p}. A module asks by engine id and output name and reads plain
- * values back; it never names an engine's type (R2_CUT_PLAN section 2).
+ * them: the same access, row rules, masks, licence and audit, for {@code p}. A module asks by engine id and output name and reads the
+ * answer's tables as columns ({@link EngineAnswer}); it never names an engine's type (R2_CUT_PLAN section 2).
  */
 public interface Engines {
 
@@ -29,14 +29,13 @@ public interface Engines {
     boolean running(String engine);
 
     /**
-     * An answer as plain data: {@code status}, {@code tables} (each {@code name}, {@code columns}: {@code [{name, type, ...}]}, {@code key},
-     * {@code rows}: each row's cells in the columns' order), {@code missing} (words), {@code stamp}, {@code notes}. Doubles are the engine's, unrounded.
+     * An answer as the person may see it, read in place ({@link EngineAnswer}). Doubles are the engine's, unrounded.
      *
      * @throws Kernel.Refused the engine is not installed, not running, refuses the ask, or the person may not open it
      */
-    Map<String, Object> ask(Person p, String engine, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot);
+    EngineAnswer ask(Person p, String engine, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot);
 
     /** As {@link #ask(Person, String, List, Map, Map)}, for a module's request in hand (its {@code Principal}). */
-    Map<String, Object> ask(com.ash.drishti.kernel.api.security.Principal p, String engine, List<String> outputs, Map<String, Object> params,
+    EngineAnswer ask(com.ash.drishti.kernel.api.security.Principal p, String engine, List<String> outputs, Map<String, Object> params,
             Map<String, String> snapshot);
 }

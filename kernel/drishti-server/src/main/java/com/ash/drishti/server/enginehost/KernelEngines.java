@@ -18,12 +18,12 @@ package com.ash.drishti.server.enginehost;
 import com.ash.drishti.server.engines.EngineRegistry;
 import com.ash.drishti.enginehost.EngineHost;
 import com.ash.drishti.enginehost.HostedEngine;
+import com.ash.drishti.kernel.api.services.EngineAnswer;
 import com.ash.drishti.kernel.api.services.Engines;
 import com.ash.drishti.kernel.api.services.Kernel;
 import com.ash.drishti.kernel.api.services.Person;
 import com.ash.drishti.packs.PackRegistry;
 import com.ash.drishti.server.security.Entitlements;
-import com.ash.engine.Answer;
 import com.ash.engine.EngineException;
 import com.ash.engine.RequestClass;
 import java.util.List;
@@ -32,7 +32,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * The kernel's engines service ({@link Engines}): a module's in-process ask, answered exactly as {@code POST /api/v1/engines/{id}/output}
- * answers it ({@link EngineHostController}): the caller's access, row rules and masks, the engine registry's gate, the plain shape.
+ * answers it ({@link EngineHostController}): the caller's access, row rules and masks, the engine registry's gate; the answer read in
+ * place ({@link HostedAnswer}), what the module shapes from it kept in the host's one answer cache.
  */
 @Component
 public class KernelEngines implements Engines {
@@ -55,19 +56,18 @@ public class KernelEngines implements Engines {
     }
 
     @Override
-    public Map<String, Object> ask(Person p, String engine, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot) {
+    public EngineAnswer ask(Person p, String engine, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot) {
         return ask(com.ash.drishti.server.kernelapi.RequestPerson.of(p).principal(), engine, outputs, params, snapshot);
     }
 
     @Override
-    public Map<String, Object> ask(com.ash.drishti.kernel.api.security.Principal p, String engine, List<String> outputs, Map<String, Object> params,
+    public EngineAnswer ask(com.ash.drishti.kernel.api.security.Principal p, String engine, List<String> outputs, Map<String, Object> params,
             Map<String, String> snapshot) {
         try {
             HostedEngine h = host.require(engine);
             try (AutoCloseable counted = registry.known(engine) ? registry.enter(engine) : () -> { }) {
-                Answer a = h.ask(new HostedEngine.Ask(outputs, params, snapshot, RequestClass.INTERACTIVE, false),
-                        new PrincipalAccess(p, entitlements, packs));
-                return com.ash.drishti.enginehost.AnswerShapes.plain(a);
+                return new HostedAnswer(h.answer(new HostedEngine.Ask(outputs, params, snapshot, RequestClass.INTERACTIVE, false),
+                        new PrincipalAccess(p, entitlements, packs)));
             }
         } catch (EngineException e) {
             throw new Kernel.Refused(EngineHostController.status(e).value(), e.code(), e.getMessage());

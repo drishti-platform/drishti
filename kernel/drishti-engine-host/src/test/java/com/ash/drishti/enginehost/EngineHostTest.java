@@ -121,17 +121,38 @@ class EngineHostTest {
             assertThat(rows(again)).containsExactlyElementsOf(rows(first));
             host.poll();
             assertThat(gt.stats().sinceStart().asked()).as("the engine asked once").isEqualTo(1);
-            assertThat(gt.answerCache()).containsExactly(1L, 256L, 1L, 1L);   // entries, limit, hits, misses
+            assertThat(gt.answerCache()[0]).as("entries").isEqualTo(1L);
+            assertThat(gt.answerCache()[1]).as("bytes").isPositive();
+            assertThat(gt.answerCache()[2]).as("hits").isEqualTo(1L);
+            assertThat(gt.answerCache()[3]).as("misses").isEqualTo(1L);
+            // what a reader derives from an answer is kept with it: built once, read by the next ask of the same answer
+            HostedEngine.Answered kept = gt.answer(TOTALS, ANN);
+            Object shaped = new Object();
+            assertThat(kept.keep("groups", shaped, 100)).isSameAs(shaped);
+            assertThat(gt.answer(TOTALS, ANN).kept("groups")).as("the same answer, the same shaped value").isSameAs(shaped);
+            assertThat(gt.answerCache()[1]).as("the shaped value counted").isGreaterThan(100L);
             // another viewer (another row rule): another stamp, the engine asked, the rows the viewer's own
             ViewerAccess bob = Fixtures.viewer("bob", Map.of("item", Fixtures.eq("GROUP", "A")), Set.of());
             assertThat(rows(gt.ask(TOTALS, bob))).containsExactly(new Object[] {"A", 2L, 3L, 4.0});
+            assertThat(gt.answer(TOTALS, bob).kept("groups")).as("another viewer never reaches a value shaped from another's rows").isNull();
             assertThat(rows(gt.ask(TOTALS, ANN))).hasSize(2);
-            assertThat(gt.answerCache()[2]).isEqualTo(2L);
+            assertThat(gt.answerCache()[2]).isEqualTo(5L);
             assertThat(gt.answerCache()[3]).isEqualTo(2L);
-            gt.purgeAnswers();
+            gt.purgeAnswers(null);
             gt.ask(TOTALS, ANN);
             assertThat(gt.answerCache()[3]).as("after a purge the engine answers again").isEqualTo(3L);
+            gt.purgeAnswers(java.time.LocalDate.parse("2001-01-01"));
+            assertThat(gt.answerCache()[0]).as("a purge of another business date keeps them").isPositive();
         }
+    }
+
+    @Test
+    void anAuditLineNamesALongListByItsCountNeverItsValues() {
+        java.util.SortedMap<String, Object> params = new java.util.TreeMap<>();
+        params.put("rows", java.util.stream.IntStream.range(0, 200_000).boxed().toList());
+        params.put("parts", List.of(1, 2, 3));
+        params.put("window", 250);
+        assertThat(HostedEngine.auditParams(params)).isEqualTo("{parts=[1, 2, 3], rows=list:200000 items, window=250}");
     }
 
     @Test

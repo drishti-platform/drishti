@@ -21,6 +21,7 @@ import com.ash.drishti.api.error.ErrorCode;
 import com.ash.drishti.banking.compute.simm.SimmChoices;
 import com.ash.drishti.banking.frtb.FrtbData;
 import com.ash.drishti.kernel.api.security.Principal;
+import com.ash.drishti.kernel.api.services.EngineAnswer;
 import com.ash.drishti.kernel.api.services.Engines;
 import com.ash.drishti.kernel.api.services.Kernel;
 import java.time.LocalDate;
@@ -153,9 +154,9 @@ public class SimmEnginePath {
         prm.put("concentration", ch.concentration());
         prm.put("hvr", ch.hvr());
         prm.put("direction", "collect");
-        Map<String, Object> c = call(p, prm, day.date());
+        EngineAnswer c = call(p, prm, day.date());
         prm.put("direction", "post");
-        Map<String, Object> po = call(p, prm, day.date());
+        EngineAnswer po = call(p, prm, day.date());
         Map<String, Object> tc = one(c, "simm-total", s);
         Map<String, Object> tp = one(po, "simm-total", s);
         Map<String, Object> ver = one(c, "simm-version", s);
@@ -249,7 +250,7 @@ public class SimmEnginePath {
         return v instanceof Number n && Double.isFinite(n.doubleValue()) ? n.doubleValue() : null;
     }
 
-    private static Map<String, Double> byProduct(Map<String, Object> answer, String scope) {
+    private static Map<String, Double> byProduct(EngineAnswer answer, String scope) {
         Map<String, Double> out = new LinkedHashMap<>();
         for (Map<String, Object> r : rows(answer, "simm-product")) {
             if (scope.equals(r.get("SCOPE"))) {
@@ -259,24 +260,23 @@ public class SimmEnginePath {
         return out;
     }
 
-    private static Map<String, Object> one(Map<String, Object> answer, String table, String scope) {
+    private static Map<String, Object> one(EngineAnswer answer, String table, String scope) {
         for (Map<String, Object> r : rows(answer, table)) {
             if (scope.equals(r.get("SCOPE"))) {
                 return r;
             }
         }
-        @SuppressWarnings("unchecked")
-        List<Object> miss = (List<Object>) answer.getOrDefault("missing", List.of());
+        List<String> miss = answer.missing();
         throw new DrishtiException(ErrorCode.SIMM_NOT_INSTALLED, "the engine " + ENGINE + " answered no " + table + " of " + scope
                 + (miss.isEmpty() ? "" : " (not found: " + miss + ")"));
     }
 
-    private static List<Map<String, Object>> rows(Map<String, Object> answer, String name) {
+    private static List<Map<String, Object>> rows(EngineAnswer answer, String name) {
         List<Map<String, Object>> r = com.ash.drishti.banking.exposure.ExposureEnginePath.rows(answer, name);
         return r == null ? List.of() : r;
     }
 
-    private Map<String, Object> call(Principal p, Map<String, Object> params, LocalDate date) {
+    private EngineAnswer call(Principal p, Map<String, Object> params, LocalDate date) {
         Engines e = engines.getIfAvailable();
         if (e == null || !e.running(ENGINE)) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " is not running here (drishti-risk-ccr in lib/engines and "

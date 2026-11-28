@@ -18,6 +18,8 @@ package com.ash.drishti.banking.exposure;
 import com.ash.drishti.api.error.DrishtiException;
 import com.ash.drishti.api.error.ErrorCode;
 import com.ash.drishti.kernel.api.security.Principal;
+import com.ash.drishti.kernel.api.services.EngineAnswer;
+import com.ash.drishti.kernel.api.services.EngineTable;
 import com.ash.drishti.kernel.api.services.Engines;
 import com.ash.drishti.kernel.api.services.Kernel;
 import java.time.LocalDate;
@@ -119,7 +121,7 @@ public class ExposureEnginePath {
      */
     public Map<String, Object> scope(Principal p, String scope, LocalDate date, Measures m) {
         String set = nettingSet(scope);
-        Map<String, Object> a = ask(p, scope, date, m, set == null ? List.of("exposure-summary", "exposure-profile")
+        EngineAnswer a = ask(p, scope, date, m, set == null ? List.of("exposure-summary", "exposure-profile")
                 : List.of("exposure-summary", "exposure-profile", "netting-set-collateral"));
         List<Map<String, Object>> summary = rows(a, "exposure-summary");
         Map<String, Object> s = summary == null || summary.isEmpty() ? null : summary.get(0);
@@ -158,7 +160,7 @@ public class ExposureEnginePath {
         if (date == null) {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "the engine path needs the business date: give asOf");
         }
-        Map<String, Object> a = call(p, List.of("counterparty-summary"), m.params(), date);   // every counterparty: no scope
+        EngineAnswer a = call(p, List.of("counterparty-summary"), m.params(), date);   // every counterparty: no scope
         List<Map<String, Object>> rows = rows(a, "counterparty-summary");
         if (rows == null) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no counterparty exposure on " + date + missing(a));
@@ -205,7 +207,7 @@ public class ExposureEnginePath {
         params.put("notional", cmd.notional() == null ? 0.0 : cmd.notional());
         params.put("reverse", cmd.reverse());
         params.put("netting-set", cmd.nettingSet() == null ? "" : cmd.nettingSet());
-        Map<String, Object> a = call(p, List.of("pre-deal", "pre-deal-buckets"), params, date);
+        EngineAnswer a = call(p, List.of("pre-deal", "pre-deal-buckets"), params, date);
         List<Map<String, Object>> rows = rows(a, "pre-deal");
         if (rows == null || rows.isEmpty()) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no pre-deal check of " + cmd.counterparty() + " on "
@@ -291,7 +293,7 @@ public class ExposureEnginePath {
                     + "answered there (path=in-tree)");
         }
         long t0 = System.nanoTime();
-        Map<String, Object> a = ask(p, scope, date, m, List.of("scope-resolution", "exposure-summary", "exposure-profile", "exposure-flags", "exposure-run"));
+        EngineAnswer a = ask(p, scope, date, m, List.of("scope-resolution", "exposure-summary", "exposure-profile", "exposure-flags", "exposure-run"));
         List<Map<String, Object>> res = rows(a, "scope-resolution");
         List<Map<String, Object>> summary = rows(a, "exposure-summary");
         if (res == null || res.isEmpty() || summary == null || summary.isEmpty()) {
@@ -333,7 +335,7 @@ public class ExposureEnginePath {
         prm.put("figure", fig);
         prm.put("at", i);
         groups(scope, date, prm);
-        Map<String, Object> c = call(p, List.of("exposure-contributions"), prm, date);
+        EngineAnswer c = call(p, List.of("exposure-contributions"), prm, date);
         List<Map<String, Object>> cs = rows(c, "exposure-contributions");
         if (cs == null) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no contributions of " + scope + " on " + date + missing(c));
@@ -397,7 +399,7 @@ public class ExposureEnginePath {
         Map<String, Object> prm = new LinkedHashMap<>();
         prm.put("confidence", ask.q());
         prm.put("collateral", ask.collateral());
-        Map<String, Object> a = call(p, List.of("exposure-tree", "exposure-tree-ee", "exposure-run"), prm, date);
+        EngineAnswer a = call(p, List.of("exposure-tree", "exposure-tree-ee", "exposure-run"), prm, date);
         List<Map<String, Object>> nodes = rows(a, "exposure-tree");
         List<Map<String, Object>> ees = rows(a, "exposure-tree-ee");
         List<Map<String, Object>> run = rows(a, "exposure-run");
@@ -554,7 +556,7 @@ public class ExposureEnginePath {
         prm.put("standalone", false);
         prm.put("confidence", ask.q());
         prm.put("collateral", ask.collateral());
-        Map<String, Object> r0 = call(p, List.of("scope-resolution", "exposure-run"), Map.of("scope", scope), d);
+        EngineAnswer r0 = call(p, List.of("scope-resolution", "exposure-run"), Map.of("scope", scope), d);
         List<Map<String, Object>> res = rows(r0, "scope-resolution");
         List<Map<String, Object>> run = rows(r0, "exposure-run");
         if (res == null || res.isEmpty() || run == null || run.isEmpty()) {
@@ -567,7 +569,7 @@ public class ExposureEnginePath {
                     ? "no exposure paths for the netting set " + id + " on " + d + " (the run " + runId + " does not cover it)"
                     : "no exposure paths for the counterparty " + id + " on " + d + " (the run " + runId + " covers none of its netting sets)");
         }
-        Map<String, Object> a = call(p, List.of("exposure-summary", "exposure-profile", "exposure-flags", "exposure-by-netting-set"), prm, d);
+        EngineAnswer a = call(p, List.of("exposure-summary", "exposure-profile", "exposure-flags", "exposure-by-netting-set"), prm, d);
         List<Map<String, Object>> summary = rows(a, "exposure-summary");
         List<Map<String, Object>> points = rows(a, "exposure-profile");
         List<Map<String, Object>> flags = rows(a, "exposure-flags");
@@ -582,7 +584,7 @@ public class ExposureEnginePath {
         if (has99) {
             Map<String, Object> prm99 = new LinkedHashMap<>(prm);
             prm99.put("confidence", 0.99);
-            Map<String, Object> b = call(p, List.of("exposure-summary", "exposure-profile"), prm99, d);
+            EngineAnswer b = call(p, List.of("exposure-summary", "exposure-profile"), prm99, d);
             s99 = rows(b, "exposure-summary");
             p99 = rows(b, "exposure-profile");
         }
@@ -632,7 +634,7 @@ public class ExposureEnginePath {
      * confidence, collateral model, EPE, peak PFE, netting sets, trades, time and what was read), with {@code version=engine} (the host
      * loaded no date of its own) and {@code path=engine}; the hidden netting sets are the engine's (the viewer's book), not counted here.
      */
-    private static void audit(ExposureService es, Principal p, Map<String, Object> a, LocalDate date, Measures m, String extra, long t0) {
+    private static void audit(ExposureService es, Principal p, EngineAnswer a, LocalDate date, Measures m, String extra, long t0) {
         if (es == null) {
             return;
         }
@@ -742,11 +744,11 @@ public class ExposureEnginePath {
             prm.put("scope-members", members);
         }
         Principal server = new Principal(ExposureOfficialStore.OWNER, List.of("*"));
-        Map<String, Object> a = call(server, List.of("exposure-official", "exposure-official-profile"), prm, d.date());
+        EngineAnswer a = call(server, List.of("exposure-official", "exposure-official-profile"), prm, d.date());
         Map<String, Object> tp = new LinkedHashMap<>();
         tp.put("confidence", ask.q());
         tp.put("collateral", ask.collateral());
-        Map<String, Object> ta = call(server, List.of("exposure-trade-ee"), tp, d.date());
+        EngineAnswer ta = call(server, List.of("exposure-trade-ee"), tp, d.date());
         List<Map<String, Object>> rows = rows(a, "exposure-official");
         List<Map<String, Object>> prof = rows(a, "exposure-official-profile");
         List<Map<String, Object>> tee = rows(ta, "exposure-trade-ee");
@@ -853,14 +855,14 @@ public class ExposureEnginePath {
         prm.put("confidence", ask.q());
         prm.put("collateral", ask.collateral());
         groups(scope, d, prm);
-        Map<String, Object> a = call(p, List.of("exposure-summary", "exposure-profile", "exposure-flags", "exposure-by-netting-set", "scope-resolution"),
+        EngineAnswer a = call(p, List.of("exposure-summary", "exposure-profile", "exposure-flags", "exposure-by-netting-set", "scope-resolution"),
                 prm, d);
         Map<String, Map<String, Object>> at = new LinkedHashMap<>();         // the summary and profile at 95% and 99% (the profile's PFE columns)
         Map<String, List<Map<String, Object>>> prof = new LinkedHashMap<>();
         for (double q : new double[] {0.95, 0.99}) {
             Map<String, Object> pq = new LinkedHashMap<>(prm);
             pq.put("confidence", q);
-            Map<String, Object> aq = call(p, List.of("exposure-summary", "exposure-profile"), pq, d);
+            EngineAnswer aq = call(p, List.of("exposure-summary", "exposure-profile"), pq, d);
             prof.put(q == 0.95 ? "pfe95" : "pfe99", rows(aq, "exposure-profile"));
             at.put(q == 0.95 ? "s95" : "s99", rows(aq, "exposure-summary").get(0));
         }
@@ -996,7 +998,7 @@ public class ExposureEnginePath {
         List<String> outs = new ArrayList<>(List.of("scope-resolution", "exposure-summary", "exposure-flags", "exposure-run", "exposure-distribution",
                 "exposure-histogram"));
         outs.add("exposure-fan");
-        Map<String, Object> a = call(p, outs, prm, date);
+        EngineAnswer a = call(p, outs, prm, date);
         List<Map<String, Object>> res = rows(a, "scope-resolution");
         List<Map<String, Object>> dist = rows(a, "exposure-distribution");
         List<Map<String, Object>> hist = rows(a, "exposure-histogram");
@@ -1090,7 +1092,7 @@ public class ExposureEnginePath {
         {"INDEPENDENT_AMOUNT", "independentAmount"}, {"COLLATERAL_HELD", "heldToday"}, {"IM_HELD", "imHeld"}, {"MTM", "netMtm"}};
 
     /** The in-tree {@code collateral} block's terms and holdings the engine holds, for one netting set; null when the engine has no row for it. */
-    private static Map<String, Object> collateral(Map<String, Object> a, String set) {
+    private static Map<String, Object> collateral(EngineAnswer a, String set) {
         List<Map<String, Object>> t = rows(a, "netting-set-collateral");
         Map<String, Object> r = t == null ? null : t.stream().filter(x -> set.equals(String.valueOf(x.get("NETTING_SET")))).findFirst().orElse(null);
         if (r == null) {
@@ -1109,7 +1111,7 @@ public class ExposureEnginePath {
 
     /** A scope's profile at the primary dates through the engine: {@code scope}, {@code businessDate}, {@code profile}, {@code path: engine}. */
     public Map<String, Object> profile(Principal p, String scope, LocalDate date, Measures m) {
-        Map<String, Object> a = ask(p, scope, date, m, List.of("exposure-profile"));
+        EngineAnswer a = ask(p, scope, date, m, List.of("exposure-profile"));
         if (rows(a, "exposure-profile") == null) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + ENGINE + " has no exposure profile of " + scope + " on " + date
                     + missing(a));
@@ -1128,7 +1130,7 @@ public class ExposureEnginePath {
     private static final String[][] POINTS = {{"EE", "ee"}, {"ENE", "ene"}, {"EEE", "eee"}, {"PFE", "pfe"}, {"EE_UNCOLL", "eeUncoll"}};
 
     /** The in-tree profile rows' keys the engine holds ({@code tenor, date, role, ee, ene, eee, pfe, eeUncoll}), each figure's exact double beside. */
-    private static List<Map<String, Object>> profileRows(Map<String, Object> a) {
+    private static List<Map<String, Object>> profileRows(EngineAnswer a) {
         List<Map<String, Object>> rows = new ArrayList<>();
         List<Map<String, Object>> t = rows(a, "exposure-profile");
         for (Map<String, Object> r : t == null ? List.<Map<String, Object>>of() : t) {
@@ -1146,7 +1148,7 @@ public class ExposureEnginePath {
         return rows;
     }
 
-    private Map<String, Object> ask(Principal p, String scope, LocalDate date, Measures m, List<String> outputs) {
+    private EngineAnswer ask(Principal p, String scope, LocalDate date, Measures m, List<String> outputs) {
         if (date == null) {
             throw new DrishtiException(ErrorCode.EXPOSURE_BAD_PARAMETER, "the engine path needs the business date: give asOf");
         }
@@ -1266,7 +1268,7 @@ public class ExposureEnginePath {
         params.put("candidates", rows);
         groups(scope, date, params);
         long t0 = System.nanoTime();
-        Map<String, Object> a = call(p, List.of("exposure-what-if", "exposure-what-if-profile"), params, date);
+        EngineAnswer a = call(p, List.of("exposure-what-if", "exposure-what-if-profile"), params, date);
         List<Map<String, Object>> w = rows(a, "exposure-what-if");
         List<Map<String, Object>> prof = rows(a, "exposure-what-if-profile");
         if (w == null || w.size() < 2 || prof == null) {
@@ -1414,7 +1416,7 @@ public class ExposureEnginePath {
         }
     }
 
-    private Map<String, Object> call(Principal p, List<String> outputs, Map<String, Object> params, LocalDate date) {
+    private EngineAnswer call(Principal p, List<String> outputs, Map<String, Object> params, LocalDate date) {
         Engines e = engines.getIfAvailable();
         if (e == null || !e.running(ENGINE)) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " is not running here (drishti-risk-ccr in lib/engines and "
@@ -1427,39 +1429,25 @@ public class ExposureEnginePath {
         }
     }
 
-    /** A table of the answer as rows by column name (the answer's rows are positional, in the columns' order); null when it is not there. */
-    @SuppressWarnings("unchecked")
-    public static List<Map<String, Object>> rows(Map<String, Object> answer, String name) {
-        for (Object t : (List<Object>) answer.getOrDefault("tables", List.of())) {
-            Map<String, Object> tm = (Map<String, Object>) t;
-            if (!name.equals(tm.get("name"))) {
-                continue;
-            }
-            List<String> names = new ArrayList<>();
-            for (Object c : (List<Object>) tm.getOrDefault("columns", List.of())) {
-                names.add(String.valueOf(((Map<String, Object>) c).get("name")));
-            }
-            List<Map<String, Object>> out = new ArrayList<>();
-            for (Object r : (List<Object>) tm.getOrDefault("rows", List.of())) {
-                Object[] cells = r instanceof Object[] x ? x : r instanceof Map<?, ?> ? null : ((List<Object>) r).toArray();
-                if (cells == null) {
-                    out.add((Map<String, Object>) r);
-                    continue;
-                }
-                Map<String, Object> rm = new LinkedHashMap<>();
-                for (int i = 0; i < names.size() && i < cells.length; i++) {
-                    rm.put(names.get(i), cells[i]);
-                }
-                out.add(rm);
-            }
-            return out;
+    /** A table of the answer as rows by column name (read from the answer's columns); null when it is not there. */
+    public static List<Map<String, Object>> rows(EngineAnswer answer, String name) {
+        EngineTable t = answer.table(name);
+        if (t == null) {
+            return null;
         }
-        return null;
+        List<String> names = t.columns();
+        List<Map<String, Object>> out = new ArrayList<>(t.rows());
+        for (int r = 0; r < t.rows(); r++) {
+            Map<String, Object> rm = new LinkedHashMap<>();
+            for (String c : names) {
+                rm.put(c, t.value(c, r));
+            }
+            out.add(rm);
+        }
+        return out;
     }
 
-    @SuppressWarnings("unchecked")
-    private static String missing(Map<String, Object> a) {
-        List<Object> m = (List<Object>) a.getOrDefault("missing", List.of());
-        return m.isEmpty() ? "" : " (not found: " + m + ")";
+    private static String missing(EngineAnswer a) {
+        return a.missing().isEmpty() ? "" : " (not found: " + a.missing() + ")";
     }
 }

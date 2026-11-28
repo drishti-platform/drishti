@@ -15,10 +15,6 @@
 # The repository content the banking package brings in (not packed itself): its packs with their connector templates
 # (the read-only templates the site's connector files are merged over), its lenses and its tutorials. Every file keeps one home.
 trim:
-- path: packs/trading
-  leave-out:
-  - tests
-  - tools
 - path: packs/market-risk
   leave-out:
   - tests

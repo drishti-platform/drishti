@@ -68,7 +68,7 @@ Every line names the setting and the fix; the console does the same (`The consol
 | P11 | The console's cookies are secure | `Secure` (`auth.secure_cookie=true`), `HttpOnly` and `SameSite=Lax` (fixed in code) | `auth.secure_cookie` is `false` | `core/production.py`; `auth_routes.py` sets the other two |
 | P12 | The console is not on the network without TLS in front | bind `127.0.0.1` behind a proxy | `server.host` is not a loopback address and `production.tls=proxy` is not declared | `core/production.py` |
 | P13 | Cross-origin calls are an allow-list | the registered embedding origins only | there is no wildcard setting to refuse | by design: `embed` origins are registered, never `*` |
-| P14 | The site folder is named and outside the release | none: you set `drishti.site.dir` (`DRISHTI_SITE_DIR`) | it is missing, is the release's configuration folder, or lies inside the release folder (server and console) | server check; `ProductionProfileTest`; `core/production.py`; `test_production_profile.py` |
+| P14 | The site folder is named and outside the release | none: you set `drishti.site.dir` (`DRISHTI_SITE_DIR`) | it is missing (server and console), is the release's configuration folder, or lies inside the release folder (server) | server check; `ProductionProfileTest`; `core/production.py`; `test_production_profile.py` |
 | P15 | Node traffic and the shared net key are encrypted | none: you state it | this node is clustered (`node.yaml` `enabled: true`) and advertises an `http://` address while `drishti.production.net-tls=mesh` (a private mesh encrypts it) is not declared | server check; `ProductionProfileTest` |
 
 The checks run before any bean is built (`kernel/drishti-server`, `com.ash.drishti.server.profile.ProductionProfile`, run by

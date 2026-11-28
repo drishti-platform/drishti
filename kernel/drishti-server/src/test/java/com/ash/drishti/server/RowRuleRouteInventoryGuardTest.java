@@ -47,7 +47,7 @@ class RowRuleRouteInventoryGuardTest {
         Map<String, String[]> listed = new LinkedHashMap<>();
         try (InputStream in = getClass().getResourceAsStream("/row-rule-route-inventory.tsv")) {
             assertThat(in).as("row-rule-route-inventory.tsv").isNotNull();
-            for (String line : new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n")) {
+            for (String line : new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\\R")) {
                 if (line.isBlank() || line.startsWith("#")) {
                     continue;
                 }
@@ -59,10 +59,10 @@ class RowRuleRouteInventoryGuardTest {
         for (String top : List.of("kernel", "modules", "compute")) {
             try (Stream<Path> files = Files.walk(root.resolve(top))) {
                 for (Path f : (Iterable<Path>) files.filter(x -> x.toString().endsWith(".java")
-                        && x.toString().contains("/src/main/")).sorted()::iterator) {
+                        && x.toString().replace('\\','/').contains("/src/main/")).sorted()::iterator) {
                     String src = Files.readString(f);
                     if (CONTROLLER.matcher(src).find()) {
-                        found.put(root.relativize(f).toString(), src);
+                        found.put(root.relativize(f).toString().replace('\\', '/'), src);
                     }
                 }
             }
@@ -104,11 +104,8 @@ class RowRuleRouteInventoryGuardTest {
     }
 
     private static Path repositoryRoot() {
-        Path p = Path.of("").toAbsolutePath();
-        while (p != null && !Files.isDirectory(p.resolve("kernel").resolve("drishti-server"))) {
-            p = p.getParent();
-        }
-        assertThat(p).as("repository root").isNotNull();
+        Path p = Path.of(com.ash.lake.tck.TestRoots.repo());
+        assertThat(Files.isDirectory(p.resolve("kernel").resolve("drishti-server"))).as("repository root " + p).isTrue();
         return p;
     }
 }

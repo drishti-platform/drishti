@@ -84,7 +84,15 @@ drishti:
 ```
 
 The schema is the engine specification's section 9. The file never names a JAR or a class. Site-wide settings:
-`drishti.engine-lib.path`, `drishti.engine-lib.trust` (`folder` or `pinned`), `drishti.engine-lib.licence`, `drishti.engine-lib.poll-seconds`.
+`drishti.engine-lib.path`, `drishti.engine-lib.trust` (`folder` or `pinned`), `drishti.engine-lib.licence`, `drishti.engine-lib.poll-seconds`, `drishti.engine-lib.answers` (the host's answer cache, below).
+
+**The host's answer cache** (engine specification 13 rule 6): the host keeps each engine's final answers by their stamp (the engine's
+version, descriptor and options, the input stamps of the session that answered, the request with the caller's visibility signature), so
+a question asked again over the same data, by a caller who sees the same rows, is answered from the cache without asking the engine. The
+stamp is the asking session's own (never another viewer's); a new data version opens a new session whose stamps differ, and a start or an
+options change empties the cache, so a kept answer is never stale. It is the one result cache of the engine path, owned by the host and listed
+with the server's other caches (Admin → Caches, `engines.answers`: entries, hits, misses, purge); an engine keeps no answer cache of its
+own. A published ask always runs.
 
 ## 4. Inputs
 

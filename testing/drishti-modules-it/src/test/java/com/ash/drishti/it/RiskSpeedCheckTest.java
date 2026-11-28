@@ -132,6 +132,10 @@ class RiskSpeedCheckTest {
         for (JsonNode n : server.get("/api/v1/risk/var/tree?hierarchy=MGMT&asOf=" + DATE + "&path=in-tree").path("nodes")) {
             (n.path("level").asText().equals("book") ? leaves : nodes).add(n.path("id").asText());   // books expand into positions: the leaves
         }
+        int innerAsked = Integer.getInteger("speed.nodes", nodes.size());   // a profiling run may ask fewer inner nodes (the scripted run: all)
+        if (innerAsked < nodes.size()) {
+            nodes = new ArrayList<>(nodes.subList(0, innerAsked));
+        }
         out.put("nodes", nodes.size());
         out.put("leaves", leaves.size());
         List<String> differ = new ArrayList<>();

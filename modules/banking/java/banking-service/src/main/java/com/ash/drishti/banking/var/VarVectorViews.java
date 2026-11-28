@@ -68,8 +68,14 @@ public class VarVectorViews implements VectorViews {
     @Override
     public Object view(String kind, String name, LocalDate date) {
         VarService svc = service.getIfAvailable();
-        if (!VIEW.equals(name) || date == null || svc == null || !on() || !svc.props().kinds().vector().equals(kind)
+        if (!VIEW.equals(name) || date == null || svc == null || !svc.props().kinds().vector().equals(kind)
                 && !svc.props().kinds().scenarioPv().equals(kind)) {
+            return null;                                                // not a view of the VaR rows: another service's to answer
+        }
+        if (!on()) {
+            if (told.add(date + "off")) {
+                LOG.info("the float32 rows of {} not served to the engine ({} is off): it builds its own", date, SETTING);
+            }
             return null;
         }
         VarDate d = svc.heldDate(date).orElse(null);

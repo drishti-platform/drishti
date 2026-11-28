@@ -110,6 +110,31 @@ class EngineHostTest {
     }
 
     @Test
+    void anAnswerAskedAgainComesFromTheHostsCacheByStampAndNeverAcrossViewers(@TempDir Path root) throws Exception {
+        EngineHostSettings s = Fixtures.home(root, Fixtures.sampleJar(), Map.of("group-totals", Fixtures.GROUP_TOTALS), null);
+        try (EngineHost host = Fixtures.host(s, Fixtures.items())) {
+            host.start();
+            HostedEngine gt = host.require("group-totals");
+            Answer first = gt.ask(TOTALS, ANN);
+            Answer again = gt.ask(TOTALS, ANN);
+            assertThat(again.stamp().text()).isEqualTo(first.stamp().text());
+            assertThat(rows(again)).containsExactlyElementsOf(rows(first));
+            host.poll();
+            assertThat(gt.stats().sinceStart().asked()).as("the engine asked once").isEqualTo(1);
+            assertThat(gt.answerCache()).containsExactly(1L, 256L, 1L, 1L);   // entries, limit, hits, misses
+            // another viewer (another row rule): another stamp, the engine asked, the rows the viewer's own
+            ViewerAccess bob = Fixtures.viewer("bob", Map.of("item", Fixtures.eq("GROUP", "A")), Set.of());
+            assertThat(rows(gt.ask(TOTALS, bob))).containsExactly(new Object[] {"A", 2L, 3L, 4.0});
+            assertThat(rows(gt.ask(TOTALS, ANN))).hasSize(2);
+            assertThat(gt.answerCache()[2]).isEqualTo(2L);
+            assertThat(gt.answerCache()[3]).isEqualTo(2L);
+            gt.purgeAnswers();
+            gt.ask(TOTALS, ANN);
+            assertThat(gt.answerCache()[3]).as("after a purge the engine answers again").isEqualTo(3L);
+        }
+    }
+
+    @Test
     void suspendRefusesInWordsAndResumeAnswersTheSame(@TempDir Path root) throws Exception {
         EngineHostSettings s = Fixtures.home(root, Fixtures.sampleJar(), Map.of("group-totals", Fixtures.GROUP_TOTALS), null);
         try (EngineHost host = Fixtures.host(s, Fixtures.items())) {

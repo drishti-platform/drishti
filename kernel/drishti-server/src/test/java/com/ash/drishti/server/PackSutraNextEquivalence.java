@@ -175,7 +175,8 @@ abstract class PackSutraNextEquivalence {
         if (copy instanceof com.fasterxml.jackson.databind.node.ObjectNode o) {
             o.remove("phone");        // the phone tiers the shared fragments declare: not part of the page drawn (PhoneViewTest)
         }
-        return normal(copy).toString().replace("Sutra " + kind + " v2", "Sutra " + kind + " v1");
+        return normal(copy).toString().replace("Sutra " + kind + " v2", "Sutra " + kind + " v1")
+                .replaceAll("\"(id|panel)\":\"([\\w-]+?)-(table|card|views)\"", "\"$1\":\"$2\"");   // H2: a Core fragment scopes its panel id as <as>-table, -card, -views
     }
 
     private static String layout(JsonNode view) {

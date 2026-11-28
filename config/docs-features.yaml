@@ -55,6 +55,7 @@ features:
 references:
   - admin/CONFIGURATION.md
   - admin/BENCHMARK.md
+  - admin/PRODUCTION_STANDARD.md
   - admin/UNDER_CONSTRUCTION.md
   - admin/TABLE_CATALOGUE.md
   - guides/CLI_REFERENCE.md

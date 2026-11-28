@@ -115,7 +115,7 @@
             <drishti.g14.dir>${project.build.directory}/g14</drishti.g14.dir>
             <!-- R2 side by side (RiskSideBySideTest): a folder holding Drishti Risk's engine JARs, copied into the test server's lib/engines; empty skips it -->
             <drishti.risk.jars>${drishti.risk.jars}</drishti.risk.jars>
-            <!-- the Python that builds the tests' lakes (it needs the drishti_lake wheel): default: drishti-console/.venv of the checkout (what the drill uses); -Ddrishti.python=/abs/venv/bin/python overrides -->
+            <!-- the Python that builds the tests' lakes (it needs the drishti_lake wheel): default: the console environment of the checkout (what the drill uses); -Ddrishti.python=/abs/venv/bin/python overrides -->
             <drishti.python>${drishti.python}</drishti.python>
             <!-- R2 side by side (ExposureSideBySideTest): drishti-risk's tck/recorded/ccr/recorder-<date>.yaml, the raw-bit reference; empty skips it -->
             <drishti.risk.recorded>${drishti.risk.recorded}</drishti.risk.recorded>

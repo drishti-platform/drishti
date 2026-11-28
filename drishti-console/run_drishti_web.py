@@ -79,6 +79,8 @@ ARGV = "DRISHTI_CONSOLE_ARGV"
 def factory():
     """One worker's app (server.workers > 1): the settings from the launcher's arguments, passed through the environment."""
     settings = load_settings(HERE / "config", json.loads(os.environ.get(ARGV, "[]")))
+    from core import production
+    production.enforce(settings)
     app = create_app(settings)
     app.state.tmp_owner = True                    # each worker removes its own temp folder when it stops (core/tmpdir.py)
     return app
@@ -186,6 +188,22 @@ def trust_roots(argv: list[str], environ, scratch: str | None = None) -> list[st
     return settings_ini.drop_foreign_vars(environ, HERE.parent, entries, scratch)
 
 
+def api_refusal(settings) -> str | None:
+    """The one line when a server this console is pointed at (``backend.url``, or each of ``backend.urls``) answers with an API version outside
+    the range this console supports (core/api_compat.py); None when all are compatible or away (start order does not matter: the backend
+    watch checks again at every probe). ``backend.require_compatible_api: false`` skips the check."""
+    if str(settings.get("backend.require_compatible_api", True)).lower() in ("false", "0", "no", "off"):
+        return None
+    from core import api_compat
+    raw = settings.get("backend.urls") or ""
+    urls = [u.strip() for u in (raw if isinstance(raw, list) else str(raw).split(",")) if u and str(u).strip()] or [str(settings.get("backend.url") or "")]
+    for url in urls:
+        found = api_compat.preflight(url) if url else None
+        if found:
+            return found
+    return None
+
+
 def main() -> None:
     import tempfile
     from core import settings_ini
@@ -203,8 +221,13 @@ def main() -> None:
     except settings_ini.SettingsError as e:            # e.g. the launcher's ~/drishti-envs/dev.ini before setup: one line, no traceback
         raise SystemExit(settings_ini.fail(e)) from None
     settings = load_settings(HERE / "config", sys.argv[1:])
+    from core import production
+    production.enforce(settings)                  # the production profile refuses an unsafe start, one line per setting (core/production.py)
     from core.launcher_stop import MAIN_PID_ENV
     os.environ[MAIN_PID_ENV] = str(os.getpid())   # the launcher's stop signals this process, whichever worker takes the request (core/launcher_stop.py)
+    refused = api_refusal(settings)
+    if refused:                                    # a server this console cannot speak to: one line, no port opened (core/api_compat.py)
+        raise SystemExit(f"[FAIL] {refused}")
     temp_under_data(settings)
     workers = max(1, int(settings.get("server.workers") or 1))
     # a stop closes the live streams after this long: a worker waits for its open connections, and a live page's stream never ends by itself

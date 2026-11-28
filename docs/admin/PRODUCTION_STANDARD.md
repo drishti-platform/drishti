@@ -1,0 +1,177 @@
+<!--
+  Project Drishti · Any data. Any domain. One grammar.
+
+  Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+  All rights reserved.
+
+  PROPRIETARY AND CONFIDENTIAL.
+
+  This file is the confidential and proprietary property of Ashutosh Sinha.
+  Unauthorised copying, use, modification, distribution or disclosure of this
+  file, via any medium, is strictly prohibited except with the express prior
+  written permission of the copyright holder.
+
+  See the LICENSE file in the root of this repository for the full terms.
+-->
+
+# The production standard
+
+The short list of rules a change is judged by: lane briefs, the gate review and a bank's reviewer read this page. Each rule names the
+check that enforces it. The install, upgrade and backup commands are in
+[OPERATIONS_GUIDE.md, Production deployment (Linux)](../guides/OPERATIONS_GUIDE.md); every setting, default and variable is in
+[CONFIGURATION.md](CONFIGURATION.md). This page repeats neither.
+
+Production is Linux. The sections so far: 1 the production profile, 2 site configuration, 3 upgrades (releases side by side, installed from the
+binary package), 4 the console, 5 data and access, 6 tables. The other sections of the standard (data, targets, secrets, modules and engines, lifecycle, acceptance)
+are added as their rules are built. **One layout** serves all of them: releases in `/opt/drishti/releases/<version>` (read only) with the
+`current` and `previous` links, the site's files only in `/etc/drishti` (`drishti.site.dir`), the data in its own folder (`/srv/drishti/data`:
+identity database, content store, lakes, logs), each release with its own Python (`<release>/python`).
+
+## 1. The production profile
+
+### 1.1 What it is and how it is switched on
+
+One setting names the profile of a server and of its console: `drishti.profile` (`DRISHTI_PROFILE`). Put it in the settings file
+(`drishti.profile=production`, see `config/settings.examples/prod.ini`); the console reads the same file.
+
+| Profile | For | What it does |
+|---|---|---|
+| `production` | a bank's servers | safe defaults (below); **refuses to start** while any rule is broken |
+| `demo` | a demonstration or a developer's machine, never a shared server | today's open defaults, the development administrator and three demo users (below) |
+| none (blank) | development | the open defaults, no demo users |
+
+Under `production` a setting you leave out takes the safe value, and a setting you set to an unsafe value is **refused, never
+overridden**. The server collects every broken rule and stops with one line each, so one start shows all of them:
+
+```
+Drishti will not start under the production profile (docs/admin/PRODUCTION_STANDARD.md): 2 settings are unsafe
+  - drishti.security.enabled is off: no one signs in. Fix: set DRISHTI_SECURITY_ENABLED=true (or remove it: production defaults to on)
+  - drishti.sources.plugins.demo.enabled is on: the demo source would serve sample data. Fix: set DRISHTI_DEMO_ENABLED=false (or remove it: production defaults to off)
+```
+
+Every line names the setting and the fix; the console does the same (`The console will not start under the production profile ...`).
+
+### 1.2 The rules
+
+| # | Rule | Safe default under `production` | Refused when | Enforced by |
+|---|---|---|---|---|
+| P1 | Sign-in is on at the server | `drishti.security.enabled=true` | it is `false` | `ProductionProfile` start check; `ProductionProfileTest` |
+| P2 | The token secret is long and shared | none: you set `DRISHTI_TOKEN_SECRET` | missing or under 32 bytes (server and console) | server check; `core/production.py`; `test_production_profile.py` |
+| P3 | No built-in administrator | `drishti.identity.seed-admin=false` | seeding is on with the built-in name `drishti-dev-admin` or the built-in password; a first administrator of your own (`DRISHTI_SEED_USERNAME`, a password from the secrets file, `DRISHTI_SEED_ADMIN=true`) is allowed | server check; `ProductionProfileTest`, `ProductionProfileStartTest` (seeds nobody) |
+| P4 | No demo users | none are created | `drishti.identity.seed-demo-users` is `true` | server check; `DemoUsersTest` (the demo profile makes them, production never) |
+| P5 | The demo source is off | `drishti.sources.plugins.demo.enabled=false` | it is `true` | server check |
+| P6 | No development switches | off | `drishti.modules.dev`, `drishti.rachana.studio-save` or the API description and its UI (`springdoc.api-docs.enabled`) is on | server check |
+| P7 | Engines are pinned and licensed | none: `drishti.engine-lib.trust=pinned`, the licence files installed | trust is `folder`; the engines' licence file (`drishti.engine-lib.licence`) or the access licence (`<drishti.access.dir>/licence.yaml`) is not a file | server check |
+| P8 | One identity database per cluster | PostgreSQL | SQLite while this server is a node of a cluster (`<net dir>/node.yaml` says `enabled: true`) | server check |
+| P9 | TLS is stated | none: you state it | the server speaks plain HTTP and `drishti.production.tls=proxy` is not declared (server TLS: `server.ssl.enabled=true`) | server check |
+| P10 | The console requires sign-in | `auth.enabled=true` | it is `false` | `core/production.py` |
+| P11 | The console's cookies are secure | `Secure` (`auth.secure_cookie=true`), `HttpOnly` and `SameSite=Lax` (fixed in code) | `auth.secure_cookie` is `false` | `core/production.py`; `auth_routes.py` sets the other two |
+| P12 | The console is not on the network without TLS in front | bind `127.0.0.1` behind a proxy | `server.host` is not a loopback address and `production.tls=proxy` is not declared | `core/production.py` |
+| P13 | Cross-origin calls are an allow-list | the registered embedding origins only | there is no wildcard setting to refuse | by design: `embed` origins are registered, never `*` |
+| P14 | The site folder is named and outside the release | none: you set `drishti.site.dir` (`DRISHTI_SITE_DIR`) | it is missing (server and console), is the release's configuration folder, or lies inside the release folder (server) | server check; `ProductionProfileTest`; `core/production.py`; `test_production_profile.py` |
+| P15 | Node traffic and the shared net key are encrypted | none: you state it | this node is clustered (`node.yaml` `enabled: true`) and advertises an `http://` address while `drishti.production.net-tls=mesh` (a private mesh encrypts it) is not declared | server check; `ProductionProfileTest` |
+
+The checks run before any bean is built (`kernel/drishti-server`, `com.ash.drishti.server.profile.ProductionProfile`, run by
+`ProductionProfileProcessor`) and before the console's first request (`drishti-console/core/production.py`, called by
+`run_drishti_web.py`); a server and a console on the same settings file agree on the profile.
+Rules that need a place to look (a licence file, the cluster folder) read the folders the settings name; they never guess a path.
+
+### 1.3 The demo profile
+
+`drishti.profile=demo` (the committed `config/profiles/demo.ini` sets it) keeps today's behaviour and, on the start that creates the
+first administrator (an empty user store), also creates three demo users with their roles and packs, each with a published password:
+
+| User | Password | Role (kinds of) | Packs | Home |
+|---|---|---|---|---|
+| `drishti-dev-admin` | `drishti-dev-admin123` | `admin` | all | every Home |
+| `drishti-dev-risk` | `drishti-dev-risk123` | `risk-trading` (trading, market-data, market-risk, counterparty-risk, core) | `core`, `trading`, `market-data`, `market-risk`, `counterparty-risk` | the risk manager's, then the trader's |
+| `drishti-dev-genomics` | `drishti-dev-genomics123` | `genomics-reader` (genomics, genomics-showcase, protein-engineering) | `genomics`, `genomics-showcase`, `protein-engineering` | none yet (no genomics Home is shipped) |
+| `drishti-dev-market` | `drishti-dev-market123` | `market-data-reader` (market-data) | `market-data` | none |
+
+Admin shows the same red *default password* warning, naming every account that still signs in with a published password, until each is
+changed. A pack that is not installed is left out of its role and user; a user none of whose packs is installed is not created.
+`DRISHTI_SEED_DEMO_USERS=false` turns the three off under the demo profile; `true` turns them on without it. Never in production (P4).
+How to make the same three users by hand: [ADMIN_GUIDE.md, Three demo users](../guides/ADMIN_GUIDE.md#27-three-demo-users).
+
+### 1.4 Not yet in this section
+
+The licence and edition rules above are the start check only; a production acceptance run (`doctor --acceptance` with a token file),
+asymmetric token signing and TLS between hosts are later sections of the standard.
+
+## 2. Site configuration
+
+### 2.1 The rules
+
+| # | Rule | Enforced by |
+|---|---|---|
+| S1 | The release folder is immutable: root-owned, read only to the service user, never written by the server or the console. | `Roots.guardWrite` (`DRS-1038`, "refused: ... is inside the release folder"); `SiteWritersTest`, `SiteFolderTest` |
+| S2 | All site state lives outside it: the **site folder** (`drishti.site.dir`, `/etc/drishti`: site settings, connector overrides and bindings, engine and module switches, licences, lens and role files, lake files, AI and MCP provider files, the site's BI files, the approved-settings files) and the **data folder** (identity database, content store, lakes, logs). | `SiteFolderGuardTest` (every Admin writer asks the guard) |
+| S3 | One resolver. A site file's path is `Roots.site(...)` (Python: `core.config.local_file`); the release's shipped defaults are `Roots.config(...)`. A class that writes files never takes a path from `Roots.config`. | `SiteFolderGuardTest` |
+| S4 | The order is explicit and the same everywhere: release defaults (templates, shipped module switches, the jar's engine files, shipped BI files), then the site's files over them (key by key for a connector, file by file for a switch, by path for BI), then secrets in memory. Admin -> Configuration -> Resolved paths shows the `config` and `site` folders and where each came from. The server never rewrites a connector file, nothing is migrated. | `LaunchRootsTest`; Admin page |
+| S5 | An upgrade swaps the release and leaves the site folder untouched: no `diff -r` of config folders. | OPERATIONS_GUIDE upgrade steps |
+| S6 | The developer and demo layout keeps working with no setting: with `drishti.site.dir` unset the site folder is the configuration folder (`<home>/config`) and the server's local file is `<home>/application.local.yaml`; no write is refused. | `SiteFolderTest` |
+| S7 | Production sets `drishti.site.dir` (a folder outside the release). | the production start check |
+
+### 2.2 What goes where
+
+| Written by | File | Folder |
+|---|---|---|
+| Admin -> Connectors, bindings, placement | `connectors/<name>.yaml`, `bindings.yaml`, `placement.yaml` | site |
+| Admin -> Engines | `engines/<engine>.yaml` (`changed:` block) | site |
+| Admin -> Modules, licence, lenses, roles | `modules/<id>.yaml`, `access/*.yaml` | site |
+| Admin -> Configuration (approved) | `application.local.yaml`; the console's `console/application.local.yaml` | site |
+| Admin -> Artifacts (BI files) | `bi/...` | site (the release's shipped BI files are read first) |
+| Admin -> Artifacts (table or model file) | `tables/<domain>/<name>.table.yaml` | site (`<site>/tables`; the release's shipped tables are read first, never written; a name is unique across both layers) |
+| everything else Admin changes | identity, content store, packs overlay, loads, archives | data |
+
+### 2.3 Checks
+
+`SiteFolderTest` (resolver, defaults, refusal), `SiteWritersTest` (connectors, engines, settings, an uploaded table to the site layer), `SiteModuleSwitchTest` (layered module
+switches), `SiteFolderGuardTest` (writers ask the guard; no class writes what it reads from the release), console `test_site_config.py`
+(the console's file). By hand: `chmod -R a-w` the release, start both services with a separate `drishti.site.dir`, change a module switch, a
+connector override and a setting in Admin, restart, and `find <release> -newer <marker>` is empty.
+
+## 3. Upgrades
+
+| Rule | How it is met | Enforced by |
+|---|---|---|
+| The site folder is named, exists and lies outside both releases; its settings files are compared with the new release's configuration catalogue | `drishti.site.dir` is `/etc/drishti`; an upgrade never touches it (S5) | `drishti.py upgrade check` (`[FAIL]` when missing or inside a release; retired keys listed); `tools/test_upgradecheck.py` |
+| Each release is installed from the binary package and is read only | the package is unpacked into `releases/<version>`, `verify_package.py` says `package verified`, the folder is root-owned `go-w`; nothing is built or downloaded on the host | `verify_package.py` (SHA256SUMS), `make_binary.py` in the index repository; [OPERATIONS_GUIDE, section 3](../guides/OPERATIONS_GUIDE.md#3-install-a-release) |
+| An upgrade swaps one release; the site's files and data are outside it | releases side by side (`/opt/drishti/releases/<version>`), one `current` link, settings in `/etc/drishti`, data in the data folder | [OPERATIONS_GUIDE, section 11](../guides/OPERATIONS_GUIDE.md#11-upgrade-and-rollback) |
+| The Python libraries of a running release are never changed | each release has its own Python prefix (`<release>/python`); when the pins did not change two releases may share one prefix | `drishti.py upgrade check <new-release-dir>` fails the run that would install into the running one |
+| Drishti never creates an environment and never installs a library | the operator makes the Python and runs pip; `setup` and `upgrade check` only check and print the command | `tools/test_no_venv.py`, `tools/test_upgradecheck.py` |
+| A rollback needs nothing that the upgrade removed | the previous release folder and its Python stay until the new release has run a business day; the site's files, the identity database and the content store are copied before the switch | the rollback of section 11.5, tried on a scratch machine |
+| No migrations | a retired settings name refuses the start and names its replacement; stored data is only read by the release that wrote it or restored from the backup | section 11.4 |
+| The check is read-only | it writes, installs, starts and stops nothing and reads no secret value | `tools/test_upgradecheck.py` |
+
+## 4. The console
+
+The console (`drishti-console`) is a deployable of its own.
+
+1. **It uses only the server's published API.** It reads no file or folder of the server: not the server's config, its lakes, the identity database, the
+   modules folder or the data folder, and takes no shortcut around the API. It may read its own configuration, its templates and static files, the docs it
+   renders for Help (`docs/` and the generated copies), and the few shared read-only files whitelisted with a reason in the guard test. Where the API lacks
+   an answer the console needs, the server gets a small endpoint, documented in [API_REFERENCE.md](../guides/API_REFERENCE.md). Test:
+   `drishti-console/tests/test_console_boundary_guard.py` (a new reach fails; the known ones are listed as pending with the lane that fixes each, and the list only shrinks).
+2. **It runs alone.** Its own requirements (`drishti-console/requirements.txt`), its own settings (`drishti-console/config/application.yaml` and a site
+   file) and its own start command (`python3.13 tools/drishti.py start console --server URL`); it runs from the binary package's `drishti-console/` folder
+   on a host that holds nothing of the server.
+3. **It scales out.** No per-person state in the process (session isolation): several instances, or several workers, behind a load balancer that
+   probes `GET /readyz`. Sticky sessions are not needed with the relay across hosts, and are needed for live pages without it
+   ([OPERATIONS_GUIDE.md](../guides/OPERATIONS_GUIDE.md#57-the-console-as-its-own-deployable)).
+4. **It checks the server's API version.** The server reports it (`GET /api/v1/version`, open); the console declares the range it supports
+   (`core/api_compat.py`) and refuses to start against a server outside it, with one line. Tests: `drishti-console/tests/test_api_version_handshake.py`,
+   `RootControllerTest` (the server's answer).
+
+## 5. Data and access
+
+| Rule | How it is met | Enforced by |
+|---|---|---|
+| Every loader stages under `<data>/tmp/loaders`, never the system temp folder | the loaders take their staging folder from the data folder's layout | `tools/lake/test_loader_staging.py` |
+| Every controller is classified for row-rule coverage | each controller route is listed in `row-rule-route-inventory.tsv` (test resources of the server) with how its rows are filtered; a new controller without a row fails the build | `RowRuleRouteInventoryGuardTest` |
+
+## 6. Tables
+
+| # | Rule | How it is met | Enforced by |
+|---|---|---|---|
+| T1 | Every table has an explicit registry entry: its own `uri:`, `format` and contract in its lake file. A table resolved only by the lake's layout (`<root>/<domain>/<table>`) is a development and demo fallback and is refused | `python tools/drishti.py lake entries --write` generates the entries; Admin -> Lakes shows each table as configured or fallback; a bank's external lake is bound as in [TABLE_CATALOGUE.md, Binding a bank's external lake](TABLE_CATALOGUE.md) | the production start check (`TablesRule`, called by `ProductionTablesCheck` when the beans are built, same message form); `TablesRuleTest` |

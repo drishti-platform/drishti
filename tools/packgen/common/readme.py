@@ -403,6 +403,22 @@ def module_of(pack: str) -> str | None:
     return p.module if p is not None else None
 
 
+def _links_from(pack_dir: Path, text: str) -> str:
+    """The README's links as written for a pack four folders below the repository (``modules/<m>/packs/<p>``), made right for where this pack
+    is (an example pack is three below), and a link to a documentation page that is not there (the contracts pages cover the modules' packs
+    only) left as its text."""
+    try:
+        depth = len(Path(pack_dir).resolve().relative_to(ROOT).parts)
+    except ValueError:
+        return text
+    if depth != 4:
+        text = re.sub(r"\]\((?:\.\./){4}", "](" + "../" * depth, text)
+    def keep(m: "re.Match[str]") -> str:
+        target = (Path(pack_dir).resolve() / m.group(2)).resolve()
+        return m.group(0) if target.is_file() else m.group(1)
+    return re.sub(r"\[([^\]]+)\]\(((?:\.\./)+docs/(?:contracts/packs|guides)/[A-Za-z_./-]+\.md)(?:#[^)]*)?\)", keep, text)
+
+
 def render_pack(pack_dir: Path, generator: str | None = None, files: dict | None = None, intro: dict | None = None) -> str:
     """A pack's README.md. ``files``: {path: text} a generator is about to write (pack.yaml, samples), read before the disk."""
     pack_dir = Path(pack_dir)
@@ -617,4 +633,4 @@ def render_pack(pack_dir: Path, generator: str | None = None, files: dict | None
         out.append(isec["See also"])
     out += ["- [Packs](../../../../docs/guides/BUILD_GUIDE.md#31-the-packs-that-ship-turning-them-on-who-sees-which) and the [pack developer's guide](../../../../docs/guides/BUILD_GUIDE.md) "
             "(the README standard).", ""]
-    return "\n".join(out).rstrip() + "\n"
+    return _links_from(pack_dir, "\n".join(out).rstrip() + "\n")

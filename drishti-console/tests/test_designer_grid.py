@@ -26,7 +26,7 @@ from core import designer, designer_grid as dg
 from test_designer import SUTRA, on  # noqa: F401 - the designer routes' fixture
 
 ROOT = Path(__file__).resolve().parents[2]
-PACK_SUTRAS = sorted((ROOT / "config").glob("**/*.sutra.yaml"))
+PACK_SUTRAS = sorted([*(ROOT / "config").glob("**/*.sutra.yaml"), *(ROOT / "modules").glob("*/packs/**/*.sutra.yaml"), *(ROOT / "examples" / "packs").glob("**/*.sutra.yaml")])
 #: the shipped Sutras that place their panels with `layout: areas` (the fund page, the company page since 2.9.2): a spreadsheet of areas, not one column
 AREA_SUTRAS = [p for p in PACK_SUTRAS if "\nlayout:" in p.read_text()]
 FLOW_SUTRAS = [p for p in PACK_SUTRAS if p not in AREA_SUTRAS]

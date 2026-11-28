@@ -32,6 +32,8 @@ rachana: '>=1.0'
 contracts: '>=1.0'
 plugin-api: '>=2.0'
 elements: '>=3.3 <4'
+requires:
+  reference-data: '>=1.0 <2'
 provides:
   kinds:
     market-data:

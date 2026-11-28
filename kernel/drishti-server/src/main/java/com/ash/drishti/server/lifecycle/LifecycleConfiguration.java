@@ -118,7 +118,16 @@ public class LifecycleConfiguration {
         reloader.onChange(packs::sync);
         packs.sync(com.ash.drishti.engine.source.SourceRegistry.SYSTEM);
         service.modules().sync(com.ash.drishti.engine.source.SourceRegistry.SYSTEM);
-        ctx.getBean(PackAccess.class).lifecycles(packs);
+        PackAccess access = ctx.getBean(PackAccess.class);
+        access.lifecycles(packs);
+        access.reconcile(access.installed(), com.ash.drishti.engine.source.SourceRegistry.SYSTEM);   // the stored switches hold across a restart (pre-gate S17)
+        ctx.getBeanProvider(com.ash.drishti.identity.SwitchLedger.class).ifAvailable(l -> l.onChange(moved -> {
+            List<String> switched = moved.stream().filter(x -> com.ash.drishti.identity.SwitchLedger.PACK.equals(x.scope()))
+                    .map(com.ash.drishti.identity.SwitchLedger.Entry::name).distinct().toList();
+            if (!switched.isEmpty()) {
+                access.reconcile(switched, "switch-sync");      // a pack switched on another node: suspended or resumed here too
+            }
+        }));
         ctx.getBeanProvider(DigestService.class).ifAvailable(d -> {
             d.service(LifecycleService.SERVICE, service::wire);
             service.onTransition(x -> d.announce());          // a suspend is seen by the peers within a gossip round

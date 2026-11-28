@@ -19,7 +19,7 @@ from pathlib import Path
 from urllib.parse import quote, unquote
 
 from fastapi import APIRouter, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from core.nextpath import safe_next
 from core.packs import samples
@@ -58,8 +58,8 @@ async def landing(request: Request):
         parts = request.app.state.module_parts
         cards += [{"title": str(c["title"]), "cmd": str(c.get("cmd") or c["title"]), "href": parts.href(c), "icon": str(c.get("icon") or "puzzle"),
                    "module": c["module"]} for c in parts.cards(ed.name if ed.lens else None) if hosted_shown(request, c["module"])]
-    if me is not None and ed.active and (landing := await edition_routes.landing_for(request, ed)) is not None:
-        return await edition_routes.render_landing(request, ed, landing, cards)        # the edition's landing (home.landing, the person's choice)
+    if me is not None and ed.active and ed.home_name and request.query_params.get("home") != "none":
+        return RedirectResponse("/home", status_code=303)                              # the lens's Home: a Home Sutra on the one Home page
     from core import house as _house                                   # the house: the kernel and this distribution's loaded modules
     house = _house.picture(_house.rooms(request.app.state.editions))
     return render(request, "landing.html", showcase=showcase, commands=commands, back=back, facts_on=facts_on, home_cards=cards, house=house)

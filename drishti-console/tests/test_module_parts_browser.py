@@ -115,25 +115,3 @@ def test_install_remove_and_reinstall_in_the_browser(browser, console):
         assert not errors, errors
     finally:
         page.close()
-
-
-def test_the_world_page_comes_from_the_economy_module(browser, console):
-    url, _, app = console
-    from test_edition import FULL_ABOUT
-    server_answers.follow(app, FULL_ABOUT)                                                    # the World lens of the full product: its Home is the module's page
-    store = {app.state.auth.default.user: {"lens": "world"}}                                 # the person works in the World lens
-
-    async def settings(ident=None):
-        return dict(store.get(ident.user if ident else "", {}))
-
-    app.state.backend.settings = settings
-    app.state.user_settings.forget(app.state.auth.default.user)                           # an earlier test's read of this person's settings is cached
-    page = browser.new_page()
-    try:
-        page.goto(url + "/")
-        assert page.locator("[data-world-landing]").count() == 1
-        assert page.locator('script[src^="/m/economy/static/"]').count() == 1
-        assert page.locator("[data-grid=moved][data-elements=grid]").count() == 1        # the Elements grid, no table of its own
-        assert page.locator(".wl table").count() == 0
-    finally:
-        page.close()

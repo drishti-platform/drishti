@@ -1,0 +1,114 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The market-data Home (Calm): the desk tiles (curves, FX, prices), the USD curve, the biggest moves, the data checks and the data loads. Built only
+# from library fragments (core of drishti-rachana); the market_* tables are the market-data module's own, the rest the server's (ROLE_HOME_SUTRAS.md 2).
+rachana: 1.2
+sutra: home-market-data
+version: 1
+libraries: [core@1]
+title: { id: "'Market data'" }
+data:
+  meta:      { table: home_meta }
+  tiles:     { table: market_tiles }
+  curve:     { table: market_curve }
+  moves:     { table: market_moves }
+  fresh:     { table: market_freshness }
+  mnem:      { table: home_mnemonics }
+  digest:    { table: home_digest }
+  loads:     { table: home_loads }
+  needs:     { table: home_needs }
+  pinned:    { table: home_pinned }
+layout:
+  user-can-arrange: true
+  areas:
+    - "tiles tiles tiles"
+    - "curve moves rail"
+    - "fresh fresh rail"
+    - "loads loads loads"
+    - "visit visit visit"
+  columns: [4, 5, 3]
+  phone: [tiles, curve, moves, fresh, rail, loads, visit]
+panels:
+  - use: core/tile-grid@1
+    as: tiles
+    area: tiles
+    with:
+      title: Curves, FX and credit
+      fmt: amount2
+      delta-fmt: signed2
+      tiles: "map($.tiles, {label: @.LABEL, value: @.VALUE, delta: @.DELTA, caption: @.CAPTION})"
+  - use: core/data-table@1
+    as: curve
+    area: curve
+    with:
+      title: USD OIS curve
+      search: false
+      limit: 20
+      rows: $.curve
+      columns: [ { label: Tenor, bind: "@.TENOR" }, { label: Zero rate, bind: "@.RATE", fmt: amount4 } ]
+  - use: core/data-table@1
+    as: moves
+    area: moves
+    with:
+      title: Biggest moves
+      search: false
+      limit: 10
+      rows: $.moves
+      columns: [ { label: Subject, bind: "@.SUBJECT" }, { label: Kind, bind: "@.KIND" }, { label: Move, bind: "@.MOVE" }, { label: Unit, bind: "@.UNIT" }, { label: Sigma, bind: "@.SIGMA" } ]
+  - use: core/exceptions-list@1
+    as: fresh
+    area: fresh
+    with:
+      title: Data freshness and checks
+      rows: { from: $.fresh, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/exceptions-list@1
+    as: needs
+    area: rail
+    with:
+      title: Needs you
+      rows: { from: $.needs, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: rail
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
+  - use: core/data-table@1
+    as: mnem
+    area: rail
+    with:
+      title: Quick mnemonics
+      search: false
+      limit: 12
+      rows: $.mnem
+      columns: [ { label: Mnemonic, bind: "@.MNEMONIC" }, { label: About, bind: "@.ABOUT" } ]
+  - use: core/data-table@1
+    as: loads
+    area: loads
+    with:
+      title: Data loads
+      search: false
+      limit: 12
+      rows: $.loads
+      columns: [ { label: Pack, bind: "@.PACK" }, { label: Kind, bind: "@.KIND" }, { label: Business date, bind: "@.BUSINESS_DATE" }, { label: State, bind: "@.STATE" } ]
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

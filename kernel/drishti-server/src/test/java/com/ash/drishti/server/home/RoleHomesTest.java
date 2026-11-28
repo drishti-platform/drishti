@@ -54,7 +54,12 @@ class RoleHomesTest {
 
     static final Map<String, List<String>> ROLES = Map.ofEntries(Map.entry("risk-manager", List.of("risk-manager")), Map.entry("trader", List.of("trader")),
             Map.entry("risk-officer", List.of("risk-officer")), Map.entry("credit-officer", List.of("credit-officer")),
-            Map.entry("operations", List.of("operations")), Map.entry("quant", List.of("quant")), Map.entry("economist", List.of("economist")), Map.entry("genomicist", List.of("genomicist")));
+            Map.entry("operations", List.of("operations")), Map.entry("quant", List.of("quant")), Map.entry("economist", List.of("economist")), Map.entry("genomicist", List.of("genomicist")),
+            Map.entry("market-data-reader", List.of("market-data")));
+
+    /** The tables the modules serve to their own Homes (genomics: GenomicsHome.tables; market-data: MarketHome). */
+    static final Set<String> MODULE_TABLES = Set.of("genomics_gwas_top", "genomics_manhattan", "genomics_clinvar", "genomics_loads", "genomics_needs",
+            "market_tiles", "market_curve", "market_moves", "market_freshness");
 
     @TempDir Path data;
 
@@ -70,13 +75,13 @@ class RoleHomesTest {
     void everyHomeFileLoads() {
         HomeCatalogue c = catalogue();
         assertEquals(Map.of(), c.faults());
-        assertEquals(Set.of("risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist"),
+        assertEquals(Set.of("risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist", "market-data"),
                 c.all().stream().map(HomeDefinition::name).collect(java.util.stream.Collectors.toSet()));
     }
 
     @ParameterizedTest
     @CsvSource({"risk-manager,risk-manager", "trader,trader", "risk-officer,risk-officer", "credit-officer,credit-officer", "operations,operations",
-            "quant,quant", "economist,economist", "genomicist,genomicist"})
+            "quant,quant", "economist,economist", "genomicist,genomicist", "market-data-reader,market-data"})
     void aRoleOpensItsHomeAndOnlyItsHome(String role, String home) {
         HomeCatalogue c = catalogue();
         List<HomeDefinition> offered = c.offered(new Principal("u", List.of(role)), false, m -> true, m -> true);
@@ -88,7 +93,7 @@ class RoleHomesTest {
     @Test
     void anAdministratorOpensEveryHomeAndAnUnknownRoleNone() {
         HomeCatalogue c = catalogue();
-        assertEquals(8, c.offered(new Principal("a", List.of("admin")), true, m -> true, m -> true).size());
+        assertEquals(9, c.offered(new Principal("a", List.of("admin")), true, m -> true, m -> true).size());
         assertTrue(c.offered(new Principal("x", List.of("viewer")), false, m -> true, m -> true).isEmpty());
     }
 
@@ -96,11 +101,11 @@ class RoleHomesTest {
     void aHomeNeedsItsModules() {
         HomeCatalogue c = catalogue();
         assertTrue(c.offered(new Principal("r", List.of("risk-manager")), false, m -> !m.equals("banking"), m -> true).isEmpty());
-        assertEquals(1, c.offered(new Principal("e", List.of("economist")), false, m -> m.equals("economy"), m -> true).size());
+        assertEquals(1, c.offered(new Principal("e", List.of("economist")), false, m -> m.equals("external-data"), m -> true).size());
     }
 
     @ParameterizedTest
-    @CsvSource({"risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist"})
+    @CsvSource({"risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist", "market-data"})
     void theSutraIsFragmentsOnlyAndReadsServedTables(String home) {
         HomeDefinition d = catalogue().find(home).orElseThrow();
         String text = d.sutraText();
@@ -112,9 +117,14 @@ class RoleHomesTest {
             assertTrue(Set.of("core", "finance", "economy").contains(use.group(1)), "library " + use.group(1));
         }
         assertTrue(n >= 3, "a Home is built of fragments");
-        Matcher table = Pattern.compile("table:\\s*(home_[a-z_]+)").matcher(text);
+        Matcher table = Pattern.compile("table:\\s*(home_[a-z_]+)").matcher(text);   // the server's tables; a module's own (genomics_*, market_*) are checked below
         while (table.find()) {
-            assertTrue(HomeTables.BUILT_IN.contains(table.group(1)), home + " reads " + table.group(1) + ", which no server table serves");
+            String name = table.group(1);
+            assertTrue(HomeTables.BUILT_IN.contains(name), home + " reads " + name + ", which no server table serves");
+        }
+        Matcher own = Pattern.compile("table:\\s*((?:genomics|market)_[a-z_]+)").matcher(text);
+        while (own.find()) {
+            assertTrue(MODULE_TABLES.contains(own.group(1)), home + " reads " + own.group(1) + ", which no module serves");
         }
         assertTrue(text.contains("user-can-arrange: true"));
         assertEquals("home-" + home, d.sutraName());
@@ -262,7 +272,7 @@ class RoleHomesTest {
         Files.createSymbolicLink(link, homes());
         HomeCatalogue c = new HomeCatalogue(new HomeProperties(true, link.toString(), data.toString(), ROLES, "17:00", 30));
         assertEquals(Map.of(), c.faults());
-        assertEquals(8, c.all().size());
+        assertEquals(9, c.all().size());
     }
 
     @Test
@@ -447,5 +457,105 @@ class RoleHomesTest {
         assertTrue(t.rows("module_table", p, one, null).isPresent());
         assertTrue(t.rows("module_table", p, two, null).isEmpty(), "a module's table is served to its own Homes only");
         assertTrue(t.names().contains("module_table") && t.names().contains("home_digest"));
+    }
+
+    /** The module a Home names exists: a typo or a module that was renamed (economy became external-data) fails here, not in a person's Home. */
+    @Test
+    void everyModuleAHomeNamesExists() throws IOException {
+        Path modules = homes().getParent().getParent().resolve("modules");
+        Set<String> ids = new java.util.TreeSet<>();
+        try (var s = Files.list(modules)) {
+            for (Path m : s.filter(Files::isDirectory).toList()) {
+                Path manifest = m.resolve("module.yaml");
+                if (Files.isRegularFile(manifest)) {
+                    Matcher id = Pattern.compile("(?m)^id:\\s*(\\S+)").matcher(Files.readString(manifest));
+                    if (id.find()) {
+                        ids.add(id.group(1));
+                    }
+                }
+            }
+        }
+        assertFalse(ids.isEmpty(), "no module manifest was found under " + modules);
+        for (HomeDefinition d : catalogue().all()) {
+            for (String m : d.modules()) {
+                assertTrue(ids.contains(m), "the Home " + d.name() + " names the module " + m + ", which does not exist (modules: " + ids + ")");
+            }
+        }
+    }
+
+    /** One way: every Home shows "Since you were here" and its data loads as panels of its own Sutra, and no Home is drawn any other way. */
+    @ParameterizedTest
+    @CsvSource({"risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist", "market-data"})
+    void everyHomeCarriesTheVisitAndLoadsPanels(String home) {
+        String text = catalogue().find(home).orElseThrow().sutraText();
+        assertTrue(text.contains("table: home_digest") && text.contains("as: visit"), home + " has no \"Since you were here\" panel");
+        assertTrue(text.contains("table: home_loads"), home + " has no data-loads panel");
+        Map<String, String> aliases = HomeComposer.aliases(text);
+        assertTrue(aliases.containsKey("digest") && aliases.containsKey("loads"), aliases.toString());
+        assertFalse(HomeComposer.stripData(text).contains("table:"), "the data: block is read by the server and left out of the Sutra it binds");
+    }
+
+    /** A fake of what is the person's own: alerts and pins by user, one approval each way. */
+    static HomePersonal personal() {
+        return new HomePersonal() {
+            public List<Map<String, Object>> alerts(Principal p) {
+                return switch (p.user()) {
+                    case "ann" -> List.of(Map.of("id", "a1", "rule", "r1", "title", "VaR breach", "severity", "critical", "stage", "raised", "message", "99% of limit"),
+                            Map.of("id", "a2", "rule", "r2", "title", "Old", "severity", "low", "stage", "resolved"),
+                            Map.of("id", "a3", "rule", "r3", "title", "Asleep", "severity", "high", "stage", "raised", "snoozedUntil", "2026-11-21T00:00:00Z"));
+                    case "bob" -> List.of(Map.of("id", "b1", "rule", "r9", "title", "Bob only", "severity", "medium", "stage", "raised"));
+                    default -> List.of();
+                };
+            }
+
+            public List<com.ash.drishti.server.approvals.ApprovalQueue.Entry> inbox(Principal p) {
+                var mine = new com.ash.drishti.kernel.api.approvals.ApprovalSource.Item("sutra", "s1", "Change X", "bob", Instant.parse("2026-11-20T10:00:00Z"), "pending", "", null,
+                        true, false, false, "/approvals", null, null, null);
+                var own = new com.ash.drishti.kernel.api.approvals.ApprovalSource.Item("sutra", "s2", "My own", "ann", Instant.parse("2026-11-20T10:00:00Z"), "pending", "", null,
+                        false, true, true, "/approvals", null, null, null);
+                return p.user().equals("ann") ? List.of(new com.ash.drishti.server.approvals.ApprovalQueue.Entry(mine, "Sutra", "screens", false, 0),
+                        new com.ash.drishti.server.approvals.ApprovalQueue.Entry(own, "Sutra", "screens", false, 0)) : List.of();
+            }
+
+            public List<Map<String, Object>> pinned(Principal p) {
+                return p.user().equals("ann") ? List.of(Map.of("kind", "trade", "id", "T-1"), Map.of("kind", "desk", "id", "DESK-A")) : List.of();
+            }
+        };
+    }
+
+    @Test
+    void needsYouAndPinnedAreTheCallersOwnAndNeverAnotherPersons() {
+        BusinessDates dates = new BusinessDates(new BusinessDateProperties(null, "UTC", null, "2026-11-20"), Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC));
+        HomeTables t = new HomeTables(new HomeProperties(true, null, data.toString(), null, null, null), new HomeStore(data, 30),
+                new HomeClock(dates, Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC)), List.of(), List.of(), ChangeEngineHost.NOT_HOSTED, List::of,
+                (who, kind) -> true, personal());
+        HomeDefinition d = catalogue().find("risk-manager").orElseThrow();
+        Principal ann = new Principal("ann", List.of("risk-manager"));
+        Principal bob = new Principal("bob", List.of("risk-manager"));
+        Principal eve = new Principal("eve", List.of("risk-manager"));
+
+        List<Map<String, Object>> a = t.rows("home_needs", ann, d).orElseThrow();
+        assertEquals(2, a.size(), "the raised alert and the approval to decide; not the resolved, the snoozed or her own item: " + a);
+        assertEquals("high", a.get(0).get("SEVERITY"));
+        assertTrue(String.valueOf(a.get(0).get("MESSAGE")).startsWith("Alert: VaR breach"));
+        assertEquals("Approve: Change X (from bob)", a.get(1).get("MESSAGE"));
+        List<Map<String, Object>> b = t.rows("home_needs", bob, d).orElseThrow();
+        assertEquals(1, b.size());
+        assertTrue(String.valueOf(b.get(0).get("MESSAGE")).contains("Bob only"));
+        assertEquals(List.of(), t.rows("home_needs", eve, d).orElseThrow());
+
+        assertEquals(List.of(Map.of("KIND", "trade", "ID", "T-1"), Map.of("KIND", "desk", "ID", "DESK-A")), t.rows("home_pinned", ann, d).orElseThrow());
+        assertEquals(List.of(), t.rows("home_pinned", bob, d).orElseThrow());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"risk-manager", "risk-officer", "trader", "operations", "quant", "credit-officer", "economist", "market-data", "genomicist"})
+    void everyHomeBindsPinnedAndTheNonModuleOnesBindNeedsYou(String home) {
+        String text = catalogue().find(home).orElseThrow().sutraText();
+        Map<String, String> aliases = HomeComposer.aliases(text);
+        assertEquals("home_pinned", aliases.get("pinned"), home);
+        if (!home.equals("genomicist")) {
+            assertEquals("home_needs", aliases.get("needs"), home);
+        }
     }
 }

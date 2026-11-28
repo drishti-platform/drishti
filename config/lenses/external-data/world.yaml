@@ -29,11 +29,6 @@ menus:                                   # by id, per menu: the order this lens 
   placeholder: "ECON CAN, NEWS rates, USEQ AAPL, LEIC US, FUND SPY …  then <GO>"
 
 home:
-  landing: desk                          # the default landing: desk (A, World desk), explorer (B, Explorer), map (C, World map); today: the product's Home
-  landings: [desk, explorer, map]        # the landings a person may pick on Home (their choice is kept in their settings)
-  template: external-data:world_landing.html   # the page that draws them: the external-data module's (its console part, modules/external-data/console/; its script and style)
-  titles: { desk: World desk, explorer: Explorer, map: World map }
-  landing-by-role: {}                    # {role: landing}: read, wins over the person's choice when set; wired to role-based access later
-  topics: [TOPIC-RATES, TOPIC-INFLATION, TOPIC-OIL, TOPIC-FED, TOPIC-ECB, TOPIC-AI]   # A's news by topic (each topic's latest stories)
+  home: economist    # the role Home this lens opens (config/homes/, docs/architecture/ROLE_HOME_SUTRAS.md): a Home Sutra on the one Home page
   sections: { stats: off, grammar: off, pipeline: off, capabilities: off, views: off }   # the product's Home (signed out, or landing=today)
 

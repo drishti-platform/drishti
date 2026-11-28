@@ -83,10 +83,9 @@ class EditionTradingServerTest {
         ok(get("/public/about")).path("lenses").forEach(l -> lenses.add(l.asText()));
         assertThat(lenses).contains("trading");
         String dee = "dee-" + System.nanoTime();
-        settings(dee, "{\"lens\":\"trading\",\"homeLanding\":\"desk\",\"tradingView\":\"desk:DESK-COMM\"}");
+        settings(dee, "{\"lens\":\"trading\",\"tradingView\":\"desk:DESK-COMM\"}");
         JsonNode back = ok(get("/api/v1/me/settings").header("Authorization", bearer(dee)));                // read back, as the console does
         assertThat(back.path("lens").asText()).isEqualTo("trading");
-        assertThat(back.path("homeLanding").asText()).isEqualTo("desk");
         assertThat(back.path("tradingView").asText()).isEqualTo("desk:DESK-COMM");
         MvcResult bad = mvc.perform(patch("/api/v1/me/settings").header("Authorization", bearer(dee)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"tradingView\":\"book:BOOK-1' or 1=1\"}")).andReturn();

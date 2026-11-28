@@ -86,8 +86,46 @@ public class HomeConfiguration {
 
     @Bean
     public HomeTables homeTables(HomeProperties props, HomeStore store, HomeClock clock, ObjectProvider<MeasureSource> sources,
-            ObjectProvider<HomeTable> tables, ChangeEngineHost host, ExpectationService expectations, com.ash.drishti.server.security.Entitlements entitlements) {
+            ObjectProvider<HomeTable> tables, ChangeEngineHost host, ExpectationService expectations, com.ash.drishti.server.security.Entitlements entitlements,
+            ObjectProvider<HomePersonal> personal) {
         return new HomeTables(props, store, clock, sources.orderedStream().toList(), tables.orderedStream().toList(), host,
-                () -> List.<ExpectationService.State>copyOf(expectations.attention(Clock.systemUTC().instant())), entitlements::mayOpen);
+                () -> List.<ExpectationService.State>copyOf(expectations.attention(Clock.systemUTC().instant())), entitlements::mayOpen,
+                personal.getIfAvailable(() -> HomePersonal.NONE));
+    }
+
+    /** The person's own alerts, approvals and pins, read as the person (an absent service gives none). */
+    @Bean
+    public HomePersonal homePersonal(ObjectProvider<com.ash.drishti.server.alerts.AlertService> alerts, ObjectProvider<com.ash.drishti.server.approvals.ApprovalQueue> queue,
+            ObjectProvider<com.ash.drishti.server.api.MySettings> settings, com.ash.drishti.server.security.Entitlements entitlements) {
+        return new HomePersonal() {
+            @Override
+            public List<java.util.Map<String, Object>> alerts(com.ash.drishti.kernel.api.security.Principal p) {
+                var a = alerts.getIfAvailable();
+                return a == null ? List.of() : a.raised(p.user(), entitlements.isAdmin(p), true);
+            }
+
+            @Override
+            public List<com.ash.drishti.server.approvals.ApprovalQueue.Entry> inbox(com.ash.drishti.kernel.api.security.Principal p) {
+                var q = queue.getIfAvailable();
+                return q == null ? List.of() : q.list(p, "inbox", null, null, 50).items();
+            }
+
+            @Override
+            public List<java.util.Map<String, Object>> pinned(com.ash.drishti.kernel.api.security.Principal p) {
+                var s = settings.getIfAvailable();
+                List<java.util.Map<String, Object>> out = new java.util.ArrayList<>();
+                if (s != null) {
+                    s.of(p.user()).path("pinned").forEach(e -> out.add(java.util.Map.of("kind", e.path("kind").asText(), "id", e.path("id").asText())));
+                }
+                return out;
+            }
+        };
+    }
+
+    @Bean
+    public HomeComposer homeComposer(HomeTables tables, HomeCatalogue catalogue, com.ash.drishti.rachana.SutraRegistry sutras,
+            com.ash.drishti.engine.ViewPipeline pipeline, com.ash.drishti.server.security.Entitlements entitlements, com.ash.drishti.common.JsonCodec codec,
+            com.fasterxml.jackson.databind.ObjectMapper json) {
+        return new HomeComposer(tables, catalogue, sutras, pipeline, entitlements, codec, json);
     }
 }

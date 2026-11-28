@@ -48,7 +48,8 @@ public final class HomeTables {
     /** The tables the server itself serves (a module adds more with a {@link HomeTable} bean). */
     public static final Set<String> BUILT_IN = Set.copyOf(List.of("home_meta", "home_kpis", "home_kpi_history", "home_exceptions", "home_changes", "home_desk_limits",
                 "home_exposure", "home_digest", "home_stress", "home_mnemonics", "home_calendar", "home_news", "home_loads", "home_held_changes", "home_model_runs",
-                "home_margin_calls", "home_backtest", "home_indicators", "home_indicator_history", "home_positions", "home_pnl_days", "home_market_tiles"));
+                "home_margin_calls", "home_backtest", "home_indicators", "home_indicator_history", "home_positions", "home_pnl_days", "home_market_tiles",
+                "home_needs", "home_pinned"));
 
     private final HomeStore store;
     private final HomeClock clock;
@@ -59,9 +60,16 @@ public final class HomeTables {
     /** Whether a person may open a kind (their roles and the kind's pack): load states and feed events of other packs are not theirs to see. */
     private final java.util.function.BiPredicate<Principal, String> mayOpen;
     private final HomeProperties props;
+    private final HomePersonal personal;
 
     public HomeTables(HomeProperties props, HomeStore store, HomeClock clock, List<MeasureSource> sources, List<HomeTable> extra, ChangeEngineHost changes,
             Supplier<List<ExpectationService.State>> loadStates, java.util.function.BiPredicate<Principal, String> mayOpen) {
+        this(props, store, clock, sources, extra, changes, loadStates, mayOpen, HomePersonal.NONE);
+    }
+
+    public HomeTables(HomeProperties props, HomeStore store, HomeClock clock, List<MeasureSource> sources, List<HomeTable> extra, ChangeEngineHost changes,
+            Supplier<List<ExpectationService.State>> loadStates, java.util.function.BiPredicate<Principal, String> mayOpen, HomePersonal personal) {
+        this.personal = personal;
         this.props = props;
         this.store = store;
         this.clock = clock;
@@ -101,6 +109,8 @@ public final class HomeTables {
             case "home_stress" -> Optional.of(List.of());      // TODO(R2): computed stress results (computed-risk-measures rule), no engine view yet
             case "home_mnemonics" -> Optional.of(mnemonics(c));
             case "home_loads" -> Optional.of(loads(p));
+            case "home_needs" -> Optional.of(needs(p));
+            case "home_pinned" -> Optional.of(pinned(p));
             case "home_calendar", "home_news" -> Optional.of(List.of());   // TODO(R2): the economy module's calendar and headline feeds
             // TODO(R2): each is served by the module that owns the data (a HomeTable bean): the edit module's held changes, the model-run ledger,
             // the risk module's margin calls (the collateral engine) and backtest (the VaR history: its VarHomeBacktest, done), the economy
@@ -110,6 +120,63 @@ public final class HomeTables {
                 Optional.of(List.of());
             default -> limitTable(c, table);
         };
+    }
+
+    /** Most rows "Needs you" shows. */
+    static final int NEEDS_MAX = 8;
+
+    /**
+     * "Needs you": what waits for this person and nobody else, worst first: the alerts raised for them (not resolved, not snoozed) and the
+     * approvals in their inbox (never their own item while four eyes apply). SEVERITY is high, medium or low like the exceptions; COMMAND opens
+     * the page that owns the item.
+     */
+    private List<Map<String, Object>> needs(Principal p) {
+        Instant now = clock.now();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> a : personal.alerts(p)) {
+            if ("resolved".equals(a.get("stage")) || snoozed(a.get("snoozedUntil"), now)) {
+                continue;
+            }
+            String message = String.valueOf(a.getOrDefault("message", ""));
+            out.add(row("SEVERITY", alertSeverity(String.valueOf(a.get("severity"))), "MESSAGE", "Alert: " + a.get("title") + (message.isBlank() ? "" : " - " + message),
+                    "SUBJECT", String.valueOf(a.get("rule")), "COMMAND", "ALERTS", "KIND", "alert"));
+        }
+        for (var e : personal.inbox(p)) {
+            var i = e.item();
+            if (!i.pending() || !i.mayDecide()) {
+                continue;
+            }
+            out.add(row("SEVERITY", e.dueSoon() ? "high" : "medium", "MESSAGE", "Approve: " + i.title() + " (from " + i.maker() + ")",
+                    "SUBJECT", i.kind() + "/" + i.id(), "COMMAND", "APPROVALS", "KIND", "approval"));
+        }
+        List<String> order = List.of("high", "medium", "low");
+        out.sort(Comparator.comparingInt(m -> order.indexOf(m.get("SEVERITY"))));       // stable: alerts before approvals within a severity
+        return out.size() > NEEDS_MAX ? new ArrayList<>(out.subList(0, NEEDS_MAX)) : out;
+    }
+
+    private static String alertSeverity(String s) {
+        return switch (s) {
+            case "critical", "high", "error", "bad" -> "high";
+            case "low", "info" -> "low";
+            default -> "medium";
+        };
+    }
+
+    private static boolean snoozed(Object until, Instant now) {
+        try {
+            return until != null && Instant.parse(String.valueOf(until)).isAfter(now);
+        } catch (java.time.DateTimeException e) {
+            return false;
+        }
+    }
+
+    /** "Pinned": the entities this person pinned (KIND, ID), in the order they pinned them. */
+    private List<Map<String, Object>> pinned(Principal p) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> e : personal.pinned(p)) {
+            out.add(row("KIND", String.valueOf(e.get("kind")), "ID", String.valueOf(e.get("id"))));
+        }
+        return out;
     }
 
     private LocalTime cutoff(HomeDefinition h) {

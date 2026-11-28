@@ -13,7 +13,7 @@
 # See the LICENSE file in the root of this repository for the full terms.
 
 # The economist's Home (milestone H1): indicator strip with sparklines, exceptions about the data, the release calendar and headlines.
-# Built only from library fragments (core of drishti-rachana). TODO(R2): home_indicators is served by the economy module.
+# Built only from library fragments (core of drishti-rachana). TODO(R2): home_indicators is served by the external-data module.
 rachana: 1.2
 sutra: home-economist
 version: 1
@@ -27,13 +27,20 @@ data:
   mnem:      { table: home_mnemonics }
   cal:       { table: home_calendar }
   news:      { table: home_news }
+  digest:    { table: home_digest }
+  loads:     { table: home_loads }
+  needs:     { table: home_needs }
+  pinned:    { table: home_pinned }
 layout:
   user-can-arrange: true
   areas:
     - "ind ind ind"
     - "exc cal news"
+    - "needs needs pinned"
+    - "loads loads loads"
+    - "visit visit visit"
   columns: [4, 4, 4]
-  phone: [ind, exc, cal, news]
+  phone: [ind, exc, cal, news, needs, pinned, loads, visit]
 panels:
   - use: core/kpi-strip@1
     as: ind
@@ -58,3 +65,33 @@ panels:
     area: news
     with:
       rows: { from: $.news, columns: { date: AT, headline: HEADLINE, source: SOURCE, link: LINK } }
+  - use: core/exceptions-list@1
+    as: needs
+    area: needs
+    with:
+      title: Needs you
+      rows: { from: $.needs, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: pinned
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
+  - use: core/data-table@1
+    as: loads
+    area: loads
+    with:
+      title: Data loads
+      search: false
+      limit: 12
+      rows: $.loads
+      columns: [ { label: Pack, bind: "@.PACK" }, { label: Kind, bind: "@.KIND" }, { label: Business date, bind: "@.BUSINESS_DATE" }, { label: State, bind: "@.STATE" } ]
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

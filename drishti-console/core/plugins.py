@@ -21,7 +21,6 @@ no module's code; a module registers what the core asks of it, and the core asks
   edition must keep (:func:`command`, :func:`redirect`); a retired stored record's link (:func:`retired`, :func:`retired_link`).
 * **type-ahead** (C3): a word's own suggestions (:func:`type_ahead`, :func:`suggest`) and lines put before the server's (:func:`hints`).
 * **presets** (C5): a Pivot preset's word grammar (``MCUBE BANK BY DESK``) as a partial view (:func:`preset`, :func:`preset_parser`).
-* **landings** (C6): who sees which landing (:func:`landing_rule`, :func:`landing_by_rules`).
 
 The workbook streamer (C4) is core/workbook_stream.py; the engines' typed client calls (C7) are the module's own, over the core client's
 one generic call (``BackendClient.engine``). Every hook holds code, never a person's data (session isolation).
@@ -56,7 +55,6 @@ _retired: list[Callable[[str, str], str | None]] = []
 _type_ahead: list[_TypeAhead] = []
 _hints: list[_TypeAhead] = []
 _presets: dict[str, Callable[[list[str]], dict]] = {}
-_landing_rules: list[Callable[..., str | None]] = []
 
 
 def _once(registry: list, item) -> None:
@@ -152,25 +150,6 @@ def preset(lens: str, parse: Callable[[list[str]], dict]) -> None:
 
 def preset_parser(lens: str | None) -> Callable[[list[str]], dict] | None:
     return _presets.get(str(lens or ""))
-
-
-# ---- C6: the landings --------------------------------------------------------------------------------------------------------------
-def landing_rule(fn: Callable[..., str | None]) -> None:
-    """Who sees which landing beyond the core's rules: ``fn(request, ed, offered, me, mine)`` answers a landing id or None."""
-    _once(_landing_rules, fn)
-
-
-async def landing_by_rules(request, ed, offered: list[str], me, mine: dict) -> str | None:
-    """The first rule's landing that is offered; a rule may be a coroutine (one that asks the server, Drishti Trading's role)."""
-    import inspect
-
-    for fn in _landing_rules:
-        to = fn(request, ed, offered, me, mine)
-        if inspect.isawaitable(to):
-            to = await to
-        if to in offered:
-            return to
-    return None
 
 
 # ---- C8: reserved words, console commands, phone pages, connector actions ---------------------------------------------------------------

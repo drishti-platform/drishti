@@ -1,0 +1,30 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# What the market-data Home follows (ROLE_HOME_SUTRAS 4): no figure of its own (the tiles are the module's market_tiles table, read as the person);
+# the change detection has nothing to compare here yet, so "Since" shows the data's own events (loads) only.
+home: market-data
+reference: { cut-off: "17:00", zone: site, day: previous-business-day }
+kpis: []
+follow: []
+events: [ load ]
+exceptions:
+  - { when: load-failed, severity: high, text: "{subject} failed the load check", open: "LOADS" }
+  - { when: feed-late,   severity: low,  text: "{subject} is {minutes} minutes late", open: "FEEDS" }
+mnemonics:
+  - { mnemonic: "CRV", about: "A yield curve" }
+  - { mnemonic: "FX", about: "An FX spot rate" }
+  - { mnemonic: "EQ", about: "An equity price" }
+  - { mnemonic: "CDS", about: "A credit curve" }
+  - { mnemonic: "LOADS", about: "Data loads and their state" }

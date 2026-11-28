@@ -235,6 +235,15 @@ explicit entries for a lake that still has some. [Every table of the reference i
 who uses it and how a bank binds its own external lake, is generated from the lake files by `drishti.py docs generate`. A table's name never follows a module or pack: reorganising modules moves
 no data.
 
+**The registry in practice.** The lake files are the registry: one entry per symbolic name, and nothing else says where a table is. To see it,
+open Admin → Lakes ([ADMIN_GUIDE.md section 29.6](ADMIN_GUIDE.md#296-admin--data-loads-the-inbox-the-upload-and-the-lakes)) or read the generated
+[table catalogue](../admin/TABLE_CATALOGUE.md); to complete it, run `drishti.py lake entries` (a list) and `drishti.py lake entries --write`
+(the explicit entries, from where the layout puts each table today); to check a lake against its entries, `drishti.py lake check`. To read a lake
+that already exists elsewhere (a bank's curated Delta or Iceberg lake on S3 or a share), write one lake file for it and give each symbolic name
+its real `uri:`: the steps, the example file and the checks are the recipe in
+[TABLE_CATALOGUE.md, Binding a bank's external lake](../admin/TABLE_CATALOGUE.md#binding-a-banks-external-lake). Loaders, connectors, Sutras and engines
+then read it by the same names, with no change of code.
+
 ### 2.3 Partitions: business date first, then as few as possible
 
 **Every table is partitioned by `business_date` first, always.** It is not a setting and cannot be turned off; `partition-by` names
@@ -378,6 +387,11 @@ The sections that follow show those with Drishti's commands and files.
 
 All three follow the same rules for the table, the business date and the mode (section 5), honour the `.ready` file (section 4), take
 the layout from the lake file, and stamp every row with `_load_id`.
+
+**Where a load works.** The lake tools (`lake build` and the loads the inbox starts through them) stage the rows they are writing in a folder of their own
+under `<data>/tmp/loaders` (`drishti-build-*`, `drishti-children-*`; made on demand), never in the system temporary folder, which is often
+memory-backed or on a small disk. Size `<data>/tmp` for the largest batch in flight; the server's and the console's own temporary folders are in
+[OPERATIONS_GUIDE.md, Temporary folders](OPERATIONS_GUIDE.md#142-temporary-folders).
 
 ### 3.1 The data inbox
 

@@ -3620,6 +3620,48 @@ the VaR and exposure lakes; package `com.ash.drishti.server.connectors` kept, in
 3. **The drills**: one with the banking module absent (the core starts, serves BI, Pivot and the economy packs, and says *not
    installed* for a banking word).
 
+<!-- i8/modules -->
+<!-- Drop from here to the closing marker if the branch i8/modules misses the release. On a merge, also replace the Economy and Capital markets rows of
+     section 21.1 by a pointer to 21.9 and the Economy paragraph of section 20 by 20.11; the module ids economy and capitalmarkets are then retired. -->
+
+### 20.11 Drishti Public Sector
+
+`drishti.public-sector` (`--distribution public-sector`, `config/distributions/drishti.public-sector.yaml`) is the distribution for economies, governments
+and their statistics: product name *Drishti Public Sector*, the modules `external-data` and `news-and-events` both required, the lenses World and Public
+sector (World the default), and Home cards for `ECON CAN`, `WDI WDI-CAN`, `CBANK CBANK-BOC` and `NEWS rates`. It carries no banking module, so no
+trade, VaR or exposure command exists in it. Like every distribution it starts with `start all --distribution public-sector`, or `distribution: public-sector`
+for a console of a stack file ([20.7](#207-starting-a-particular-distribution)). The IMF-derived data stays internal-only in it as in the others
+(`features: { internal-only-data: off }`), so it is for internal demonstrations until the licence is settled. `drishti.finance` requires
+`external-data`, `news-and-events`, `market-data` and `reference-data` (lenses Markets and World, Markets the default), and `drishti.risk` requires
+`reference-data` and offers no external-data or news-and-events command.
+
+### 21.9 The content modules: reference-data, external-data and news-and-events
+
+Three content modules (no code of their own) carry the data every domain reads. A **pack is the switch** (Admin → Packs); the **module is the
+delivery and licensing unit**, with a licence feature of its own name. Lake folders and table names do not follow a module or a pack
+([DATA_LAKE_GUIDE.md section 2.2.1](../guides/DATA_LAKE_GUIDE.md#221-tables-by-symbolic-name-where-a-name-is)).
+
+| Module | Packs (off by default in brackets) | What it brings | Needs |
+|---|---|---|---|
+| `reference-data` | `core`, [`gleif`] | the parties and organisation every domain builds on (counterparty, counterparty-group, issuer, ccp, book, desk, trader, calendar, clearing-account) and the GLEIF legal entities (LEI): commands `CORE`, `CPTY`, `GRP`, `ISS`, `CCP`, `LE`, `BOOK`, `DESK`, `TRDR`, `CAL`, `CLR`, `GLEIF`, `LEI*` | nothing |
+| `external-data` | `world-economy`, [`world-development`, `national-statistics`, `oecd`, `central-banks`, `funds`, `us-equities`] | public data of the world: economies and forecasts, governments and elections, development indicators, central banks, national statistics, the OECD, US listed companies (SEC EDGAR) and the largest US funds and ETFs; the World and Markets lenses; the Economies and Companies menus | `reference-data` (optional) |
+| `news-and-events` | `news-and-markets`, [`official-news`, `gdelt-events`] | news and quotes by topic, official press releases, GDELT world events; the News and Quotes menu entries | `market-data` (optional) |
+
+`market-data` and `banking` (titled Risk) require `reference-data`: the counterparties, books and desks they read are its packs, so a distribution that
+offers either lists it. Each pack is filled by its own refresh script (Help → External data); the IMF-derived figures of `world-economy` stay internal-only
+exactly as before (the module's `content.yaml` lists the restricted sample files; the package carries none of them). Switching a module off removes its
+lenses, menus, functions, Help pages and Sutras; switching one pack off removes that pack's only
+([ADMIN_GUIDE.md section 29.3](../guides/ADMIN_GUIDE.md#293-admin--packs-switching-a-pack-off-for-everyone)).
+
+**Retired module ids.** The ids `economy`, `capitalmarkets` and `capital-markets` no longer name a module. A site that still names one (a switch file
+`config/modules/economy.yaml`, or a setting such as `drishti.modules.capitalmarkets.enabled` or `DRISHTI_MODULES_CAPITALMARKETS_ENABLED`) is
+**refused at start**, with one line that names the file or key and the module that replaces it: `economy` becomes `external-data` (the world-economy,
+world-development, national-statistics, oecd and central-banks packs) and `news-and-events` (the official-news, gdelt-events and news-and-markets
+packs), and the two capital-markets ids become `external-data` (the funds and us-equities packs). Nothing is translated silently: switch the module you meant, in the site
+folder's `modules/<module>.yaml`, and delete the old file ([OPERATIONS_GUIDE.md, upgrading](../guides/OPERATIONS_GUIDE.md#18-upgrades-and-rollback)).
+
+<!-- /i8/modules -->
+
 ## 22. Kernel and modules: mock-ups
 
 **Status:** design, not built.

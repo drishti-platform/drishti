@@ -31,14 +31,20 @@ data:
   mnem:      { table: home_mnemonics }
   cal:       { table: home_calendar }
   news:      { table: home_news }
+  digest:    { table: home_digest }
+  loads:     { table: home_loads }
+  needs:     { table: home_needs }
+  pinned:    { table: home_pinned }
 layout:
   user-can-arrange: true                     # "arrange my Home": the person's own order and sizes, kept per person (ROLE_HOME_SUTRAS 3)
   areas:
     - "kpis kpis kpis"
     - "exc chg rail"
     - "cpty calls rail"
+    - "loads loads loads"
+    - "visit visit visit"
   columns: [4, 5, 3]
-  phone: [kpis, exc, chg, work, rail]
+  phone: [kpis, exc, chg, work, rail, loads, visit]
 panels:
   - use: core/kpi-strip@1
     as: kpi
@@ -74,6 +80,21 @@ panels:
     requires: mnemonic.COLL
     with:
       rows: { from: $.calls, columns: { date: DATE, direction: DIRECTION, amount: AMOUNT, currency: CURRENCY, status: STATUS } }
+  - use: core/exceptions-list@1
+    as: needs
+    area: rail
+    with:
+      title: Needs you
+      rows: { from: $.needs, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: rail
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
   - use: core/data-table@1
     as: mnem
     area: rail
@@ -93,3 +114,18 @@ panels:
     area: rail
     with:
       rows: { from: $.news, columns: { date: AT, headline: HEADLINE, source: SOURCE, link: LINK } }
+  - use: core/data-table@1
+    as: loads
+    area: loads
+    with:
+      title: Data loads
+      search: false
+      limit: 12
+      rows: $.loads
+      columns: [ { label: Pack, bind: "@.PACK" }, { label: Kind, bind: "@.KIND" }, { label: Business date, bind: "@.BUSINESS_DATE" }, { label: State, bind: "@.STATE" } ]
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

@@ -954,21 +954,13 @@
           "description" : "Curves, surfaces, fixings and prices, the market data that feeds risk and valuations, in one place",
           "edition" : "market",
           "home" : {
-            "landing" : "desk",
-            "landing-by-role" : { },
-            "landings" : [ "desk", "explorer", "quality" ],
+            "home" : "market-data",
             "sections" : {
               "capabilities" : false,
               "grammar" : false,
               "pipeline" : false,
               "stats" : false,
               "views" : false
-            },
-            "template" : "home/market_landing.html",
-            "titles" : {
-              "desk" : "Market desk",
-              "explorer" : "Explorer",
-              "quality" : "Quality"
             }
           },
           "menus" : {
@@ -977,9 +969,6 @@
             "placeholder" : "CRV CRV-USD-OIS, FXV FXV-EURUSD, IRV IRV-USD, CDS where SPREAD_5Y > 100 …  then <GO>",
             "top" : [ "views", "markets", "bi", "admin", "help" ],
             "views" : [ "terminal", "search", "forms", "functions", "datamap", "data", "reports", "workspaces", "monitors", "alerts" ]
-          },
-          "quality" : {
-            "stale-days" : 2
           },
           "title" : "Drishti Market"
         },
@@ -1012,22 +1001,13 @@
           "description" : "VaR and counterparty exposure, from your own pricing data, in one place",
           "edition" : "risk",
           "home" : {
-            "hierarchies" : [ "MGMT" ],
-            "landing" : "desk",
-            "landing-by-role" : { },
-            "landings" : [ "desk", "command", "map" ],
+            "home" : "risk-manager",
             "sections" : {
               "capabilities" : false,
               "grammar" : false,
               "pipeline" : false,
               "stats" : false,
               "views" : false
-            },
-            "template" : "home/risk_landing.html",
-            "titles" : {
-              "command" : "Command first",
-              "desk" : "Risk desk",
-              "map" : "Risk map"
             }
           },
           "menus" : {
@@ -1052,21 +1032,13 @@
           "description" : "Your books, P&L, VaR and limits, today's trades and your counterparties, for traders and desk heads",
           "edition" : "trading",
           "home" : {
-            "landing" : "trader",
-            "landing-by-role" : { },
-            "landings" : [ "trader", "desk", "explorer" ],
+            "home" : "trader",
             "sections" : {
               "capabilities" : false,
               "grammar" : false,
               "pipeline" : false,
               "stats" : false,
               "views" : false
-            },
-            "template" : "home/trading_landing.html",
-            "titles" : {
-              "desk" : "Desk head",
-              "explorer" : "Explorer",
-              "trader" : "Trader desk"
             }
           },
           "menus" : {
@@ -1078,45 +1050,20 @@
             "top" : [ "views", "markets", "blotter", "positions", "risk", "counterparties", "help" ],
             "views" : [ "terminal", "search", "functions", "data", "reports", "workspaces", "monitors", "alerts" ]
           },
-          "title" : "Drishti Trading",
-          "trading" : {
-            "landing-by-role" : {
-              "desk-head" : "desk",
-              "trader" : "trader"
-            },
-            "limit-days" : 5,
-            "live-statuses" : [ "NEW", "VALIDATED", "AMENDED" ],
-            "match-records" : true,
-            "max-rows" : 20000,
-            "people" : {
-              "drishti-dev-admin" : {
-                "trader" : "TRDR-ASHAH"
-              }
-            },
-            "pnl-var-days" : 60
-          }
+          "title" : "Drishti Trading"
         },
         "world" : {
           "description" : "Economies, markets, companies, legal entities and funds, from public data, in one place",
           "edition" : "world",
           "home" : {
-            "landing" : "desk",
-            "landing-by-role" : { },
-            "landings" : [ "desk", "explorer", "map" ],
+            "home" : "economist",
             "sections" : {
               "capabilities" : false,
               "grammar" : false,
               "pipeline" : false,
               "stats" : false,
               "views" : false
-            },
-            "template" : "economy:world_landing.html",
-            "titles" : {
-              "desk" : "World desk",
-              "explorer" : "Explorer",
-              "map" : "World map"
-            },
-            "topics" : [ "TOPIC-RATES", "TOPIC-INFLATION", "TOPIC-OIL", "TOPIC-FED", "TOPIC-ECB", "TOPIC-AI" ]
+            }
           },
           "menus" : {
             "footer" : [ "help", "about", "release-notes" ],

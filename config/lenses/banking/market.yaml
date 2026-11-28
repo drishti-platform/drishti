@@ -28,13 +28,5 @@ menus:                                   # by id, per menu: the order this lens 
   placeholder: "CRV CRV-USD-OIS, FXV FXV-EURUSD, IRV IRV-USD, CDS where SPREAD_5Y > 100 …  then <GO>"
 
 home:
-  landing: desk                          # the default landing: desk (A, Market desk), explorer (B, Explorer), quality (C, Quality); today: the product's Home
-  landings: [desk, explorer, quality]    # the landings a person may pick on Home (their choice is kept in their settings)
-  template: home/market_landing.html     # the page that draws them (it names its script and style: drishti_market-landing.js, drishti_market-landing.css)
-  titles: { desk: Market desk, explorer: Explorer, quality: Quality }
-  landing-by-role: {}                    # {role: landing}: read, wins over the person's choice when set; wired to role-based access later
+  home: market-data    # the role Home this lens opens (config/homes/, docs/architecture/ROLE_HOME_SUTRAS.md): a Home Sutra on the one Home page
   sections: { stats: off, grammar: off, pipeline: off, capabilities: off, views: off }   # the product's Home (signed out, or landing=today)
-
-quality:                                 # the Quality landing's checks (LENSES.md › The design); read-only, from the pack's own answers
-  stale-days: 2                          # stale: data older than the business date by more than this many business days
-

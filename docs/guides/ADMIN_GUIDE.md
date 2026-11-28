@@ -37,7 +37,7 @@ almost everything here; it is all under **Admin** in the top bar. Every setting 
 12. [What a lens is](#12-what-a-lens-is)
 13. [Run a whole instance as Drishti Risk or Drishti Finance](#13-run-a-whole-instance-as-drishti-risk-or-drishti-finance)
 14. [Offer lenses to people](#14-offer-lenses-to-people)
-15. [Home: landings, cards and chips](#15-home-landings-cards-and-chips) ([15.1 Configuring role Homes](#151-configuring-role-homes))
+15. [Home: the lens's Home, cards and chips](#15-home-the-lenss-home-cards-and-chips) ([15.1 Configuring role Homes](#151-configuring-role-homes))
 16. [The shipped lenses](#16-the-shipped-lenses)
 17. [Customise a lens without forking it, and white-label it](#17-customise-a-lens-without-forking-it-and-white-label-it)
 18. [Make your own lens](#18-make-your-own-lens)
@@ -171,6 +171,11 @@ have `bi` for pivots and reports) and click **Save**; you should see *Created <n
 packs; a user never given a list sees the default packs), an initial password of at least 10 characters with letters and digits, and
 **Save**. The demo profile does the same on the first start and gives each user the password in the table of [section 2.1](#21-sign-in-as-the-development-admin);
 until a password is changed, Admin shows the red default-password warning, so never run the demo profile in production.
+
+**Homes of the demo users.** `drishti-dev-risk` has the role `risk-trading`, which opens the risk manager's Home first and the trader's
+second (a **Home** picker on the page switches). `drishti-dev-genomics` and `drishti-dev-market` hold roles that are tied to no Home, so
+they land on the landing page; to give the genomics user the genomicist Home, set the role's Home to `genomicist` in **Admin → Roles**
+([section 15.1](#151-configuring-role-homes)). The development administrator is offered every Home.
 
 **Check each one.** Sign out and sign in as each user (a private window is quickest):
 
@@ -659,7 +664,7 @@ The console keeps a few answers for a moment so pages draw quickly. Nothing it k
   the browser's back button shows a person's page after they sign out.
 - **The browser**: what pages keep in this browser (the VaR basket, Calc's drafts and history, column filters, table sizes, the capacity
   plan, BI Studio's tabs and drafts, the controls' choices) is named per person, and **Sign out** clears it (`Clear-Site-Data: "storage"`).
-- **Links that change something** (open or leave a lens, choose Home's landing) are posted; opening their address shows a form, so a
+- **Links that change something** (open or leave a lens) are posted; opening their address shows a form, so a
   crawler, a prefetch or another site's link changes nothing.
 - **The server connection** keeps no cookie a server sets: who calls is said by each call's own headers.
 - **SQL over a BI extract** runs in four shared worker threads, at most two of them one person's at a time.
@@ -729,7 +734,7 @@ curl -s 'localhost:18480/api/v1/admin/audit?subject=priya&limit=20'
 
 ## 12. What a lens is
 
-A **lens** is a **workspace**: Drishti arranged for one kind of person. It sets the starting Home (landings, cards, chips), which menus
+A **lens** is a **workspace**: Drishti arranged for one kind of person. It names the Home it opens and sets the cards and chips, which menus
 and menu items come first, the command line's placeholder and the default screens. It **never hides anything**: every command, page,
 menu item, Help page, Admin page and BI dataset the running distribution has stays there, inside a lens or not. A person opens one for
 their own session (*Open Drishti Risk*, [section 14](#14-offer-lenses-to-people)); the distribution may name one as everyone's starting
@@ -753,7 +758,7 @@ licence  →  modules on  →  lenses offered  →  functions this person may us
 - **The functions** are the command words the lens bundles (`VAR`, `TRD`, `CRV`, `ECON` ...). A card, chip, menu item or command whose
   function is off for the person (its module off, or an administrator's switch on Functions: [section 20](#20-functions-func-every-command-and-turning-one-on-or-off))
   is not shown.
-- **The lens** arranges the experience: the top menus it puts first and their items' order, Home (landings, cards, chips), the
+- **The lens** arranges the experience: the top menus it puts first and their items' order, its Home (the one it opens, cards, chips), the
   placeholder, the phone display. It loads no pack, presets no feature and hides nothing.
 
 ### 12.2 Where a lens is defined
@@ -761,7 +766,7 @@ licence  →  modules on  →  lenses offered  →  functions this person may us
 | Where | What it holds |
 |---|---|
 | **The registry** (`META-INF/drishti/lenses.yaml` in each module's jar: [the banking module's](../../modules/banking/java/banking-service/src/main/resources/META-INF/drishti/lenses.yaml), [the core server's](../../kernel/drishti-server/src/main/resources/META-INF/drishti/lenses.yaml)) | the lens's id and title, the modules it needs, the functions it bundles, its Home template, its Home **cards** (`cards:`) and **chips** (`chips:`), and for a lens with no file its menus and Help pages; a site's `config/access/lenses.yaml` adds a lens or replaces one by its id |
-| **The lens file** (`config/lenses/<module>/<lens>.yaml`) | the arrangement: its title and description, the menus it puts first (`menus:`), Home (`home:`), the phone display (`phone:`) and its landings' own settings (`trading:`, `quality:`) |
+| **The lens file** (`config/lenses/<module>/<lens>.yaml`) | the arrangement: its title and description, the menus it puts first (`menus:`), the Home it opens (`home:`) and the phone display (`phone:`) |
 
 The shipped lenses:
 
@@ -818,7 +823,7 @@ drishti:
 ```
 
 Each person then sees **Open Drishti Risk** (and the others listed) in the Views menu and on Home, each with its lens's description.
-Opening one arranges, on every page and every server of the cluster, their Home (the lens's landings, cards and chips) and the menus
+Opening one arranges, on every page and every server of the cluster, their Home (the Home the lens names, its cards and chips) and the menus
 (the lens's first, then the rest); every command, page and dataset stays where it was. **Leave Drishti Risk** comes back (to the
 distribution's starting workspace, which has no Leave link of its own). Inside one lens the menu shows
 **Leave …** first, then **Switch to …** each of the others: switching needs no leaving first. The default, `default`,
@@ -838,103 +843,84 @@ fix, and **Admin → Health** shows it in red. The 3-node stack uses the default
 
 To turn lenses off, set `DRISHTI_LENSES=` (empty) and restart: people inside one see the full product at their next page.
 
-## 15. Home: landings, cards and chips
+## 15. Home: the lens's Home, cards and chips
 
-**Landings.** Each shipped lens with a lens file has three Home pages, each filled from the engines' and packs' own answers. The links at
-the top of Home switch between them, and **the choice is remembered** in the person's settings (`homeLanding`, read back by the server's
-`/api/v1/me/settings`), so it follows them to every server and browser. A landing the current lens does not offer gives that lens's
-default; a landing id two lenses share (`desk`, `explorer`, `map`) follows the person from one to the other. "The classic Home"
-(`?landing=today`) opens the product's Home with the lens's sections.
-
-The lens file sets which landings are offered, the default, the page that draws them and their titles:
+**The lens's Home.** A lens names the Home it opens, a role Home of the server ([section 15.1](#151-configuring-role-homes)); there is no landing page of a lens's own. The lens
+file says it:
 
 ```yaml
 home:
-  landing: desk                    # the default
-  landings: [desk, command, map]
-  template: home/risk_landing.html # a home/<name>_landing.html page; a file that names none gets Drishti Risk's
-  titles: { desk: Risk desk, command: Command first, map: Risk map }
-  landing-by-role: {}              # e.g. { risk-manager: map, trader: command }
-  sections: { stats: off, grammar: off, pipeline: off, capabilities: off, views: off }   # the product's Home sections
+  home: risk-manager               # the Home this lens opens (config/homes/<module>/): a Home Sutra on the one Home page (/home)
+  sections: { stats: off, grammar: off, pipeline: off, capabilities: off, views: off }   # the product's public Home sections
 ```
 
-`landing-by-role: {role: landing}`, when configured, wins over a person's remembered choice (Drishti Trading's own trading role sits below
-the choice: [section 16.2](#162-drishti-trading)).
+While a person works in the lens, `/` opens `/home`, and the console asks the server for that Home as their **default start**: it is used only for a person who has not chosen
+a start Home of their own and only when the Home is one they are offered (`GET /api/v1/homes/view?home=<name>`); a person with no Home offered gets the public landing page.
+Shipped: Risk opens `risk-manager`, Trading `trader`, Market `market-data`, World `economist`. The lens never widens what a Home shows: every figure is read as the person.
 
 **Cards and chips** come from the lens's registry entry (`cards:`, each `{title, cmd, icon}`; `chips:`, command lines). A card or chip is
 shown only while its function is on for the person, so a lens whose capital markets functions are off loses `USEQ AAPL` and `FUND SPY`
 without a change to any file. A site replaces them in the console's `edition:` block (`home.cards`, `home.chips`:
 [section 17](#17-customise-a-lens-without-forking-it-and-white-label-it)).
 
-The landings are not Sutras: a Sutra lays out one entity's view, and these pages span the engines with no entity. Each lens's landing is
-one template under its module's console plugin (`home/<lens>_landing.html`), drawn in the terminal look with the theme's own variables in
-every theme, one column on a phone. A figure the data cannot give is left out or labelled, never invented.
-
 ### 15.1 Configuring role Homes
 
-Everyone lands on **Your Home** (`/home`) after signing in, unless they asked for another page or chose a landing of their own in their
-settings. What it holds is configured in three places, all files, none code:
+Everyone lands on **Your Home** (`/home`) after signing in, unless they asked for another page or chose another landing page in their
+settings (`landing`). There is one Home page and one way to build it: a Home is a **Rachana Sutra** of library parts over the **home tables** the server serves for
+the person. What it holds is configured in files, none of it code:
 
 | What | Where | Says |
 |---|---|---|
-| Which Home a role has | the role's `home` field (Admin, Roles), preset by the distribution | the Home name (`risk-manager`, `trader`, `risk-officer`, `credit-officer`, `operations`, `quant`, `economist`, `genomicist`); the Home files are `config/homes/<module>/<home>.home.yaml` ([ROLE_HOME_SUTRAS.md](../architecture/ROLE_HOME_SUTRAS.md)) |
-| Which cards exist and for whom | a module's console `plugin.yaml`, `home: role-cards:`; the console's own in `drishti-console/config/home-cards.yaml` | a card's `id`, `title`, `kind` (`metric`, `bars`, `table`, `scatter`), the home `table` it reads, `pick`, `columns`, `open`, `explain` and `rank` |
-| Which layout | `layouts:` in `home-cards.yaml` | `risk-manager: cockpit`; any Home not named is calm |
+| Which Home a role has | `drishti.homes.roles` (or the role's `home` field in Admin, Roles), preset by the distribution | the Home name (`risk-manager`, `trader`, `risk-officer`, `credit-officer`, `operations`, `quant`, `economist`, `genomicist`, `market-data`); the Home files are `config/homes/<module>/` |
+| A Home | `<home>.home.yaml` beside its Sutra and measures | `home`, `title`, `modules:` (every module it needs must exist and be on: a test fails on a name no module has), `sutra:`, `arrange: allow` or `locked`, `measures:` |
+| What is on it | `<home>.sutra.yaml` | library parts (`use: core/...`) over the tables its `data:` block names; the layout (`areas`, `columns`, `phone`) and `user-can-arrange` |
+| What it follows | `<home>.measures.yaml` | the figures (`kpis:`), the measures compared with the cut-off (`follow:`), the event kinds of "Since you were here" (`events:`), the exceptions' rules and the quick mnemonics |
 
-A card is a declaration over a **home table** (`home_kpis`, `home_desk_limits`, `home_exposure`, `home_changes`, `home_loads`, ...): the server serves each
-table for the person, so the figures are theirs and nothing is computed in the console.
+The layout of a Home is the Sutra's: Calm is three columns; a Home with twelve columns is drawn as the cockpit. Nothing else configures a layout.
 
-```yaml
-home:
-  role-cards:
-    - id: limits                      # lower-case words; the person's pins and hidden cards are kept under this id
-      title: Limit utilisation by desk
-      kind: bars                      # metric: one figure of a table row; bars: use against a limit; table: columns of rows
-      table: home_desk_limits
-      name: DESK
-      value: VAR
-      limit: LIMIT
-      open: VLIM                      # the Open button's command
-      explain: { kind: var, measure: var, scope: BANK }   # the Explain button (optional)
-      rank: { risk-manager: 80, risk-officer: 85, trader: 50 }   # weight per role Home; "*" is any Home
-```
+The Sutra's `data:` block names its tables (`kpis: { table: home_kpis }`); the server reads each one **as the person** (their roles, row rules and
+masks), hands the rows to the Rachana binder as the document `{kpis: [...]}`, and the panels bind them (`$.kpis`). The built-in tables are `home_meta`,
+`home_kpis`, `home_kpi_history`, `home_exceptions`, `home_changes`, `home_desk_limits`, `home_exposure`, `home_loads`, `home_needs`, `home_pinned`, `home_digest`, `home_mnemonics`
+and the ones whose module is not yet serving them (`home_calendar`, `home_news`, `home_indicators`, ... empty, and the panel says so in its own words).
+The server computes every figure, the use of a limit and its tone included; the console only draws.
 
-**Ranking.** A card is offered when one of the person's Homes has a weight for it (or it has a `*` weight); the highest weight over all their
-Homes puts it first, so a person with several roles sees the cards of every one ranked together. A card of a module that is switched off is
-not offered. A metric card whose figure the server does not have (its engine is off) is left out; a table card says its own empty words
-(`empty:`, or `always: true` to keep it on the page). A `light: [4, 9]` on a metric colours it green up to 4, amber up to 9, red above.
+**Needs you and Pinned (the person's own).** Every shipped Home binds `home_needs` (panel `needs`, the `core/exceptions-list` part) and `home_pinned` (panel `pinned`, a
+`core/data-table`; the genomicist Home's own pipeline panel is `modneeds`). `home_needs` is SEVERITY, MESSAGE, SUBJECT, COMMAND, KIND: the alerts raised for the person (not
+resolved, not snoozed; the platform alerts too for an administrator) and the approvals in their inbox that they may decide (four eyes: never their own request), worst first,
+at most eight; the person's **Snooze for 4 hours** puts the panel to sleep. `home_pinned` is KIND, ID: the entities the person pinned (setting `pinned`, up to 20). Both are read
+as the person, so two people never see each other's rows; add either to a Home's `data:` block and panels to put it where it belongs.
 
-**Needs you** reads three things that need no configuration: the person's raised alerts, their approvals inbox and the data loads that are
-late, missing or failed; the high exceptions of the Home's measures file (`exceptions:`) join them.
+**Who is offered a Home.** A person is offered the Homes their roles name (`drishti.homes.roles`, or the role's `home` field edited in Admin → Roles) while
+every module the Home needs is on; an **administrator** is offered every such Home, and only an administrator may **View as** another Home (the Homes API
+refuses it to anyone else, and ignores a stored choice of a person who is no longer an administrator). The figures are still the signed-in person's own
+(row rules and masks), and a Home of a module that is switched off is offered to nobody. The person's own start Home is the setting `home`
+(`PUT /api/v1/homes/me`, which refuses a Home they are not offered).
 
-**Per person.** Pins, hidden cards, order, snoozes, the last visit (`lastVisit`, and `prevVisit`, the visit before it, which the digest
-reads against), and the role they **View as** (`viewAs`, one of their own Homes: the console refuses a Home they are not offered) are the
-person's `homeCards` setting (`PATCH /api/v1/me/settings`); a card an administrator removes simply stops being drawn.
+**Per person.** Pins, hidden panels, order, snoozes, the last visit (and the visit before it, which "Since you were here" reads against) and the
+administrator's **View as** are the person's own Home state, kept by the server (`GET /api/v1/homes/view` composes the Home with it applied;
+`POST /api/v1/homes/state` takes one action: `pin`, `unpin`, `hide`, `show`, `up`, `down`, `snooze`, `reset`, `visited`, `viewas`). The server
+checks every name (a panel id or a Home name only), caps the lists and refuses what is not the person's to do; a panel an administrator removes from a
+Sutra simply stops being drawn. A locked Home (`arrange: locked`) keeps the Sutra's order and offers no arrange buttons, only Snooze. Nothing per person
+is held in the console. The person's arrangement of the grid itself (width, place, fold) is `/me/arrange/home-<home>`.
 
-**Since your last visit.** The digest panel reads the home table `home_digest` from the person's last visit (`GET /api/v1/homes/{home}/tables/home_digest?since=<UTC time>`;
+**Since you were here.** The panel reads the home table `home_digest` from the person's last visit (`GET /api/v1/homes/{home}/tables/home_digest?since=<UTC time>`;
 with no `since` the Home's reference cut-off): the change events of the kinds the Home's measures file lists (`events:`), and each followed
-measure (`follow:`) that moved since the stored snapshot of that day, for the subjects the person may see; the console adds the alerts fired since.
+measure (`follow:`) that moved since the stored snapshot of that day, for the subjects the person may see.
 
-**A module's own Home (genomics).** A module brings figures, tables and Needs-you items to a Home with no kernel code: a `MeasureSource` bean
-(engine `genomics`: `SAMPLES`, `VARIANTS`, `HITS`, and the variants and samples of each cohort, which the Home's `follow:` compares with the cut-off
-snapshot), `HomeTable` beans (a table names the Homes it is served to by `homes()`, so a person who is not offered that Home never reads it),
-and the console `plugin.yaml`:
+**A module's own Home (genomics, market data).** A module brings figures and tables to a Home with no kernel code: a `MeasureSource` bean (the genomics
+engine: `SAMPLES`, `VARIANTS`, `HITS`, which the Home's `follow:` compares with the cut-off snapshot) and `HomeTable` beans (a table names the Homes it
+is served to by `homes()`, so a person who is not offered that Home never reads it). Its Home's Sutra names the tables in `data:` and draws them with
+library parts, like every other panel.
 
-```yaml
-home:
-  role-cards:                         # the genomics cards; rank names the genomicist Home only, so no other role is offered them
-    - {id: genomics-gwas, title: Top associations, kind: table, table: genomics_gwas_top, rank: {genomicist: 90}}
-    - {id: genomics-manhattan, title: Association map, kind: scatter, table: genomics_manhattan, x: X, value: Y, name: GENE, group: CHROM, rank: {genomicist: 85}}
-  needs:                              # what the module adds to Needs you: each row of the table is one item
-    - {table: genomics_needs, what: WHAT, detail: DETAIL, tone: bad, open: LOADS, homes: [genomicist]}
-```
+| Module | Home | Tables it serves to that Home |
+|---|---|---|
+| genomics | `genomicist` | `genomics_gwas_top`, `genomics_manhattan` (the association table of the genomics-showcase pack), `genomics_clinvar` (the ClinVar feed's table for the genes the cohorts carry), `genomics_loads` (the feeds and each VCF file read), `genomics_needs` (a VCF that failed validation, with its first problem) |
+| market-data | `market-data` (role `market-data-reader`, the demo user `drishti-dev-market`) | `market_tiles` (the desk tiles), `market_curve` (the USD OIS curve), `market_moves` (the biggest moves), `market_freshness` (the data checks: stale, gaps, broken) |
+| external-data | `economist` | `home_indicators` and the calendar and headline tables (the module that replaced `economy`) |
 
-The module's tables are `genomics_gwas_top` and `genomics_manhattan` (the association table of the genomics-showcase pack), `genomics_clinvar`
-(the ClinVar feed's table, symbolic name clinvar-variant: `GENE`, `VARIANT_ID`, `SIGNIFICANCE`, `UPDATED`, `BUSINESS_DATE`, for the genes the cohorts carry), `genomics_loads` (the ClinVar
-feed, the Ensembl feed's table, ensembl-gene, and each VCF file read) and `genomics_needs` (a VCF that failed validation, with its first problem). The lake
-tables are read by their symbolic names, never by a path (the site's bindings say where they live); a table that is not loaded shows as *not loaded*
-and its card says so in its own words. The feed rows are read at most once a minute. A role opens the Home through `drishti.homes.roles`
-(`genomicist` and `geneticist` open `genomicist`; add your own roles there, or in Admin, Roles); the Home files are `config/homes/genomics/`.
+The lake tables are read by their symbolic names, never by a path (the site's bindings say where they live); a table that is not loaded shows as
+*not loaded* and its panel says so. The genomics feed rows are read at most once a minute. A role opens a Home through `drishti.homes.roles`
+(`genomicist` and `geneticist` open `genomicist`; `market-data-reader` opens `market-data`; add your own roles there, or in Admin, Roles).
 
 ## 16. The shipped lenses
 
@@ -952,15 +938,9 @@ The command line suggests
 `VAR BANK`, `VRES DESK:RATES`, `EXP CPTY:CP-ALDERSHOT`; the registry's chips add `VAR DESK RATES`, `EXP BANK`, `VLIM` and `VOFF`, and its
 cards open the bank's and the rates desk's VaR, VaR results by desk and a counterparty's exposure.
 
-| Landing | Id | What leads |
-|---|---|---|
-| **Risk desk** (the default) | `desk` | tiles: VaR and ES of the bank, the backtest, exposure EPE and peak PFE, limits in breach, counterparties and netting sets; VaR by desk with limit use; exposure by counterparty against its credit limit; quick cards |
-| **Command first** | `command` | a big command line, the lens's chips, a status strip, the person's VaR baskets, their monitors, links to learn |
-| **Risk map** | `map` | the hierarchy with VaR and limit use per node and a switch between the hierarchies the engine holds (`home.hierarchies` names the one it opens on); a limit-use heat map; Today: intraday batches, official records, breaches |
-
-Every figure is the engines' own answer through the console's `/api/var/...` and `/api/exposure/...` (`scope`, `scope/history`, `tree`,
-`intraday/streams`, `official`, `baskets`). The map shows VaR and limit use per node (exposure is netted per netting set across desks, so
-there is no EPE per VaR node), and the heat map shows each node's VaR limit use; the Today feed names the date an official record captured.
+**Its Home** is the risk manager's Home (`risk-manager`, `config/homes/banking/risk-manager.sutra.yaml`): the lens file names it with `home: { home: risk-manager }`,
+so signing in while in this lens opens it (`/` redirects to `/home`). The Home is a Rachana Sutra over the home tables ([section 15.1](#151-configuring-role-homes)): VaR and
+exposure against their limits, what needs you, what changed. The lens has no landing page of its own.
 
 ### 16.2 Drishti Trading
 
@@ -977,84 +957,15 @@ out.
 `SMAT BOOK BOOK-RATES-1 20` opens the scenario matrix: the book's scenarios across its last 20 business dates
 ([VAR_GUIDE.md section 3.9](VAR_GUIDE.md#39-the-scenario-matrix-smat)).
 
-| Landing (green accent) | Id | What leads |
-|---|---|---|
-| **Trader desk** (the default; traders) | `trader` | P&L today (MtM change since the business day before, over my books), my VaR (intraday when updated) and the highest limit use of my books, DV01 (when the valuations carry it), trades today (new, amended, cancelled); **Check a new trade**; today's blotter; top positions by VaR contribution; quick commands for my trader and book |
-| **Desk head** (desk heads) | `desk` | desk P&L today, desk VaR and its limit use, breaches, books near their limit, the largest counterparty's share of the desk's positive MtM; limit use by book over the last 5 business dates; by trader (P&L, VaR, trades); P&L against VaR over 60 days (official history only); overnight movers |
-| **Explorer** | `explorer` | a big command line, the chips, the commands grouped (blotter, books and positions, risk on my book, counterparties, market data), the person's recent Trading commands |
+**Its Home** is the trader's Home (`trader`, `config/homes/banking/trader.sutra.yaml`): the lens file names it with `home: { home: trader }`. Positions and P&L, the
+pre-deal check form and the market tiles are panels of that Sutra; their tables (`home_positions`, `home_pnl_days`, `home_market_tiles`) are served by the module that
+owns the data and show their own empty words until it does. The lens has no landing page of its own.
 
-The figures are worked out on the server by the trading module (`GET /api/v1/trading/landing/{role,me,valuations,blotter,risk,limits,pnl-var,traders}`,
-`POST /api/v1/trading/landing/check`, as the person; [API_REFERENCE.md](API_REFERENCE.md)); the console passes them on, read-only, as `/api/home/trading/{part}`
-and `POST /api/home/trading/check` (`404 DRS-4023` unless the person's lens shows `TRD`; the check also needs the words `VAR` and `EXP`),
-cached two minutes per person, date and scope.
-
-**"My": who a person is.** The landings open on **the person's own** books or desk. Who that is, in order:
-
-1. **Configuration.** `trading.people` in the lens file, with the server's own `drishti.trading.people` (its `application.local.yaml`)
-   added on top (a name in both: the server's). User names are compared ignoring case.
-
-   ```yaml
-   trading:
-     people:
-       a.shah: { trader: TRDR-ASHAH }                      # a trader: their trader record's books; opens on the Trader desk
-       t.brennan: { desk: DESK-COMM, role: desk-head }      # a desk head: the desk's books; opens on Desk head
-   ```
-
-2. **A trader record** (`trading.match-records`, on): a `trader` whose id is `TRDR-<USER>` (case, dots and dashes ignored) or whose `NAME`
-   is the person's display name, read with their own search.
-3. **Their own choice**: a person with neither sees a small **View as** picker (the traders and desks their search returns); the choice is
-   kept in their settings (`tradingView`: `trader:<id>` or `desk:<id>`, validated by the server's settings API).
-4. An **administrator** always sees the picker, and their choice wins over a mapping; a mapped person who is not an administrator cannot
-   repoint themselves (`/home/trading/view-as` refuses with `DRS-4023`).
-
-**Which landing opens first** follows the trading role: `trading.landing-by-role: {desk-head: desk, trader: trader}` (a View as desk counts
-as a desk head). It sits **below the person's own choice**, so a desk head who picks the Trader desk keeps it; `home.landing-by-role` still
-wins over both when configured. **It never widens access:** every figure is read through the existing routes as the person, with their
-roles, masks, lens and date; scoping only chooses which books the landing asks about. A role without `raw` sees `TRADER_ID` masked, so the
-Desk head's figures by trader say so instead of guessing. Other settings (all in `trading:`): `limit-days` (5), `pnl-var-days` (60),
-`max-rows` (20,000 valuations a date before the figures say **partial**), `live-statuses` (`NEW`, `VALIDATED`, `AMENDED`).
-
-**How the figures are made.**
-
-- **P&L today**: the MtM change of every trade of my books valued on both the business date and the business day before (`TVAL` on both
-  dates; the person's date box moves both), summed. The valuations' own `PNL_1D` is a different figure and is not used.
-- **My VaR**: the VaR engine's figure of the union of my books (`BOOK:A + BOOK:B`), labelled **intraday** with the trades updated and the
-  time when the engine applied intraday updates. **Limit use**: the highest of my books' VaR ÷ its limit, with the book and limit named.
-- **Totals** (P&L today, MtM, DV01, by book, by trader, the largest counterparty's share) are the server's pivot engine's
-  (`POST /api/v1/pivot/inline`); with the pivot engine off the tiles show no figure and say why.
-- **Trades today**: the trades of my books whose `SOURCE_UPDATE_TIME` is on the business date: **cancelled** (`TRADE_STATUS` CANCELLED),
-  **new** (`TRADE_ACTION` NEW, or `TRADE_DATE` that day), else **amended**. When that search does not answer in time on a large lake
-  (`DRS-1004`), the events come from the two days' valuations, with no time of day, and the tile says so.
-- **The day**: when the lake's latest valuations are older than the business date, the figures are of that day against the business day
-  before it, and the page says "the latest valuations are of …".
-- **Limit use by book**: each cell VaR ÷ limit from that date's **official VaR record**; a date without a record shows "—" and is named
-  under the grid.
-- **By trader**: each trader's component VaR over every trade of the desk, adding up to the desk's VaR. With `TRADER_ID` masked the P&L and
-  VaR are "—" and the card says why.
-- **P&L against VaR**: the desk's official history, the last `pnl-var-days`, exceptions circled; a replayed history is scenario P&L, not a
-  day's, so then the card is left out with that note.
-- **Largest counterparty**: its share of the desk's positive MtM over live trades (named so; a desk's share of each counterparty's netted,
-  collateralised exposure is not a figure the exposure engine serves).
-
-Left out or labelled, never invented: the DV01 tile when no live trade holds a DV01; P&L today, by book and by trader, and the movers
-without valuations on the day before; P&L against VaR without official history; by-trader P&L and VaR for a role that sees `TRADER_ID`
-masked; a book's limit use on a date without an official record. A scope larger than `trading.max-rows` is read in part and every figure
-says **partial**.
-
-**The new-trade check.** Pick a product (the products of your live trades), the side, a notional (`250m`, `1.5bn`), the counterparty and
-the book, then **Check**. The engines price a **copy of a booked trade**: a live trade of the product with a notional in my books (the
-counterparty's own first, then the chosen book's, then the largest notional), scaled to the notional (negative when the side differs). One
-answer from the two engines, each asked once, as the person:
-
-- **VaR**: the VaR page's what-if on `BOOK:<book>` gives VaR before and after and the book's limit, its use before and after and the status
-  after: **fits** (`within`), **near** (from `drishti.risk.limit-near`), **breaches**; no comparable limit: the change only.
-- **Counterparty**: the exposure engine's pre-deal check ([EXPOSURE_GUIDE.md section 18.9](EXPOSURE_GUIDE.md#189-the-pre-deal-check)):
-  the decision and the counterparty's credit limit before and after: **fits**, **near** (from `drishti.ccr.exposure.limit-near`),
-  **breaches** (a decline), or **refer** with the reason. When the copied trade has no paths on the run the check is asked described, the
-  engine's conservative proxy, labelled **proxy**, which refers.
-
-A verdict reads: *Fits my VaR · 6.12m → 6.30m · limit use 83% → 85%* and *Counterparty near its limit · peak PFE 401.5m → 409.2m · 97% of
-limit*. Both halves are the server's engines and need no compute workers.
+The trading module's server API (`GET /api/v1/trading/landing/{role,me,valuations,blotter,risk,limits,pnl-var,traders}`, `POST /api/v1/trading/landing/check`;
+[API_REFERENCE.md](API_REFERENCE.md)) computes, as the person, the figures a trader's Home draws from: P&L today (the MtM change of the books' trades over two
+business dates), my VaR and the highest limit use of my books, trades today, limit use by book, P&L against VaR and the new-trade check (the VaR what-if and the
+counterparty pre-deal check, each asked once). "My" is the server's `drishti.trading.people` (a name to a trader or a desk), else a trader record whose id is
+`TRDR-<USER>`, else the person's `tradingView` setting; scoping only chooses which books are asked about and never widens access.
 
 ### 16.3 Drishti Market
 
@@ -1067,36 +978,11 @@ market-data pack, with the core pack it extends). No trades and no VaR. The mark
 | **Commands** | the pack's: `CRV`, `REPO`, `IRV`, `CPV`, `FIX`, `INF`, `INFC`; `FX`, `FXF`, `FXV`; `CDS`, `BND`; `EQ`, `EQX`, `DIV`, `EQV`, `CMD`, `CMDC`, `CMDV`; `CORR`, `CORRC`, `EQB`; the words `BI`, `FORM`, `FUNC`, `WHAT`, `DATAMAP`, `DATA` | `VAR`, `EXP`, `SMAT`, `PLAY` and every risk and trade command; core's own (`CPTY`, `BOOK`, `CAL`, `ISS` …); `RUPAKA` |
 | **Menus** | Views (Terminal, Search, Forms, Functions, Data map, Export data, Reports, Workspaces, Monitors, Alerts), Curves, Volatility, FX, Credit, BI, Admin, Help | Build, the risk engines |
 
-The landings (violet accent) are worked out on the server by the market-data module from the pack's own answers, read as the person,
-cached two minutes per person (`GET /api/v1/market-data/landing/{desk,moves,quality}`), and passed on by the console as
-`/api/home/market/desk`, `/moves` and `/quality` (`404 DRS-4023` unless the person's lens shows `CRV`).
-
-| Landing | Id | What leads |
-|---|---|---|
-| **Market desk** (the default) | `desk` | USD OIS 10Y, USD 2s10s, EUR/USD 1M ATM vol, the CDS 5Y median, the data exceptions; the USD curves (today against a week ago when the history has it); the biggest moves in σ of their own history; quick cards for CRV, FXV, IRV and FIX |
-| **Explorer** | `explorer` | a big command line, the chips, counts by asset class, the commands grouped by asset class with their counts; the person's recent commands, Knowledge, Data map, Learn |
-| **Quality** | `quality` | the checks below, critical first, then warnings, each opening its command; the clean share; a Checks run card |
-
-- **Changes only from real data.** A day-over-day change appears only when the history holds real data for both days; otherwise the tile
-  says "no change: no history for the day before".
-- **Biggest moves**: each curve's `TEN_Y`, credit curve's `SPREAD_5Y`, FX spot's `MID`, commodity's `FRONT` and index's `LEVEL` over 21
-  business days; the latest move in standard deviations of the item's own daily moves when ten or more are held (a "jump" at 3σ or more);
-  with less history, the largest moves against the day before.
-- **The quality checks**, worst first: **stale** (warning: a document older than the business date by more than `quality.stale-days`
-  business days, weekends and the server's holidays skipped); **gaps** (warning: a curve missing a tenor that every other curve of its type
-  has, for a type of three or more); **discount factors and forwards** (a discount factor that does not fall with maturity or is outside
-  (0, 1]: critical; a negative forward rate: warning); **vol surfaces** (critical: a vol at or below zero, and ATM total variance falling
-  with expiry on the FX and equity surfaces). Jumps and a second source are not checks.
-
-The stale threshold and the chips are configuration:
-
-```yaml
-edition:
-  quality:
-    stale-days: 3                  # default 2 (config/lenses/banking/market.yaml)
-  home:
-    chips: [CRV CRV-USD-OIS, FXV FXV-USDJPY, CDS CDS-SOLARIS, DATAMAP]
-```
+**Its Home** is the market-data Home (`market-data`, `config/homes/market-data/`, role `market-data-reader`): the lens file names it with `home: { home: market-data }`.
+Its panels (the desk tiles, the USD OIS curve, the biggest moves, the data checks) read the tables `market_tiles`, `market_curve`, `market_moves` and `market_freshness`, which
+the market-data module serves for the person ([section 15.1](#151-configuring-role-homes)). A day-over-day change appears only when the history holds both days. The
+module's checks are **stale** (a document older than the business date by more than 2 business days, weekends and holidays skipped), **gaps** (a curve missing a tenor that
+every other curve of its type has), **discount factors and forwards** and **vol surfaces**, worst first. The chips are configuration (`edition: { home: { chips: [...] } }`).
 
 ### 16.4 Drishti World
 
@@ -1106,32 +992,15 @@ edition:
 (`lake demo` builds them; [WORLD_DATA_GUIDE.md](WORLD_DATA_GUIDE.md) says how each source is refreshed). The IMF figures and Yahoo prices in these
 packs are shown inside the bank only; showing Drishti World outside it needs the product owner's decision first. While capitalmarkets is
 off, its packs, its functions (`USEQ`, `IDX`, `SIC`, `EDGAR`, `FILING`, `FACT`, `PXH`, `FUND`, `HELD`, `TRACK`), its cards and chips, and
-the landings' company, filing and fund parts are gone; the rest of World stands.
+its Home's company, filing and fund parts are gone; the rest of World stands.
 
 | Area | Put first | Left to the other menus (still there) |
 |---|---|---|
 | **Commands** | the packs' own: `ECON`, `MACRO`, `FCST`, `LABR`, `FISC`, `ECG`, `REGE`, `JUR`, `PARTY`, `OFFC`, `ELEC`, `REGN`, `SOCI`; `TOPIC`, `NEWS`, `CO`, `QUOTE`; `USEQ`, `IDX`, `SIC`, `EDGAR`, `FILING`, `FACT`, `PXH`; `LEI`, `LEIG`, `LEIR`, `LEIC`, `LEIM`; `FUND`, `HELD`, `TRACK`; `PRESS`, `PREL`, `GDELT`; the words `BI`, `FORM`, `FUNC`, `WHAT`, `DATAMAP`, `DATA` | `VAR`, `EXP`, `SMAT`, `PLAY` and every risk command; `RUPAKA` |
 | **Menus** | Views (Terminal, Search, Forms, Functions, Data map, Export data, Reports, Workspaces, Monitors, Alerts), Economies, Markets (news and quotes), Companies, BI, Admin, Help | Build, the risk engines |
 
-The landings (teal accent) read one thin read-only route, `/api/home/search`, which runs the server's own search grammar
-(`ECON where GDP_USD_BN > 0 order by GDP_USD_BN desc limit 12`), refused with `404 DRS-4023` for a command the person's lens does not
-show; the server filters again by the lens it is told. Each panel paints when its answer arrives; one refused or empty says so in place.
-
-| Landing | Id | What leads |
-|---|---|---|
-| **World desk** (the default) | `desk` | World GDP growth (GDP-weighted), quotes up and down in the market snapshot, the biggest mover, new SEC filings, funds and ETFs; economies that moved (the twelve largest, growth against the year before); today's news by topic (`home.topics`); quick cards |
-| **Explorer** | `explorer` | a big command line, the chips, the counts of economies, companies, legal entities, funds, filings and topics; the person's recent commands (World's only), Knowledge, Data map, Learn |
-| **World map** | `map` | the world by region, income group, G7 or G20, by growth, inflation or debt to GDP (each group GDP-weighted from its economies); US sectors by revenue; the largest funds and the index each tracks; what changed (the latest of each source) |
-
-The desk's topics, the chips and the default landing are configuration, in the file or the console's `edition:` block:
-
-```yaml
-edition:
-  home:
-    topics: [TOPIC-RATES, TOPIC-FED, TOPIC-OIL]            # the desk's news topics (TOPIC ids)
-    chips: [ECON USA, USEQ MSFT, FUND QQQ, DATAMAP]          # the Explorer's chips
-    landing: map                                            # the default landing
-```
+**Its Home** is the economist's Home (`economist`, `config/homes/external-data/`): the lens file names it with `home: { home: economist }`. The indicators, the release
+calendar and the headlines are panels of that Sutra over `home_indicators`, `home_calendar` and `home_news`. The chips and cards are the lens's registry entry.
 
 ### 16.5 Public sector
 
@@ -1149,13 +1018,13 @@ and world events: the packs world-development, central-banks, national-statistic
 | **Chips** | `WDI WDI-USA`, `CBANK CBANK-FED`, `OECD OECD-USA`, `PRESS PRESS-ECB` |
 
 With the economy module off, all its packs and functions are gone and neither World nor Public sector is offered. It ships no lens file and
-no landing template of its own, so it is not run as a whole instance's lens; to do that, or to give it landings, write a lens file for it
+no Home of its own, so it is not run as a whole instance's lens; to do that, or to give it a Home, write a lens file for it
 in `config/lenses/external-data/` ([section 18](#18-make-your-own-lens)).
 
 ## 17. Customise a lens without forking it, and white-label it
 
 A lens only arranges, so customising one is editing its file (or a copy: [section 18](#18-make-your-own-lens)): the menus it puts
-first, Home's landing, cards and chips, the placeholder. What exists, the brand and the feature presets are the distribution file's
+first, the Home it opens, cards and chips, the placeholder. What exists, the brand and the feature presets are the distribution file's
 ([section 24](#24-white-label-distributions)); a site changes them in its own distribution file, and any feature preset can be overridden by its own
 setting (for example `DRISHTI_LABS_CALC=true` turns Calc, a Labs feature, on). A site's `config/access/lenses.yaml` adds a lens to the
 registry or replaces a shipped one by its id (its modules, functions, cards and chips).
@@ -1164,8 +1033,7 @@ registry or replaces a shipped one by its id (its modules, functions, cards and 
 
 A lens's `phone:` block sets and caps the phone tier of panels over every Sutra, after the site's `ui.phone`
 ([BUILD_GUIDE.md](BUILD_GUIDE.md#32-designing-for-phones), [USER_GUIDE.md, On a phone](USER_GUIDE.md#on-a-phone));
-`max:` is a cap no Sutra can exceed. `pages:` does the same for the parts of the VaR and exposure pages, and `home.phone` for the lens's
-landing. Drishti Risk ships one rule: a VaR contribution panel waits under *More on this page*.
+`max:` is a cap no Sutra can exceed. `pages:` does the same for the parts of the VaR and exposure pages. Drishti Risk ships one rule: a VaR contribution panel waits under *More on this page*.
 
 ```yaml
 phone:
@@ -1214,7 +1082,7 @@ cp config/lenses/banking/risk.yaml config/lenses/banking/my-desk.yaml
 | `menus.top` | the top menus it puts first, by id, in order; the others follow (a subject menu it names is drawn too where the distribution names no list) |
 | `menus.<menu>` | the items it puts first per menu (`views`, `bi`, `build`, `admin`, `help`, `footer`, or a module's menu), by the ids in `drishti-console/config/sitemap.yaml` and the modules' manifests (`console.menus`); nothing is left out |
 | `menus.placeholder` | the command line's placeholder |
-| `home.landing`, `home.landings`, `home.template`, `home.titles`, `home.landing-by-role`, `home.sections`, `home.hierarchies`, `home.topics` | Home ([section 15](#15-home-landings-cards-and-chips)); `template` is a `home/<name>_landing.html` page (none: Drishti Risk's); `sections` switches off `house`, `stats`, `grammar`, `pipeline`, `capabilities`, `views`, `close` |
+| `home.home`, `home.sections` | Home ([section 15](#15-home-the-lenss-home-cards-and-chips)); `home` names the role Home the lens opens (a Home of `config/homes/`); `sections` switches off `house`, `stats`, `grammar`, `pipeline`, `capabilities`, `views`, `close` |
 | `phone` | the phone display ([section 17.1](#171-on-a-phone)) |
 
 Then add `my-desk` to `drishti.lenses` (or a distribution's `lenses.offered`) and restart. A lens a person opens also needs a registry
@@ -1559,6 +1427,18 @@ offers none of its lenses, functions, packs or engines (its engines show *not in
 `404 DRS-1025`; a function that is off answers `404 DRS-1026`. The switch is `config/modules/<module>.yaml` (`POST /api/v1/admin/modules` writes it, with a reason, audited) or
 `DRISHTI_MODULES_<MODULE>_ENABLED`, and a change takes effect at the next start. The how-to, the licence file and what each module brings
 to the console are in [OPERATIONS_GUIDE.md, Modules on or off](OPERATIONS_GUIDE.md#65-engines-modules-and-editions).
+
+<!-- i8/modules -->
+<!-- Replace the first paragraph of this section by this one if the branch i8/modules is in the release; drop the block otherwise. -->
+**The modules, as shipped.** **banking** (titled Risk: VaR and ES, exposure, FRTB-SA, SIMM, sensitivities, the MR cube, the official results and the
+trading, market-risk and counterparty-risk packs), **market-data**, **reference-data** (the counterparties, books, desks and traders every domain
+reads, and the GLEIF legal entities), **external-data** (the world-economy, world-development, national-statistics, oecd, central-banks, funds and us-equities
+packs, and the World and Markets lenses), **news-and-events** (the news-and-markets, official-news and gdelt-events packs), the source-system modules
+(`source-murex`, `source-calypso`, `source-endur`, `source-ici`, `source-swapone`, `source-wss`) and **genomics**. A pack is the switch, a module the unit
+you license and install ([KERNEL_AND_MODULES.md section 21.9](../architecture/KERNEL_AND_MODULES.md#219-the-content-modules-reference-data-external-data-and-news-and-events)).
+A switch file or a setting that names a retired module id (`economy`, `capitalmarkets`, `capital-markets`) **stops the server from starting**, with one
+line naming the file or key and the modules that replace it (`external-data`, `news-and-events`); rename it and the start succeeds. Nothing is translated for you.
+<!-- /i8/modules -->
 
 ### 22.1 Module packages and the shared lib folder
 
@@ -2613,7 +2493,8 @@ between them without the menu.
 | Tokens | `/admin/tokens` | Every personal API token (never its secret): its owner, its scopes (*read only* or what it may write), when it was last used (in the console's time zone, named), and revoking any of them ([API_REFERENCE.md (clients)](INTEGRATION_GUIDE.md#33-clients-scripts-notebooks-and-excel)) |
 | Access | `/admin/access` | Who read which entity, filtered by user, action, kind, id and dates ([ADMIN_GUIDE.md](ADMIN_GUIDE.md)) |
 | AI | `/admin/ai` | The AI layer: off by default; providers, models, MCP servers and a test call ([ADMIN_GUIDE.md › 27.1 Model providers](#271-model-providers)) |
-| Data loads | `/admin/loads` | What your ETL announced, what is due and what is late ([DATA_GUIDE.md](DATA_GUIDE.md#1-telling-drishti-new-data-has-landed)); its **Inbox** tab (`/admin/loads/inbox`, while the data inbox runs) is the inbox's status board: files waiting, the run loading table by table, the last cycles, failures with **Retry**, and **Load now** ([DATA_LAKE_GUIDE.md section 3.1](DATA_LAKE_GUIDE.md#31-the-data-inbox)) |
+| Data loads | `/admin/loads` | What your ETL announced, what is due and what is late ([DATA_GUIDE.md](DATA_GUIDE.md#1-telling-drishti-new-data-has-landed)); its **Inbox** tab (`/admin/loads/inbox`, while the data inbox runs) is the inbox's status board, and **Upload** (`/admin/loads/upload`) the one way to put a file there from the browser ([29.6](#296-admin--data-loads-the-inbox-the-upload-and-the-lakes)); the Inbox board is: files waiting, the run loading table by table, the last cycles, failures with **Retry**, and **Load now** ([DATA_LAKE_GUIDE.md section 3.1](DATA_LAKE_GUIDE.md#31-the-data-inbox)) |
+| Lakes | `/admin/lakes` | Every lake file and each table by its symbolic name: where it resolves, its format and contract, **configured** or **fallback**, its figures and business dates; Maintain ([29.6](#296-admin--data-loads-the-inbox-the-upload-and-the-lakes)) |
 | Collaboration | `/admin/collab` | Moderation of shares and threads, legal holds, export, the mail outbox and chat bridges ([ARCHITECTURE.md §31](../architecture/ARCHITECTURE.md#31-collaboration-write-back-and-approvals)) |
 | Embedding | `/admin/embedding` | Host applications that show Drishti views in their own pages ([INTEGRATION_GUIDE.md](../architecture/ARCHITECTURE.md#30-the-client-renderer-and-drishti-elements)) |
 | BI | `/admin/bi` | Powers per role and who creates workspaces (needs `bi-admin`; [README.md](bi/README.md)) |
@@ -2693,6 +2574,22 @@ Switching a pack **off** takes effect for every user at their next click: its ki
 mnemonics and suggestions disappear, and it leaves every pack menu. Switching it **on** brings it all back.
 The choice is kept in the database, so it survives restarts, and each switch is in the audit log
 (`pack-disabled`, `pack-enabled`).
+
+**What follows the switch.** Switching a pack off does more than hide its screens; everything that belongs to the pack goes quiet with it, and
+comes back when it is switched on (nothing is unloaded, so switching on is instant):
+
+| Of the pack | While it is off |
+|---|---|
+| Kinds, mnemonics, suggestions, forms, menus | not offered (as above) |
+| **Connectors** it names | stopped and not read through, except one that another switched-on pack also names |
+| **Sutras** | no longer offered for their kind; a source system's pack owns no kind of its own, so its Sutras follow the pack |
+| **Inbox rules** (`dataload.yaml` in the pack's folder; a rule there that names no `pack:` belongs to the pack) | not matched: a file they would route waits in the inbox, with the reason in words on the Inbox board, and is loaded after the pack is switched on |
+| **Maps** (`mappings/` in the pack's folder) | not applied, with the connector that uses them |
+| **Help pages** (a `help.yaml` page that names `pack:`) | leave Help and the Help search |
+
+So a source system's pack (Murex, Endur, ...) is switched off in one place: its screens, its Sutras, its connectors and its inbox rules go
+together, and the trades already loaded stay in their lake. The pack's own files are described in
+[BUILD_GUIDE.md](BUILD_GUIDE.md#48-connectors-the-pack-names-them-the-site-owns-them) (`dataload`, `mappings`).
 
 Two safeguards keep packs consistent:
 
@@ -2799,5 +2696,39 @@ A connector whose plugin is installed but has no settings (a Kafka connector wit
 `feed`) stays **idle**: it is not started and is not counted as failed. Anything else that is not **UP** is
 explained in [runbooks/source-down.md](OPERATIONS_GUIDE.md#201-source-down-or-slow). A connector a pack names but that has no file shows as *not configured* (its kinds answer `DRS-1011`);
 an administrator creates it in *Admin → Connectors*, and a connector file with a mistake is listed on Health as a bad file while the last good configuration keeps running.
+
+### 29.6 Admin → Data loads: the inbox, the upload and the lakes
+
+The **Data loads** page has four tabs: **Loads** (what each pack expects and what landed), **Inbox** and **Upload** (while the data inbox runs
+somewhere in the cluster), **Feeds** (the public-data feeds and their runs) and **Load a file into a lake**, which opens the Lakes page.
+
+**Upload is the one way a file reaches a table from the browser.** It takes the file, builds its `.ready` from a form, checks both against the
+kind's contract and pushes the pair to the data inbox; the server loads it, exactly as it loads a file dropped in the inbox folder or sent with
+`drishti.py dataload ready`. The console writes into no lake itself and opens no lake folder: it asks the server (the page works the same on a console
+on another machine). The steps, the checks, the replace question and the command line are in
+[DATA_LAKE_GUIDE.md section 3.5](DATA_LAKE_GUIDE.md#35-upload-a-file-and-build-its-ready-admin--data-loads--upload); a token needs `loads:write`, and the
+push is audited with the file's SHA-256 and the `.ready` text.
+
+**Lakes** (`/admin/lakes`) lists every lake file under `config/lakes/` (in production, the site folder's, [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md#production-deployment-linux))
+and, per lake, a count such as *183 configured* or *5 configured, 3 fallback*. Open a lake to see each of its tables **by its symbolic name**
+(`trading.trade`, `risk.scenario-pv`) with:
+
+| Column | Says |
+|---|---|
+| Location | where the name resolves: an absolute path or URI |
+| Format, Contract | `delta` or `iceberg`; the kind's contract the table is read by |
+| **How** | **configured**: the lake file gives the table its own `uri:` (or `${lake.root}/...`). **Fallback**: no entry; the layout puts it at `<root>/<domain>/<table>` |
+| Rows, files, bytes, dates | read from the table's own log; no data file is opened |
+
+A fallback works, but it is a guess about a folder layout. The production profile refuses to start while any table the server reads is a fallback
+([PRODUCTION_STANDARD.md](../admin/PRODUCTION_STANDARD.md), rule T1); to fix it, run `drishti.py lake entries` (it lists the entries a lake still lacks,
+`--write` writes them from where the layout puts the tables today) and review the file. A bank's own lake is bound the same way, entry by entry:
+[TABLE_CATALOGUE.md, Binding a bank's external lake](../admin/TABLE_CATALOGUE.md#binding-a-banks-external-lake). A table's page lists its business
+dates, columns and runs; **Maintain** (compaction, vacuum, Iceberg orphan files) runs the lake tools beside the lakes, so it is offered on a console that
+has them ([DATA_LAKE_GUIDE.md section 2.2.1](DATA_LAKE_GUIDE.md#221-tables-by-symbolic-name-where-a-name-is)).
+
+**Admin changes go to the site folder.** Everything an administrator saves in these pages (a lake entry, a connector, a switch, a routing rule) is written
+to the site folder (`drishti.site.dir`), never into the release; the release folder is read only. Which folder it is, how to give it to the service
+user and how the layers combine are in [OPERATIONS_GUIDE.md, Lay out the machine](OPERATIONS_GUIDE.md#production-deployment-linux).
 
 Managing users and roles is explained in [ADMIN_GUIDE.md](ADMIN_GUIDE.md).

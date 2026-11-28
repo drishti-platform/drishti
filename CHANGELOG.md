@@ -15,7 +15,81 @@
 -->
 # Changelog
 
-## Unreleased (i8, branch i8/trading-systems)
+## 2.9.11.i8 (2026-11-28)
+
+The production release: a standard layout and a profile that refuses an unsafe start, a role Home for every user, one catalogue of
+tables, loaders and a guide page per load type, and the first engine paths of Drishti Risk. Items marked with a comment name the branch
+that carries them, so a release that leaves a branch out can drop the lines (the lead trims them before the tag).
+
+### One Home
+
+- **One Home page** (`/home`): the role Home Sutra is the only Home; the cards page and its machinery (`home_cards.py`, `home_cards_routes.py`,
+  `config/home-cards.yaml`, a module's `home: role-cards:` and `needs:`, the `homeCards` setting) are gone. The cards are panels of each Home's Sutra
+  (`core/data-table`, `core/scatter-plot`, `core/event-timeline` ...), and every Home has **Since you were here** and **Data loads**. `/home/role` and
+  `/api/home/cards*` are removed.
+- **The Home's state is the server's:** `GET /api/v1/homes/view` binds the Home's Sutra over the home tables as the person and applies their pins,
+  hidden and moved panels and snoozes; `POST /api/v1/homes/state` takes one checked action. **View as** is an administrator's only (the server
+  refuses anyone else and ignores a stored choice of a non-administrator); every row is read as the viewer.
+- **A market-data Home:** the role `market-data-reader` (the demo user `drishti-dev-market`) lands on the Calm Home `market-data`: desk tiles, the USD
+  curve, the biggest moves and the data checks (the module's `market_*` tables).
+- **Needs you and Pinned are back, as the person's own tables:** `home_needs` (the alerts raised for them and the approvals they may decide, four eyes
+  respected, worst first) and `home_pinned` (their pinned entities) are bound as the person in every Home Sutra (`core/exceptions-list`, `core/data-table`);
+  no bespoke UI. Two people see only their own rows (tests).
+- **A lens opens a Home, not a landing page:** the lens file's `home.home` names a role Home (Risk `risk-manager`, Trading `trader`, Market `market-data`, World
+  `economist`); `/` opens `/home` and the console passes the Home to the server as the person's default start (`GET /api/v1/homes/view?home=`). The three
+  lens landing templates, the World landing, their scripts and styles, `/api/home/{trading,market,search}`, `/home/landing/*`, the landing rules and the `homeLanding`
+  setting are deleted.
+- **The economist Home names the module that replaced economy** (`external-data`, `config/homes/external-data/`), and a test fails on a Home that
+  names a module no manifest declares.
+
+### Production
+
+- **The production profile:** `drishti.profile=production` makes the server and the console refuse to start while a rule is broken (sign-in
+  off, a short token secret, the built-in administrator or demo users, the demo source, development switches, unpinned or unlicensed engines,
+  SQLite on a cluster node, TLS not stated, plain-HTTP node traffic, an unnamed site folder) and name the fix; the rules are in
+  `docs/admin/PRODUCTION_STANDARD.md`. The `demo` profile keeps today's open start.
+- **The site folder** (`drishti.site.dir`, `/etc/drishti` in production): every site file and every Admin change goes there and never into
+  the release; a write that would land in the release is refused (`DRS-1038`). Resolution is release defaults, then the site's files, then
+  the secrets in memory.
+- **One layout and a binary package:** `/opt/drishti/releases/<version>` (read only, one Python each), `current` and `previous` links, the
+  site folder and a separate data folder. Production installs from the binary package (no Maven, no compiler, no network on the host); the
+  production unit templates are in `deploy/systemd/prod`.
+- **Upgrade and rollback side by side:** `tools/drishti.py upgrade check <release>` compares the new release with the running one (the Python
+  pins that changed, the commands to run yourself, the site folder and any retired key); an upgrade switches `current` and a rollback
+  switches it back.
+- **Loaders stage under `<data>/tmp/loaders`,** never the system temp folder; a route inventory guard classifies every controller for
+  row-rule coverage.
+- **The console is its own deployable:** it keeps no lake folder and opens none; lake tables, table detail and run logs are server
+  endpoints, `GET /api/v1/version` carries the API version and the console refuses a server it does not match.
+  <!-- i8/console-lake: lake operations behind the server API, pack switch G2/G4/G5 -->
+- **Demo users** are named like the development administrator: `drishti-dev-risk`, `drishti-dev-genomics`, `drishti-dev-market`
+  (demo profile only).
+
+### Your Home
+
+- **Home** is where every person lands after signing in: the role's cards, **Needs you**, a digest of what changed since the last visit,
+  per-person pin, hide, move and snooze, Calm and Cockpit layouts, and **View as** another role. Banking, market-data and genomics Homes ship;
+  a module brings its own cards and tables.
+
+### Data
+
+- **The table catalogue:** every table of the reference lakes has an explicit entry (uri, format, contract); code, packs and Sutras know a
+  table only by its symbolic name; Admin and the generated `TABLE_CATALOGUE.md` show where each resolves.
+- **Loaders and feeds:** one `tools/loaders` package with a daily-routine README in each part; a genomics loader (`clinvar`, `ensembl`,
+  your own VCF, gene and sample files); a Help page per load type (23 pages and an index); the data inbox upload page builds the `.ready`
+  and checks it against the contract.
+- **Refreshed public data:** GLEIF, funds (N-PORT 2026q3), the US equities universe (586 companies, widened to the Russell 2000) and the news
+  and markets snapshot; the public packs' data is test data under `data/testdata`, not the pack.
+- **Genomics on the lake:** variants, samples, genes and cohorts come from the genomics pack's connector tables, and the module opens no file.
+  <!-- i8/merge3: genomics screens on the lake, the catalogue registry -->
+
+### Modules and Rachana
+
+- **New modules:** `reference-data`, `external-data` and `news-and-events` replace the kernel packs, the `economy` module and the
+  `capital-markets` module; a `drishti.public-sector` distribution; **a retired module id (`economy`, `capital-markets`) refuses the start**
+  and names the module to use. <!-- i8/modules -->
+- **Rachana 1.1.1:** core fragments take `key`, `code`, `empty`, `when`, `span` and `where`; core/tabbed-views; libraries resolve beside pack
+  fragments and the palette lists them. <!-- i8/rachana-11 -->
 
 - **The module `trading-systems` (module rationalisation S3).** The `trading` module and the six `source-*` modules (Endur, Calypso, Murex, WSS,
   SwapOne, ICI) become one module of two kinds of pack: `trading` (moved out of banking: the one trade kind, its four derived kinds, the blotter)
@@ -26,6 +100,27 @@
 - **Module `banking` is titled Risk** (the id, settings keys, paths and packages are unchanged); it requires `trading-systems`. Distribution
   `drishti.risk` lists `trading-systems` in place of `trading` and the six source modules. Upgrade note: KERNEL_AND_MODULES.md section 3.4.
 - **Before = after tests** (`tools/test_module_rationalisation.py`): no kind, word, connector or lake table changed; the only new packs are the six.
+
+### Drishti Risk engines
+
+- **VaR and exposure on the risk engines, behind switches:** the VaR headline, tree, contributions, P&L path, what-if, parametric, history,
+  backtesting and statistics, and the exposure scope, profile, counterparty grain, pre-deal and tree, can be answered by the market-risk
+  and counterparty-risk engines instead of in-tree code, with the same figures to the bit (parametric within a relative 1e-12). The
+  switches are `drishti.module.banking.var.route`, `drishti.module.banking.var.consumers.route` and
+  `drishti.module.banking.exposure.route`. <!-- TODO(R2 flip): state the shipped defaults here once decided; today in-tree is the default. -->
+- **Reporting currency:** a request in another currency sums the book converted to it trade by trade, the reporting currency is a setting
+  (`drishti.module.banking.var.reporting-currency`, USD as shipped, editable in Admin), and a backtest on fewer than 250 days is scaled
+  (Basel light). The figures in a currency other than USD move by at most a unit against i7n.
+- **Engine design:** zero-copy access, the computation contract and declared engine functions are in the engine design documents.
+
+### Documents and tools
+
+- Tutorials 16 and 19 are shorter. <!-- i8/windows-docs -->
+- Windows: a replaced day segment is no longer held by a reader; the Windows test workflow builds the engine kit. <!-- i8/windows-docs -->
+
+### Upgrading from i7n
+
+Read RELEASE_NOTES.md first: retired keys and module ids stop the start.
 
 ## 2.9.11.i7n (2026-11-25)
 

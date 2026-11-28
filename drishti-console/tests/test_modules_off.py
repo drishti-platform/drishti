@@ -77,7 +77,7 @@ def test_banking_off_is_gone_from_every_door(backend, monkeypatch):
     for page in ("/var", "/var/reports", "/exposure", "/predeal", "/frtb", "/simm", "/smat", "/play", "/mcube", "/admin/scopes"):
         assert c.get(page, follow_redirects=False).status_code == 404, page
     for api in ("/api/var/scope?scope=BANK", "/api/exposure/scope?scope=BANK", "/api/frtb/sa", "/api/simm/versions", "/api/pivot/mr/versions",
-                "/api/home/trading/me", "/api/home/market/desk"):
+                ):
         assert c.get(api).status_code == 404, api
     for typed in ("VAR BANK", "SMAT DESK:RATES", "PLAY VAR BANK", "FRSA BANK", "SIMM", "MCUBE", "EXP CPTY CP-X", "PREDEAL CP-X LIKE T1 5M"):
         said = _refusal(c.get("/go", params={"q": typed + " <GO>"}, follow_redirects=False))
@@ -96,7 +96,6 @@ def test_banking_off_is_gone_from_every_door(backend, monkeypatch):
     for asset in BANKING_ASSETS:                                                                      # its files are not served
         assert c.get(asset).status_code == 404, asset
     assert c.get(CORE_ASSET).status_code == 200
-    assert c.get("/m/external-data/static/1.0.0/js/drishti_world-landing.js").status_code == 200           # another module's still are (hosted)
 
 
 def test_the_command_lines_examples_are_only_what_the_person_may_type(backend, monkeypatch):
@@ -201,7 +200,6 @@ def test_a_lens_never_hides_a_modules_assets(backend, monkeypatch):
     for asset in BANKING_ASSETS:
         assert wendy.get(asset).status_code == 200, asset                                             # the World lens arranges, never hides
         assert alice.get(asset).status_code == 200, asset                                             # the full product: every module on
-    assert wendy.get("/m/external-data/static/1.0.0/js/drishti_world-landing.js").status_code == 200
     assert wendy.get(CORE_ASSET).status_code == 200
 
 

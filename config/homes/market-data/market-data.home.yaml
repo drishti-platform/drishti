@@ -1,0 +1,24 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# A Home (docs/architecture/ROLE_HOME_SUTRAS.md, 1): market data's. The person who looks after curves, FX, prices and the freshness of the data
+# lands on the Calm Home with the market cards: the desk tiles (rates, slope, FX vol, credit), the USD curve, the biggest moves and the data checks.
+# The tables are the market-data module's own (market_*), served to this Home only.
+home: market-data
+title: Market data
+description: "Curves, FX and prices at a glance, the biggest moves, and how fresh and whole the data is"
+modules: [ market-data ]                  # offered only while the market-data module is on
+sutra: market-data.sutra.yaml
+arrange: allow
+measures: market-data.measures.yaml

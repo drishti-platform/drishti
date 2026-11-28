@@ -27,17 +27,21 @@ data:
   exc:       { table: home_exceptions }
   chg:       { table: home_changes }
   loads:     { table: home_loads }
+  needs:     { table: home_needs }
+  pinned:    { table: home_pinned }
   held:      { table: home_held_changes }
   mnem:      { table: home_mnemonics }
   cal:       { table: home_calendar }
   news:      { table: home_news }
+  digest:    { table: home_digest }
 layout:
   user-can-arrange: true                     # "arrange my Home": the person's own order and sizes, kept per person (ROLE_HOME_SUTRAS 3)
   areas:
     - "exc chg rail"
     - "loads held rail"
+    - "visit visit visit"
   columns: [4, 5, 3]
-  phone: [exc, chg, loads, held, rail]
+  phone: [exc, chg, loads, held, rail, visit]
 panels:
   - use: core/exceptions-list@1
     as: exc
@@ -66,6 +70,21 @@ panels:
     area: held
     with:
       changes: { from: $.held, columns: { change: CHANGE, state: STATE, summary: SUMMARY, by: BY, at: AT, message: MESSAGE } }
+  - use: core/exceptions-list@1
+    as: needs
+    area: rail
+    with:
+      title: Needs you
+      rows: { from: $.needs, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: rail
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
   - use: core/data-table@1
     as: mnem
     area: rail
@@ -85,3 +104,9 @@ panels:
     area: rail
     with:
       rows: { from: $.news, columns: { date: AT, headline: HEADLINE, source: SOURCE, link: LINK } }
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

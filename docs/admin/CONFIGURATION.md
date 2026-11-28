@@ -1333,13 +1333,9 @@ menus' order and the placeholder and never hides anything.
 | `drishti.lenses` | `default` (`DRISHTI_LENSES`; empty turns lenses off) | The lenses a person may open ("Open Drishti Risk", "Open Drishti World", "Open Drishti Market", "Open Drishti Trading", "Open Drishti Research"): `default` is every lens of the modules that are on, or a comma list (it may hold `default`); a person inside one switches to another; a name that cannot be offered is left out with an ERROR in the log and a red line on Admin → Health. A distribution's `lenses.default` is everyone's starting workspace. |
 
 The lens files: the server's `drishti.lenses-dir` (default `<config>/lenses`), `config/lenses/<module>/<lens>.yaml`, sent to the console in its installation answer (a
-lens's Home landings are its `home.landings`, drawn by its `home.template` with its `home.titles`: Drishti Risk's `desk`, `command`, `map`,
-Drishti World's `desk`, `explorer`, `map`, Drishti Market's `desk`, `explorer`, `quality`, Drishti Trading's `trader`, `desk`, `explorer`;
-Drishti Market's `quality.stale-days`, default 2, is the Quality landing's stale threshold in business days); Drishti Trading's `trading:`
-block: `trading.people` (who is who: `{user: {trader: TRDR-ASHAH}}` or `{user: {desk: DESK-COMM, role: desk-head}}`), `trading.match-records`
-(true: else a matching trader record), `trading.landing-by-role` (`{desk-head: desk, trader: trader}`, below the person's own choice),
-`trading.near-limit` (0.8), `trading.limit-days` (5), `trading.pnl-var-days` (60), `trading.max-rows` (20000), `trading.live-statuses`; a
-person's View as choice is their `tradingView` setting ([ADMIN_GUIDE.md](../guides/ADMIN_GUIDE.md#162-drishti-trading)). Its own feature
+lens's Home is the role Home it names with `home.home`: Drishti Risk's `risk-manager`, Drishti Trading's `trader`, Drishti Market's `market-data`,
+Drishti World's `economist`; a person's View as choice of books is their `tradingView` setting
+([ADMIN_GUIDE.md](../guides/ADMIN_GUIDE.md#162-drishti-trading))). Its own feature
 switches, each on by default and preset by a distribution's `features:` through `config/distributions/kernel.yaml`'s `features:`:
 `features.build` (Build: new screens, packs, designs, reviews, changes), `features.forms` (`FORM`, `/forms`), `features.datamap`,
 `features.data` (Export data, `DATA`), `features.workspaces`, `features.monitors`, `features.alerts`, `features.lakes` (Admin → Lakes),
@@ -3800,6 +3796,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | `drishti.homes.roles.genomicist` | list | `[genomicist]` |  | server | the genomicist's Home (the genomics module) | restart |  | admin |
 | `drishti.homes.roles.geneticist` | list | `[genomicist]` |  | server | a geneticist opens the genomicist's Home | restart |  | admin |
 | `drishti.homes.roles.genomics-reader` | list | `[genomicist]` |  | server | the demo user drishti-dev-genomics (demo profile): the genomicist's Home | restart |  | admin |
+| `drishti.homes.roles.market-data-reader` | list | `[market-data]` |  | server | the demo user drishti-dev-market (demo profile): the market-data Home (Calm layout, the market cards) | restart |  | admin |
 
 #### `drishti.trading`
 
@@ -4758,7 +4755,7 @@ One file per module (banking, external-data, news-and-events), `config/modules/<
 | `ui.phone.kinds` | map | `{}` |  | console | a panel kind's tier over the built-in one, such as { table: more, map: desk } | restart |  | admin |
 | `ui.phone.rules` | list | `[]` |  | console | the site's tiers and caps: \[{ kind: provenance, tier: desk }, { panel: "\*contrib\*", max: more }]; keys panel, kind, title, sutra, entity (globs), tier or max | restart |  | admin |
 | `ui.phone.packs` | map | `{}` |  | console | a pack's rules, for the entity kinds it owns: { market-risk: \[{ panel: "\*contrib\*", tier: more }] } | restart |  | admin |
-| `ui.phone.pages` | map | `{}` |  | console | the VaR and exposure pages and the landings: { var: { contrib: glance, tiles: { max: glance } } } | restart |  | admin |
+| `ui.phone.pages` | map | `{}` |  | console | the VaR and exposure pages: { var: { contrib: glance, tiles: { max: glance } } } | restart |  | admin |
 
 #### `ui.facts`
 
@@ -5927,28 +5924,14 @@ A lens file (`config/lenses/<module>/<lens>.yaml`): a workspace a person opens, 
 | `menus.help` | list | `[help-centre, knowledge, install, about]` |  | a lens (the console) | the Help menu's items by id | restart |  | admin |
 | `menus.footer` | list | `[help, about, release-notes]` |  | a lens (the console) | the footer's links by id | restart |  | admin |
 | `menus.placeholder` | string | `"VAR BANK, VAR DESK RATES, EXP CPTY:CP-ALDERSHOT, VRES DESK:RATES …  then <GO>"` |  | a lens (the console) | the command line's placeholder text | restart |  | admin |
-| `home.landing` | string | `desk` |  | a lens (the console) | the default landing: desk (A, Market desk), explorer (B, Explorer), quality (C, Quality); today: the product's Home | restart |  | admin |
-| `home.landings` | list | `[desk, explorer, quality]` |  | a lens (the console) | the landings a person may pick on Home (their choice is kept in their settings) | restart |  | admin |
-| `home.template` | string | `home/market_landing.html` |  | a lens (the console) | the page that draws them (it names its script and style: drishti\_market-landing.js, drishti\_market-landing.css) | restart |  | admin |
-| `home.titles` | map | `{ desk: Risk desk, command: Command first, map: Risk map }` |  | a lens (the console) | the landings' names, by landing | restart |  | admin |
-| `home.landing-by-role` | map | `{}` |  | a lens (the console) | {role: landing}: read, wins over the person's choice when set; wired to role-based access later | restart |  | admin |
-| `home.sections` | map | `{ stats: off, grammar: off, pipeline: off, capabilities: off, views: off }` |  | a lens (the console) | the product's Home (signed out, or landing=today) | restart |  | admin |
-| `quality.stale-days` | integer | `2` |  | a lens (the console) | stale: data older than the business date by more than this many business days | restart |  | admin |
+| `home.home` | string | `risk-manager` |  | a lens (the console) | the role Home this lens opens (config/homes/, docs/architecture/ROLE_HOME_SUTRAS.md): a Home Sutra on the one Home page | restart |  | admin |
+| `home.sections` | map | `{ stats: off, grammar: off, pipeline: off, capabilities: off, views: off }` |  | a lens (the console) | the product's Home (signed out) | restart |  | admin |
 | `phone.rules` | list | empty |  | a lens (the console) | tiers and caps by panel, kind, title, Sutra or entity kind (globs): a VaR contribution panel waits under More | restart |  | admin |
 | `phone.pages` | map | `{}` |  | a lens (the console) | the VaR and exposure pages' parts, as ui.phone.pages: { var: { hist: glance } } | restart |  | admin |
 | `menus.risk` | list | `[my-var, vlim, pnlv, var-explorer, var-explain, play-var, smat, var-reports, ...` |  | a lens (the console) | the Risk and Counterparties menus' items by id: the VaR and exposure engines' pages (their switches and status: Admin -&gt; Engines) | restart |  | admin |
 | `menus.counterparties` | list | `[cpty, nset, lim, predeal, exp]` |  | a lens (the console) | the Counterparties menu's items by id | restart |  | admin |
-| `home.hierarchies` | list | `[MGMT]` |  | a lens (the console) | the hierarchy the Risk map opens on (its switch lists every hierarchy the engine holds) | restart |  | admin |
 | `menus.markets` | list | `[crv, repo, fix, irv, cpv, fxv, fx-spot, fxf, cds, bnd, eq, eqx, cmd, cmdc]` |  | a lens (the console) | the one Markets menu: rates, vols, FX, credit, equities and commodities | restart |  | admin |
-| `trading.people.drishti-dev-admin` | map | `{ trader: TRDR-ASHAH }` |  | a lens (the console) | the demo's administrator reads A. Shah's books (the demo data's rates trader) | restart |  | admin |
-| `trading.match-records` | boolean | `true` |  | a lens (the console) | fall back to a matching trader record (TRADER\_ID = TRDR-&lt;USER&gt;, or the same NAME) | restart |  | admin |
-| `trading.landing-by-role` | map | `{ desk-head: desk, trader: trader }` |  | a lens (the console) | the same {role: landing} hook for the trading role: below the person's own choice | restart |  | admin |
-| `trading.live-statuses` | list | `[NEW, VALIDATED, AMENDED]` |  | a lens (the console) | a trade counts in DV01, top lists and the check when its status is one of these | restart |  | admin |
-| `trading.limit-days` | integer | `5` |  | a lens (the console) | the Desk head's limit use by book: this many business dates (the official records) | restart |  | admin |
-| `trading.pnl-var-days` | integer | `60` |  | a lens (the console) | the Desk head's P&amp;L against VaR: this many days of the desk's official history | restart |  | admin |
-| `trading.max-rows` | integer | `20000` |  | a lens (the console) | the most trade valuations read per date for a scope (more: the figures say partial) | restart |  | admin |
 | `offered-by-default` | boolean | `false` |  | a lens (the console) | Drishti Finance's lens (its distribution offers it); the full product offers the Market lens of the same data | restart |  | admin |
-| `home.topics` | list | `[TOPIC-RATES, TOPIC-INFLATION, TOPIC-OIL, TOPIC-FED, TOPIC-ECB, TOPIC-AI]` |  | a lens (the console) | A's news by topic (each topic's latest stories) | restart |  | admin |
 
 #### Feature presets: `kernel.yaml` `features:`
 

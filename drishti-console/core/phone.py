@@ -178,15 +178,11 @@ def plan(request, vm: dict, panels: list[dict], dev: str, pack_list: list | None
             "why": [{"id": p.get("id"), "title": p.get("title") or p.get("id"), **tiers.get(str(p.get("id") or ""), {})} for p in panels]}
 
 
-# ---- pages beyond Sutra pages (docs/guides/BUILD_GUIDE.md section 8): a module's pages (core/plugins.py) and the edition landings ------------------
+# ---- pages beyond Sutra pages (docs/guides/BUILD_GUIDE.md section 8): a module's pages (core/plugins.py) ------------------
 
 # Each page's parts with their default tier and their name in *More on this page*. The site sets its own in ui.phone.pages.<page>, an
 # edition in its phone.pages.<page> (a landing also in home.phone); either may cap with max (a part never above it).
-PAGES: dict[str, dict[str, tuple[str, str]]] = {
-    "landing": {"hero": ("must", "Command line"), "tiles": ("must", "Headline figures"), "quick": ("more", "Saved baskets, watch list, learn"),
-                "card-1": ("must", "First card"), "table": ("glance", "Tables"), "chart": ("more", "Charts"), "map": ("more", "Maps"),
-                "feed": ("glance", "Today")},
-}
+PAGES: dict[str, dict[str, tuple[str, str]]] = {}      # the kernel has none of its own now; a module registers its pages (core/plugins.py)
 
 
 def page_parts_catalogue() -> dict[str, dict[str, tuple[str, str]]]:
@@ -211,8 +207,6 @@ def page_parts(request, page: str) -> dict | None:
     spec = getattr(edition, "spec", None) or {}
     ed_phone = spec.get("phone") if isinstance(spec.get("phone"), dict) else {}
     layers = [(settings(request).get("pages") or {}).get(page), (ed_phone.get("pages") or {}).get(page)]
-    if page == "landing":
-        layers.append((spec.get("home") or {}).get("phone") if isinstance(spec.get("home"), dict) else None)
     for layer in layers:
         for part, v in (layer or {}).items() if isinstance(layer, dict) else ():
             if isinstance(v, str) and v in TIERS:

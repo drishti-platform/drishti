@@ -3128,8 +3128,7 @@ agreement → the bank's lake (production) or the demo risk lake.
 **Screens:** Home "Markets and economy" (indices, movers, central-bank decisions, news); company and fund pages; the world map and
 country pages; series charts; Pivot and BI over fundamentals and series; Admin → External data (the refresh scripts).
 
-**Backend:** the `capital-markets` and `economy` modules (today packs and the economy console plugin; packaged as modules in wave 2
-next to banking, mostly content: kinds, Sutras, pages), the public-data refresh scripts, the memory lake for news, Flight for data out.
+**Backend:** the `external-data` and `news-and-events` modules (content modules: packs, kinds, Sutras, pages; [21.9](#219-the-content-modules-reference-data-external-data-and-news-and-events)), the public-data refresh scripts, the memory lake for news, Flight for data out.
 
 **Cautions carried over:** IMF data and US equity prices stay internal-only (off by default in this distribution's `demo`), as today.
 
@@ -3232,8 +3231,8 @@ every file keeps one home. `python3 tools/drishti.py module pack modules/<id>` w
 | Module | Packs | Lens | In |
 |---|---|---|---|
 | `market-data` | market-data (MKT, CRV, REPO, IRV, CPV, FIX, INF, INFC, FX, FXF, FXV, CDS, BND, EQ, EQX, DIV, EQV, CMD, CMDC, CMDV, CORR, CORRC, EQB) | Market | Risk, Finance, All |
-| `capital-markets` | us-equities, funds | **Markets** (Home's Markets cards: USEQ AAPL, FUND SPY, IDX SP500, CRV, FXV) | Finance, All |
-| `economy` | world-economy, news-and-markets, world-development, central-banks, national-statistics, oecd, official-news, gdelt-events | World | Finance, All |
+| `external-data` | world-economy, world-development, central-banks, national-statistics, oecd, funds, us-equities | World, Markets | Finance, Public sector, All |
+| `news-and-events` | news-and-markets, official-news, gdelt-events | World | Finance, Public sector, All |
 
 The IMF figures stay out of the economy package (world-economy's samples are left out); US equity prices stay internal-only and off.
 The World landing (Home's World desk) is still drawn by the console's economy plugin: its two hand-drawn tables move onto the Elements
@@ -3330,8 +3329,7 @@ that exist today and the order of the move. The native libraries' module, which 
 |---|---|---|
 | **Core** | everything generic: entities, packs and the pack loader, Sutras and Rachana, Pivot, BI, tables and models, lakes, loaders and the data inbox, connectors, search, Explain, approvals and changes, collaboration, security, the cluster, Flight, AI, the console shell, the generic compute (Python workers, the vector store, parallel and many-set sums, sharding, fan-out), `drishti-native` | it would serve a hospital, a utility or a ministry unchanged |
 | **Banking** (the risk and banking domain) | VaR and ES (historical, parametric), the VaR playground content, backtesting, regulatory VaR reporting, the scenario matrix, stress windows, baskets; exposure and CCR (PFE, EEPE, what-if); FRTB-SA and sensitivities; ISDA SIMM; SA-CCR and CVA (planned); the MR and CCR cubes; the risk, trading, market and CRO lenses; the official risk results; equity analytics (beta, correlation); the trading, market-data, market-risk and counterparty-risk packs | it names a trade, a position, a risk factor, a desk or a regulation |
-| **Economy** (no code of its own: a content module shipped with the core) | the world-economy and news-and-markets packs and the public sector's six (world-development, central-banks, national-statistics, oecd, official-news, gdelt-events), the World and Public sector lenses, the world landing, the IMF-based BI reports | public economic and public-sector data |
-| **Capital markets** (no code of its own yet: a content module shipped with the core; the owner's choice, 2026-11-07) | the us-equities and funds packs; the market data's functions (curves, FX, vols, equities, bonds: `CRV` ... `EQV`); the market lens with banking | listed companies, funds, prices and market data |
+| **Content modules** (no code of their own: `reference-data`, `external-data`, `news-and-events`) | the packs of public and reference data and the World and Public sector lenses | see [21.9](#219-the-content-modules-reference-data-external-data-and-news-and-events) |
 
 ### 21.2 The boundary list
 
@@ -3620,10 +3618,6 @@ the VaR and exposure lakes; package `com.ash.drishti.server.connectors` kept, in
 3. **The drills**: one with the banking module absent (the core starts, serves BI, Pivot and the economy packs, and says *not
    installed* for a banking word).
 
-<!-- i8/modules -->
-<!-- Drop from here to the closing marker if the branch i8/modules misses the release. On a merge, also replace the Economy and Capital markets rows of
-     section 21.1 by a pointer to 21.9 and the Economy paragraph of section 20 by 20.11; the module ids economy and capitalmarkets are then retired. -->
-
 ### 20.11 Drishti Public Sector
 
 `drishti.public-sector` (`--distribution public-sector`, `config/distributions/drishti.public-sector.yaml`) is the distribution for economies, governments
@@ -3659,8 +3653,6 @@ lenses, menus, functions, Help pages and Sutras; switching one pack off removes 
 world-development, national-statistics, oecd and central-banks packs) and `news-and-events` (the official-news, gdelt-events and news-and-markets
 packs), and the two capital-markets ids become `external-data` (the funds and us-equities packs). Nothing is translated silently: switch the module you meant, in the site
 folder's `modules/<module>.yaml`, and delete the old file ([OPERATIONS_GUIDE.md, upgrading](../guides/OPERATIONS_GUIDE.md#18-upgrades-and-rollback)).
-
-<!-- /i8/modules -->
 
 ## 22. Kernel and modules: mock-ups
 

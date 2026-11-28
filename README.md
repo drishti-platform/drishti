@@ -27,10 +27,10 @@ with no generated code to trust. The same parts work outside Drishti: Rachana an
 ([IN_YOUR_APP](https://github.com/drishti-platform/drishti-rachana/blob/v1.1.1/docs/IN_YOUR_APP.md#rachana-and-elements-in-your-own-flask-or-fastapi-application); the GenUI kit ships with Rachana 1.1, planned for the platform),
 Lake as a Delta and Iceberg library in Java or Python, Tools as shared Java utilities.
 
-Everything specific to a field comes as a **module**: its data shapes, measures, screens and rules. Banking risk, capital markets,
-economic data and genomics are modules today; a new field is a new module, not a new product. Each person lands on **Home** after
+Everything specific to a field comes as a **module**: its data shapes, measures, screens and rules. Banking risk, trading systems, reference data,
+external data, news and events, market data and genomics are modules today; a new field is a new module, not a new product. Each person lands on **Home** after
 signing in: the cards, the figures and the items that need them, for their role, which they can pin, hide, reorder, snooze or view as
-another role. <!-- i8/modules: reference-data, external-data and news-and-events modules and the drishti.public-sector distribution replace the economy and capital-markets modules; update this paragraph and the counts if that branch is in the release. -->
+another role.
 
 ## Sample uses
 
@@ -44,7 +44,7 @@ Pricing and simulation engines deliver the trade-grain inputs; Drishti never pri
 domain of its own. It reads VCF files into variants, samples, genes and cohorts, and its screens include a GWAS Manhattan plot, gene
 lollipops, an oncoprint across a cohort and a protein-engineering workbench, all written as Sutras on Elements. Its data is synthetic.
 
-Other modules work the same way: capital markets, and economic and public-sector data from sources such as the World Bank and FRED.
+Other modules work the same way: market data, trading systems, and economic and public-sector data from sources such as the World Bank and FRED.
 
 It is built from three blocks:
 
@@ -52,7 +52,7 @@ It is built from three blocks:
 |---|---|
 | **Kernel** | the server (Java 21, Spring Boot), domain-free: connectors and lakes, Rachana (screens written as short YAML Sutras in one grammar), the pivot and BI engines, Explain, the cluster, audit |
 | **Console** | the web tier (Python, FastAPI) in front of one kernel or a cluster; it draws what the server decides |
-| **Modules** | signed `.dmod` packages that bring an industry (banking, capital markets, the economy, genomics, source-system adapters); a module declares the data it needs and never brings connectors or credentials |
+| **Modules** | signed `.dmod` packages that bring an industry (banking, trading systems, reference, external and news data, market data, genomics); a module declares the data it needs and never brings connectors or credentials |
 
 One build makes several products, the **distributions**: Drishti Risk, Drishti Finance, Drishti Genomics (a sample) and Drishti All.
 How the pieces fit, one picture per idea: [HOW_IT_FITS.md](HOW_IT_FITS.md) ([PDF](HOW_IT_FITS.pdf)).
@@ -73,7 +73,7 @@ WDI WDI-CAN <GO>                               →  a country's development indi
 |---|---|
 | `kernel/` | the server, its API, identity, registry, packs runtime and the module runtime (10 Maven modules) |
 | `compute/` | the compute engines: Rachana, tables, BI compute, inference |
-| `modules/` | the 12 `.dmod` modules (banking, capital-markets, economy, genomics, market-data, trading and six source-system adapters: Calypso, Endur, ICI, Murex, SwapOne, WSS) with their 19 packs |
+| `modules/` | the 7 `.dmod` modules (banking, external-data, genomics, market-data, news-and-events, reference-data, trading-systems with its six source-system packs: Calypso, Endur, ICI, Murex, SwapOne, WSS) with their 25 packs |
 | `plugins/` | the 13 connector plugins, `plugins/drishti-plugin-*/` (activemq, aerospike, cassandra, delta, duckdb, iceberg, iceberg-external, jdbc, kafka, mongodb, rabbitmq, redis, s3), each with its README; their jars are packed into the server jar |
 | `drishti-console/` | the web console (Python), its launchers and its tests ([README](drishti-console/README.md)) |
 | `tools/` | the one command line, `tools/drishti.py`, the launcher table and the checks |
@@ -179,13 +179,13 @@ About **687k lines of product code** and **293k lines of tests** (43% of the pro
 | What | Count |
 |---|---|
 | Maven modules | 47 in 10 subject folders: `compute/`, `drishti-sdk/`, `examples/`, `kernel/`, `lake/`, `modules/`, `net/`, `packaging/`, `plugins/`, `testing/` |
-| Modules (`.dmod`) | 12: banking, capitalmarkets, economy, genomics, market-data, source-calypso, source-endur, source-ici, source-murex, source-swapone, source-wss, trading |
+| Modules (`.dmod`) | 7: banking, external-data, genomics, market-data, news-and-events, reference-data, trading-systems |
 | Lenses | 12: world, markets, publicsector, research, cio, oversight, risk, trading, market, cro, mr-cube, ccr-cube |
 | Functions a module declares | 124 (48 banking, 12 capitalmarkets, 35 economy, 6 genomics, 23 market-data); every other command word is the kernel's |
 | Console routes | 654 |
 | Server REST handlers | 854 |
 | Drishti's own Elements libraries (Drishti Elements itself: vendored) | 2 libraries, 18 ES modules |
-| Domain packs | 19: banking 3, capital-markets 2, core 3, economy 8, genomics 2, market-data 1 |
+| Domain packs | 25 in modules: banking 2, external-data 7, genomics 3, market-data 1, news-and-events 3, reference-data 2, trading-systems 7 |
 | Sutras in the shipped packs | 265 |
 | Connectors | 13 plugins (a driver or native library each) and 9 built-in types |
 | Feeds | 15 |

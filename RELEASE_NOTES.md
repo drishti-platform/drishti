@@ -48,7 +48,7 @@ Read these before you stop the running release. The upgrade is a side-by-side sw
    commands it prints), that the site folder is set and outside both releases, and which settings keys the new release does not know.
 5. **Retired names stop the start.** Retired settings keys (`drishti.edition`, `drishti.branding.*`) refuse the start and name the key to
    use instead; the VaR route switch is `drishti.module.banking.var.route` (a key ending in `.path` is a folder). Retired module ids
-   (`economy`, `capital-markets`) refuse the start and name the module that replaces them. <!-- i8/modules -->
+   (`economy`, `capital-markets`) refuse the start and name the module that replaces them.
 6. **Demo users** on the demo profile are `drishti-dev-admin`, `drishti-dev-risk`, `drishti-dev-genomics` and `drishti-dev-market`
    (password = user id + `123`); production never creates them, and Admin warns while any still signs in with a published password.
 7. **Install from the binary package** (`make_binary.py`): no Maven, no compiler, no network on the host; verify it with

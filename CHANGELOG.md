@@ -87,7 +87,7 @@ that carries them, so a release that leaves a branch out can drop the lines (the
 
 - **New modules:** `reference-data`, `external-data` and `news-and-events` replace the kernel packs, the `economy` module and the
   `capital-markets` module; a `drishti.public-sector` distribution; **a retired module id (`economy`, `capital-markets`) refuses the start**
-  and names the module to use. <!-- i8/modules -->
+  and names the module to use.
 - **Rachana 1.1.1:** core fragments take `key`, `code`, `empty`, `when`, `span` and `where`; core/tabbed-views; libraries resolve beside pack
   fragments and the palette lists them. <!-- i8/rachana-11 -->
 

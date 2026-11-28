@@ -104,7 +104,7 @@ python3 --version                   # Python 3.11 or newer  (Windows: py -3.13 -
 ```
 
 **Sizing beyond the demo.** A server's heap grows with the trades held a day (about 4 GB for 400,000, 8 GB for a million or more). The
-sizing planner (`tools/sizing_planner.py`, and **Admin → Capacity** in the console) turns your volumes into memory, CPU and disk:
+sizing planner (`drishti.py admin capacity-workbook`, and **Admin → Capacity** in the console) turns your volumes into memory, CPU and disk:
 [CLUSTER_GUIDE.md › Sizing](guides/CLUSTER_GUIDE.md#15-sizing-memory-cpu-and-disk), [OPERATIONS_GUIDE.md › Admin → Capacity](guides/OPERATIONS_GUIDE.md#146-admin--capacity-today-against-the-plan).
 
 ### 1.2a Windows notes: the things that stop a first build
@@ -1790,7 +1790,7 @@ within a second, still signed in (Admin → Health, *Console servers*, shows the
 
 One node at a time: drain → `safeToStop` → stop → replace the jar → start → readiness → the next node. **Servers before consoles**: the
 BI and data-serving nodes, then the coordinators, then the shard owners one zone at a time, and the consoles last (a console newer than
-its servers cannot sign anyone in). `python3 tools/rolling.py --inventory <file> --version <v>` (Windows `py -3.13 tools\rolling.py …`) does
+its servers cannot sign anyone in). `python3 tools/drishti.py cluster roll --inventory <file> --version <v>` (Windows `py -3.13 tools/drishti.py cluster roll …`) does
 exactly this from an inventory (`deploy/rolling.example.yaml`); `--dry-run` prints every step. The stop hooks of systemd and Docker drain
 by themselves; on Windows drain before stopping the task ([section 8](#8-run-them-as-services)). Details: [CLUSTER_GUIDE.md › Zero downtime](guides/CLUSTER_GUIDE.md#8-zero-downtime).
 
@@ -1867,12 +1867,12 @@ $tools = "<drishti>\tools"
 
 ### 12.2 Put the data in place
 
-**One command for everything** (stop the server first). `build_demo_lakes.py` builds every demo lake over the sixty business days of the
+**One command for everything** (stop the server first). `lake demo-all` builds every demo lake over the sixty business days of the
 committed test data, moved to end on the date of your newest file, then replaces the synthetic ENDUR trades with your files:
 
 ```powershell
-& py -3.13 "$tools\build_demo_lakes.py" --endur-dir <private> --dry-run     # prints every step, changes nothing
-& py -3.13 "$tools\build_demo_lakes.py" --endur-dir <private>
+& py -3.13 "$tools\drishti.py" lake demo-all --endur-dir <private> --dry-run     # prints every step, changes nothing
+& py -3.13 "$tools\drishti.py" lake demo-all --endur-dir <private>
 ```
 
 You should see `1/3 the demo lakes …` (15 to 45 minutes; `data\delta\demo` ends at about 3.4 GB), then

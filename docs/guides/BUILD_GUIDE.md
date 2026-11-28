@@ -660,7 +660,7 @@ published public data such as the us-equities and gleif packs):
    file a business day (the first the snapshot, then each day's changes), or one dated snapshot the same on every day, or a tar of
    `<table>/<YYYY-MM-DD>/` folders where a date is several files; each dataset listed in `data/testdata/testdata.yaml` with its pack, kind,
    Delta connector and key (`tools/testdata/make_testdata.py` and `tools/testdata/publicsnap.py` write it; never by hand);
-2. `python3 tools/drishti.py lake demo` (or `tools/build_demo_lakes.py`) builds them into the demo lake;
+2. `python3 tools/drishti.py lake demo` (or `drishti.py lake demo-all`) builds them into the demo lake;
 3. a Delta connector in the pack's `pack.yaml` serves them (`plugin: delta`, its `domain`, the kinds, `layout.<kind>.columns` for the fields
    searches and the search form filter on, `layout.<kind>.type-ahead` for the columns a name is found by).
 

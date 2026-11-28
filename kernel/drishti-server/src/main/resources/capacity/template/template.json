@@ -1,5 +1,5 @@
 {
- "comment": "Written by tools/sizing_planner.py: do not edit; edit capacity/planner.yaml and run the tool.",
+ "comment": "Written by drishti.py admin capacity-workbook: do not edit; edit capacity/planner.yaml and run the tool.",
  "parts": [
   "[Content_Types].xml",
   "_rels/.rels",

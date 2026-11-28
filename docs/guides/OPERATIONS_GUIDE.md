@@ -450,7 +450,7 @@ warehouse `<data>/iceberg`; nothing is copied into `config/`). On Linux and macO
 |---|---|---|
 | Local paths | | `C:\lakes\drishti`, `\\fileserver\lakes`, `file:/C:/lakes`, paths with spaces all work; S3 with the connector's `s3.*` settings |
 | Replacing a DuckDB file while the server reads it | Windows cannot rename over an open file | load a new file and switch the connector's `path`, or stop the server first |
-| `tools\drill.sh`, `tools\bench\*.sh` (internal test tooling) | they need bash | `tools\drishti.py` for starting and stopping the server and console, lakes (`lake demo --engine java`), packs, loads (`data load --store <store>`) and feeds (`drishti.py feed run <feed>`), `tools\rolling.py` for upgrades; the Python tools run as they are; or Git Bash or WSL |
+| `tools\drill.sh`, `tools\bench\*.sh` (internal test tooling) | they need bash | `tools\drishti.py` for starting and stopping the server and console, lakes (`lake demo --engine java`), packs, loads (`data load --store <store>`) and feeds (`drishti.py feed run <feed>`), `tools\cluster roll` for upgrades; the Python tools run as they are; or Git Bash or WSL |
 | `docker compose` (`deploy\`) | Linux containers | Docker Desktop runs them; the jar runs natively |
 | Python in BI, compute in fork mode | the strict sandbox needs Linux | stays off on Windows, with that reason ([section 15](#15-compute-workers)) |
 
@@ -2332,7 +2332,7 @@ python3 tools/drishti.py admin capacity --set Trades=450000 --set Positions=4500
 python3 tools/drishti.py admin capacity --xlsx capacity.xlsx --inputs both
 ```
 
-To calibrate the planner to your servers, change a coefficient in `capacity/planner.yaml` and run `python3 tools/sizing_planner.py` (it rewrites the
+To calibrate the planner to your servers, change a coefficient in `capacity/planner.yaml` and run `python3 tools/drishti.py admin capacity-workbook` (it rewrites the
 workbook, the template and the test vectors; `--check` fails while any is stale).
 
 ### 14.7 Busy protection: refuse politely, never fall over
@@ -2894,7 +2894,7 @@ untouched: [the production deployment guide, section 11](#11-upgrade-and-rollbac
 
 With Docker: build the images with the new tag, change the `image:` tags and run `docker compose --env-file deploy/.env -f deploy/docker/compose.yaml up
 -d` (named volumes are kept). **Rollback**: stop, put the old jar (or image tag) back, restore the backup if the new version changed stored data, start.
-A cluster is upgraded one node at a time with the rolling upgrade runner, `python tools/rolling.py`, servers first and the consoles last
+A cluster is upgraded one node at a time with the rolling upgrade runner, `python tools/drishti.py cluster roll`, servers first and the consoles last
 ([CLUSTER_GUIDE.md › Rolling upgrades](CLUSTER_GUIDE.md#82-rolling-upgrades)).
 
 **What a start does after an upgrade, by itself**: it writes no connector file. A connector file an older release generated is
@@ -3656,7 +3656,7 @@ with the pip commands of [section 3](#3-install-a-release), and `setup` only che
 A virtual environment you make yourself from it works the same (use its `python` wherever this guide says `/opt/python3.13/bin/python3.13`).
 Both services run that Python; it is owned by root and read-only to the service user.
 
-**Sizing.** Before a large deployment, plan it: `python3 tools/sizing_planner.py --out <folder>` writes the single-node planner workbook (the
+**Sizing.** Before a large deployment, plan it: `python3 tools/drishti.py admin capacity-workbook --out <folder>` writes the single-node planner workbook (the
 committed copy is `docs/architecture/Drishti-Sizing-Planner.xlsx`), and **Admin → Capacity** compares today against the plan
 ([CLUSTER_GUIDE.md › Sizing](CLUSTER_GUIDE.md#15-sizing-memory-cpu-and-disk), [OPERATIONS_GUIDE.md › Memory, caches and capacity](OPERATIONS_GUIDE.md#14-memory-caches-and-capacity)).
 
@@ -4469,7 +4469,7 @@ Without `DRISHTI_DRAIN_TOKEN_FILE` (or `DRISHTI_DRAIN_TOKEN`) a server with sign
 After a rollback `previous` still names the release that was running before the upgrade: set it to the failed release (`ln -sfn releases/<failed> /opt/drishti/previous`) when you
 keep that folder for the investigation.
 
-- **A cluster upgrades one node at a time**, servers first, consoles last, draining each before its stop: `tools/rolling.py` does it from an
+- **A cluster upgrades one node at a time**, servers first, consoles last, draining each before its stop: `drishti.py cluster roll` does it from an
   inventory (`deploy/rolling.example.yaml`; `--dry-run` prints every step). Releases run side by side during the roll
   ([CLUSTER_GUIDE.md › Rolling upgrades](CLUSTER_GUIDE.md#82-rolling-upgrades)); on each node the release and its Python are switched as above.
 - Remove an old release when nothing needs it (a business day later): `sudo rm -rf /opt/drishti/releases/<old> /opt/drishti/python/<old>`.

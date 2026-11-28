@@ -15,7 +15,7 @@
 
 """`drishti.py admin capacity`: Admin -> Capacity from the command line (docs/guides/CLUSTER_GUIDE.md 9.7; the API:
 /api/v1/admin/capacity, administrators). The planner the server serves (capacity/planner.yaml) is evaluated here, by the same evaluator
-as tools/sizing_planner.py's workbook and the page's drishti_capacity.js: the heap to set, RAM, disk and cores, the warnings, the YAML block of
+as drishti.py admin capacity-workbook's workbook and the page's drishti_capacity.js: the heap to set, RAM, disk and cores, the warnings, the YAML block of
 the settings and the whole JVM command line. --live puts this server's measured figures into the inputs (positions, trades, dates in
 memory, users, requests a second, Java) and prints them; --set Name=value changes any input; --xlsx FILE downloads the formula workbook
 (--inputs plan, live or both), audited on the server as capacity-workbook-downloaded. Exit codes: 0, 1 (the server said no), 2 (usage)."""
@@ -162,4 +162,9 @@ def register(groups, srv, ctx: dict):
     p.add_argument("--all", action="store_true", help="every result line, band by band")
     p.add_argument("--xlsx", metavar="FILE", help="download the formula workbook to FILE instead")
     p.add_argument("--inputs", choices=("plan", "live", "both"), default="plan", help="with --xlsx: the plan's inputs, the live ones, or both side by side")
+    w = sub.add_parser("capacity-workbook", help="admin capacity-workbook: write the sizing planner's workbook, the server's template and the test vectors from capacity/planner.yaml (a build step, no server)",
+                       description="Writes docs/architecture/Drishti-Sizing-Planner.xlsx, the server's capacity template and the test vectors from capacity/planner.yaml; --out DIR writes only the workbook; --check says when they drift.",
+                       formatter_class=argparse.RawDescriptionHelpFormatter)
+    _planner().add_arguments(w)
+    w.set_defaults(func=lambda a, extra: _planner().run(a))
     return sub

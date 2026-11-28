@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The planner workbook for a download (Admin → Capacity, "Download the working"): the template {@code tools/sizing_planner.py} writes into
+ * The planner workbook for a download (Admin → Capacity, "Download the working"): the template {@code drishti.py admin capacity-workbook} writes into
  * {@code capacity/template/} (the committed workbook's parts, branding as {@code {{PRODUCT}}} placeholders, and {@code template.json} naming
  * each input's row), with only the Inputs sheet's value cells filled, so Results, Coefficients and Explain go out untouched and every
  * figure stays a live Excel formula (recalculated on opening: {@code fullCalcOnLoad}). An optional second Inputs column (Live or Plan)
@@ -71,7 +71,7 @@ public final class CapacityWorkbook {
     private static String read(String resource) throws IOException {
         try (InputStream in = CapacityWorkbook.class.getClassLoader().getResourceAsStream(resource)) {
             if (in == null) {
-                throw new IllegalStateException("the server has no " + resource + " (tools/sizing_planner.py writes it)");
+                throw new IllegalStateException("the server has no " + resource + " (drishti.py admin capacity-workbook writes it)");
             }
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }

@@ -147,13 +147,14 @@ class Make(unittest.TestCase):
         self.assertIn("pack check passed, pack verify passed", self.stdout)
 
     def test_folder_layout(self):
-        for rel in ("README.txt", "MANIFEST.json", "run-server.sh", "run-server.ps1", "config/drishti-site.yaml", "pack/pm-test/pack.yaml",
+        for rel in ("README.txt", "MANIFEST.json", "config/drishti-site.yaml", "pack/pm-test/pack.yaml",
                     "pack/pm-test/config/about.yaml", "bundle/pm-test-2.1.0.tar.gz", "bundle/pm-test-2.1.0.tar.gz.sha256"):
             self.assertTrue((self.out / rel).is_file(), rel)
         self.assertTrue(any((self.out / "pack/pm-test/sutras").rglob("*.sutra.yaml")))
         self.assertTrue((self.out / "data/files/pm-test/2026-09-17/trade.jsonl").is_file())
         self.assertTrue((self.out / "data/files/pm-test/2026-09-18/trade.jsonl").is_file())
-        self.assertTrue(os.access(self.out / "run-server.sh", os.X_OK))
+        self.assertFalse((self.out / "run-server.sh").exists(), "no second way to start a server")
+        self.assertFalse((self.out / "run-server.ps1").exists())
 
     def test_readme_has_real_values(self):
         text = (self.out / "README.txt").read_text(encoding="utf-8")

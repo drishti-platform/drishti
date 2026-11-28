@@ -23,8 +23,8 @@ it is safe to stop, stop, upgrade, start, wait until it is ready (a server: ``/a
 the next node. On ECS stop, upgrade and start are one ``aws ecs update-service`` (the services stop the old task before starting the new).
 Any step that fails stops the run, naming the node to resume from (``--from``). ``--dry-run`` prints every step and calls nothing.
 
-    python3 tools/rolling.py --inventory cluster.yaml --version 2.9.7 --dry-run
-    python3 tools/rolling.py --inventory cluster.yaml --version 2.9.7 [--from var-3] [--only var-1,var-2]
+    python3 tools/drishti.py cluster roll --inventory cluster.yaml --version 2.9.7 --dry-run
+    python3 tools/drishti.py cluster roll --inventory cluster.yaml --version 2.9.7 [--from var-3] [--only var-1,var-2]
 
 The inventory (YAML or JSON; ``deploy/rolling.example.yaml`` is a commented example)::
 
@@ -43,7 +43,7 @@ The inventory (YAML or JSON; ``deploy/rolling.example.yaml`` is a commented exam
       - {name: var-1, role: owner, zone: az-a, url: "http://10.0.3.11:18480", host: 10.0.3.11}
 
 The token (an administrator's personal API token with the ``node:drain`` scope) comes from ``--token-file``, else ``DRISHTI_DRAIN_TOKEN``,
-else ``DRISHTI_TOKEN``; it is never printed. Run it as ``python tools/rolling.py --inventory my-cluster.yaml --version <version> [--dry-run]`` on any OS.
+else ``DRISHTI_TOKEN``; it is never printed. Run it as ``python tools/drishti.py cluster roll --inventory my-cluster.yaml --version <version> [--dry-run]`` on any OS.
 """
 from __future__ import annotations
 
@@ -341,21 +341,22 @@ def describe(work: list[tuple[str, Node, list[Step]]], inv: Inventory, version: 
     return "\n".join(lines)
 
 
-def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="rolling.py", description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
-                                epilog="docs/guides/CLUSTER_GUIDE.md section 10.1; docs/guides/OPERATIONS_GUIDE.md, Rolling upgrades")
+def add_arguments(p: argparse.ArgumentParser) -> None:
+    """The words of ``drishti.py cluster roll``."""
     p.add_argument("--inventory", required=True, help="the cluster's nodes and commands (YAML or JSON; deploy/rolling.example.yaml)")
     p.add_argument("--version", default="", help="the version to install, filled in as {version}")
     p.add_argument("--dry-run", action="store_true", help="print every step and call nothing")
     p.add_argument("--from", dest="start", help="resume from this node (the nodes before it are skipped)")
     p.add_argument("--only", help="only these nodes (comma-separated), still in the upgrade order")
     p.add_argument("--token-file", help="a file holding the token (default DRISHTI_DRAIN_TOKEN, else DRISHTI_TOKEN); never printed")
-    a = p.parse_args(argv)
+
+
+def run(a: argparse.Namespace) -> int:
     try:
         inv = Inventory.load(a.inventory)
         work = plan(inv, a.version, a.start, {x.strip() for x in a.only.split(",") if x.strip()} if a.only else None)
     except (PlanError, OSError, ValueError) as e:
-        print(f"rolling.py: {e}", file=sys.stderr)
+        print(f"drishti.py cluster roll: {e}", file=sys.stderr)
         return 2
     if a.dry_run:
         print(describe(work, inv, a.version))
@@ -363,5 +364,9 @@ def main(argv: list[str] | None = None) -> int:
     return Runner(_token(a.token_file)).run(work)
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+def main(argv: list[str] | None = None) -> int:
+    """The same through ``drishti.py cluster roll`` (a test calls this with the words)."""
+    p = argparse.ArgumentParser(prog="drishti.py cluster roll", description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
+                                epilog="docs/guides/CLUSTER_GUIDE.md section 10.1; docs/guides/OPERATIONS_GUIDE.md, Rolling upgrades")
+    add_arguments(p)
+    return run(p.parse_args(argv))

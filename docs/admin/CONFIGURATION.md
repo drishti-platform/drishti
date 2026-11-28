@@ -6616,7 +6616,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_DISTRIBUTIONS_DIR` | `drishti.distributions-dir` | `<config>/distributions` | server | the distribution files and kernel.yaml (the kernel's packs and words) |
 | `DRISHTI_DOCTOR_PORTS` | drishti.py doctor | none | tools | The ports doctor checks |
 | `DRISHTI_DRAIN_ON_STOP` | `drishti.node.drain.on-stop` | `true` | server | the server drains itself when stopped (SIGTERM: a service stop, docker stop, Ctrl+C), then shuts down gracefully |
-| `DRISHTI_DRAIN_TOKEN` | rolling.py, drishti.py node | none | tools | An administrator's personal API token with the node:drain scope: drishti.py node and the rolling upgrade runner drain a server with it (secret; else DRISHTI\_DRAIN\_TOKEN\_FILE, else DRISHTI\_TOKEN) |
+| `DRISHTI_DRAIN_TOKEN` | cluster roll, drishti.py node | none | tools | An administrator's personal API token with the node:drain scope: drishti.py node and the rolling upgrade runner drain a server with it (secret; else DRISHTI\_DRAIN\_TOKEN\_FILE, else DRISHTI\_TOKEN) |
 | `DRISHTI_DRAIN_TOKEN_FILE` | drishti.py node | none | tools | A file holding the drain token (instead of DRISHTI\_DRAIN\_TOKEN) |
 | `DRISHTI_DRAIN_WAIT` | `drishti.node.drain.on-stop-wait-seconds`, drishti.node.drain.on-stop-wait-seconds, drishti.py node drain | `90` | server, server, tools | how long that drain waits for safeToStop before the stop goes on anyway |
 | `DRISHTI_DRILL_TMP` | the drop-in drill's temporary folder | `<home>/data/tmp` | tools | The folder the drop-in drill works in (tools/drillkit/dropin.py); removed when the drill ends |

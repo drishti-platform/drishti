@@ -263,7 +263,7 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
 |---|---|
 | Role homes (post-freeze) | `var/VarHomeMeasures`, `var/VarHomeBacktest`, `exposure/ExposureHomeMeasures`; `kernel/drishti-server/.../server/home/` reads them |
 | Figures on screens | `var/VarFigures`, `exposure/ExposureFigures` (moved, but registered as `ViewAugmenter`), `var/VarTradeLinks`, `exposure/ExposureTradeLinks`, `var/VarWhyPanels`, `var/VarNumberExplainer`, `exposure/ExposureNumberExplainer`, `exposure/ExposurePreDealExplainer` |
-| Admin and sizing | `var/VarCaches`, `exposure/ExposureCaches` (`CacheGroup`), `var/VarCapacityFigures` (`CapacityFigures`), `kernel/.../capacity/planner.yaml`, `tools/sizing_planner.py` |
+| Admin and sizing | `var/VarCaches`, `exposure/ExposureCaches` (`CacheGroup`), `var/VarCapacityFigures` (`CapacityFigures`), `kernel/.../capacity/planner.yaml`, `drishti.py admin capacity-workbook` |
 | Cluster | `var/VarMeasure` (`ShardedMeasure`), `var/VarShards`, `var/VarShardRows`, `var/VarShardController`, `var/VarNodeParts` |
 | Kinds | `var/VarPositionsProvider`, `var/VarSystemBasketsProvider` (`KindProvider`), `var/VarMatrixLake`, `var/VarMatrixController` |
 | Jobs and rules | `var/VarReadyRule`, `var/VarPvStream`, `var/VarPvStreamPlugin`, `var/StressWindowApprovals`, `var/VarReportApprovals`, `var/VarReportSignoff`, `config/alerts/platform-alerts.yaml` |

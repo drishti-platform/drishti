@@ -739,7 +739,7 @@ page says what that means for data coming in, data going out, and the files Dris
 
 | Form | One line is | Written by | Read by |
 |---|---|---|---|
-| **Document** | one entity, as its source holds it: `{"TRADE_ID": "1000015", "LEGS": [...], ...}` | `make_trades.py`, `bulk_trades.py`, `comswap_synth.py`, `note_synth.py`, every pack's `samples/<kind>.jsonl` | `lake build`, `build_demo_lakes.py`, `ingest_jsonl.py`, the file connector, the demo connector |
+| **Document** | one entity, as its source holds it: `{"TRADE_ID": "1000015", "LEGS": [...], ...}` | `make_trades.py`, `bulk_trades.py`, `comswap_synth.py`, `note_synth.py`, every pack's `samples/<kind>.jsonl` | `lake build`, `lake demo-all`, `ingest_jsonl.py`, the file connector, the demo connector |
 | **Loader row** | `{"domain", "kind", "id", "date", "doc", "columns"}`: a document (`doc`, as JSON text) of a kind on a business date, with the fields its pack promotes; kept as it is, but stored under the business date of its file by the load rules ([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md#5-routing-business-dates-modes-repeats-and-undo)), never its own `date` (a row whose `date` differs is counted) | `make_data.py --jsonl`, `bulk_trades.py --jsonl`: tars of `<kind>/<YYYY-MM-DD>/rows.jsonl` folders | the Java loaders (PostgreSQL, Cassandra, Iceberg, DuckDB, Redis, MongoDB, Aerospike, the file connector's `JsonlLoader`) |
 | **Lake row** | `{"domain", "kind", "table", "id", "date", "doc"}`: the same, naming the Delta table (`trade_endur`); kept as it is, but stored under the business date of its file by the load rules ([DATA_LAKE_GUIDE.md](DATA_LAKE_GUIDE.md#5-routing-business-dates-modes-repeats-and-undo)), never its own `date` (a row whose `date` differs is counted) | `make_data.py --lake`, `samplegen/lake.py`, the pack generators' `--lake`: tars of `<table>/<YYYY-MM-DD>/rows.jsonl` | `tools/samplegen/load_rows.py` |
 | **Sutra test case** | `{"case": "<name>", "document": {...}}` | every generator of Sutra tests (`tests/<sutra>/cases.jsonl`, beside `expect.yaml`) | `sutra test`; the older one-`.json`-a-case folders still read, with a warning |
@@ -763,8 +763,8 @@ Where the generators put their output:
 ### 2.3 Reading: JSONL first, JSON still, CSV deprecated
 
 The readers keep what they accept: the file connector reads `<kind>.jsonl` (dated `<yyyy-MM-dd>/<kind>.jsonl`) and one file per
-entity (`<kind>/<id>.json`); `lake build`, `build_demo_lakes.py`, `data ingest` and the Java loaders read JSON Lines and JSON arrays
-(gzipped or not), and `lake build`, `build_demo_lakes.py`, `load_rows.py`, `convert` and the parallel lake loader read them inside a
+entity (`<kind>/<id>.json`); `lake build`, `lake demo-all`, `data ingest` and the Java loaders read JSON Lines and JSON arrays
+(gzipped or not), and `lake build`, `lake demo-all`, `load_rows.py`, `convert` and the parallel lake loader read them inside a
 `.zip`, `.tar.gz`, `.tgz` or `.tar` archive too ([section 2.7](#27-archives-zip-and-tarballs)); the demo connector reads
 `samples/<kind>.jsonl` and the older `samples/<kind>/<id>.json`.
 

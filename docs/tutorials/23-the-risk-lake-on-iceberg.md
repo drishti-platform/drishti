@@ -30,13 +30,13 @@ About 20 minutes.
 ## Before you start
 
 - [The VaR tutorial, Part A](../guides/VAR_GUIDE.md#part-a--historical-var-from-the-bank-to-a-trade) step 1 done once: you know the VaR test data and `VAR BANK` (112,041,646 USD on 2026-09-30).
-- `build_demo_lakes.py` writes Iceberg with the loader in the server's jar, so the server is built first.
+- `lake demo-all` writes Iceberg with the loader in the server's jar, so the server is built first.
 - The Python you run Drishti with (`python3`; Windows `py -3.13`), its libraries installed with the two pip commands (`setup` checks them): it has the Drishti Lake wheel (the loader's Python path) and `pyarrow`.
 - Stop the server while you build the lake; the examples use the default data folder, `data/` (`data/delta/demo`, `data/iceberg`).
 
 ## What you will learn
 
-- how `build_demo_lakes.py --store risk=iceberg` moves every table of the risk domain into Iceberg and switches `risk-store.yaml`;
+- how `lake demo-all --store risk=iceberg` moves every table of the risk domain into Iceberg and switches `risk-store.yaml`;
 - how to publish the official results to Iceberg (`drishti.var.official.format` and `.root`), and why a table keeps its format;
 - that VaR, ES and the limit letters read from Iceberg equal Delta's;
 - each table's **Format** in Admin → Lakes;
@@ -48,7 +48,7 @@ About 20 minutes.
 **From the command line.** The same `--only` list as the VaR tutorial, Part A, with `--store risk=iceberg`:
 
 ```bash
-python3 tools/build_demo_lakes.py --as-of data --store risk=iceberg \
+python3 tools/drishti.py lake demo-all --as-of data --store risk=iceberg \
   --only market-risk/pnl-vector,market-risk/scenario-pv,market-risk/fx-scenario,market-risk/scenario-set,market-risk/var-limit
 ```
 
@@ -75,7 +75,7 @@ file names no kinds: the pack's template still binds the risk kinds to `risk-sto
 bindings) is where a site binds them elsewhere:
 
 ```yaml
-# Written by tools/build_demo_lakes.py --store risk=iceberg: every risk table in Iceberg (data/iceberg/risk), …
+# Written by drishti.py lake demo-all --store risk=iceberg: every risk table in Iceberg (data/iceberg/risk), …
 plugin: iceberg
 settings:
   root: ${DRISHTI_ICEBERG_ROOT:${lake.data.dir:${drishti.data.dir}}/iceberg}
@@ -231,7 +231,7 @@ files an earlier release left).
 **From the command line** (server stopped):
 
 ```text
-$ python3 tools/build_demo_lakes.py --as-of data --store risk=delta --only market-risk/pnl-vector,…,market-risk/var-limit
+$ python3 tools/drishti.py lake demo-all --as-of data --store risk=delta --only market-risk/pnl-vector,…,market-risk/var-limit
   the risk domain is in Delta now: its Iceberg tables are removed (data/iceberg/risk)
   Risk domain: delta data/delta/risk; risk-store: now reads delta, was iceberg (the pack's own connector; …); exposure-store: now reads delta, was iceberg (…)
 ```

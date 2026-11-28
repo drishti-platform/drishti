@@ -14,7 +14,7 @@
 
 """Admin -> Capacity's evaluator as it runs in the browser (static/js/drishti_capacity.js under Node): every named figure of the planner
 (kernel/drishti-server/src/main/resources/capacity/planner.yaml) at the three shapes of the shared test vectors
-(kernel/drishti-server/src/test/resources/capacity/test-vectors.json, written by tools/sizing_planner.py) agrees with the Python evaluator the
+(kernel/drishti-server/src/test/resources/capacity/test-vectors.json, written by drishti.py admin capacity-workbook) agrees with the Python evaluator the
 workbook is checked with, text exactly (the YAML block and the command line too), numbers to a millionth; and today against the plan
 says what breaks first from a server's measured figures."""
 import json

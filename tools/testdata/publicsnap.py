@@ -12,7 +12,7 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 """The public-data snapshots of the us-equities and gleif packs in the committed test data (data/testdata), the standard data
-pattern every pack follows: the documents live in data/testdata/<pack>/<kind>/, `drishti.py lake demo` (tools/build_demo_lakes.py)
+pattern every pack follows: the documents live in data/testdata/<pack>/<kind>/, `drishti.py lake demo` (drishti.py lake demo-all)
 builds them into the Delta (or Iceberg) lake, and the pack's own Delta connector serves them. Never the demo connector.
 
     data/testdata/us-equities/us-company/us-company.2026-10-24.jsonl.gz   one gzipped JSON Lines file per kind, named by the load rules

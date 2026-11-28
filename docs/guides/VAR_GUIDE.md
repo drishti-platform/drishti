@@ -1983,7 +1983,7 @@ pricing system ──► PV topic (each message's value JSONL text: one or more 
 The window's rows are written with the trades' table layout of the loaded pack and announced as a data load of the kind (one signal a
 window). The window goes to the lake in the lake's own format: one Delta commit on a Delta risk lake or, when the
 kind's table is an Iceberg table (`<lake>/risk/<kind>/metadata`, no `_delta_log`), one Iceberg append (`LakeAppends`: nothing replaced,
-the vector as `list<double>`; the connector's `lake` must then name the Iceberg root, e.g. `<data>/iceberg` after `build_demo_lakes.py
+the vector as `list<double>`; the connector's `lake` must then name the Iceberg root, e.g. `<data>/iceberg` after `lake demo-all
 --store risk=iceberg`, which switches `risk-store.yaml` but not `pv-updates`); either way the intraday layer applies it the same ([section 29.3](#293-how-the-lake-tools-and-the-delta-plugin-carry-a-vector)). The lake is the record: a restart rebuilds the layer from the lake, and the stream reading the topic again writes nothing it
 already holds.
 
@@ -2591,7 +2591,7 @@ Every dataset below, whether it is required and the links to its data contract a
 All VaR inputs are tables in the **common risk lake**, domain `risk`, one table per kind, served by the market-risk pack's
 connector `risk-store` (`plugin: delta`, `root: ${DRISHTI_DELTA_ROOT:${lake.data.dir:${drishti.data.dir}}/delta/demo}`, `domain: risk`). Delta is the
 default; the same tables may be Iceberg tables, read by the same connector switched to `plugin: iceberg`
-(`build_demo_lakes.py --store risk=iceberg` writes both the tables and the file; [section 29.3](#293-how-the-lake-tools-and-the-delta-plugin-carry-a-vector)),
+(`lake demo-all --store risk=iceberg` writes both the tables and the file; [section 29.3](#293-how-the-lake-tools-and-the-delta-plugin-carry-a-vector)),
 with the same VaR to the cent. The engine reads the kinds named by `drishti.var.kinds` (defaults below), whichever connector the kind
 is routed to. The official results it
 publishes live beside them, never read back ([section 19](#19-official-end-of-day-results)).
@@ -4215,7 +4215,7 @@ new format another root. The readers follow by themselves: with `format: iceberg
 template (BI's reader, `plugin: delta` in the pack) as `plugin: iceberg` over `${drishti.var.official.root}` with
 the `s3.*` settings of `drishti.var.official.storage` (`OfficialReaders`). The file generated at start says so; a file never edited
 follows when the format changes (back to Delta too); an edited file is kept and the change of plugin listed under Template updates.
-`drishti.py lake demo` and `build_demo_lakes.py` leave `var-results.yaml` and `exposure-results.yaml` to the server (they read where the
+`drishti.py lake demo` and `lake demo-all` leave `var-results.yaml` and `exposure-results.yaml` to the server (they read where the
 server publishes, not the demo lake); a file an earlier `lake demo` wrote (first line *Written by drishti.py lake demo*, no stamp) is
 moved to `<data>/connectors/history/` by the next build, and the server writes the stamped one at its next start. An Iceberg reader of `risk-results` is allowed as the Delta one is: read only, computed kinds only (`tools/test_contracts.py`).
 
@@ -5287,7 +5287,7 @@ the whole bank's vectors as 10 GB of JSON a date, usable for a few desk-level ar
 | the test data | the vector stays a JSON array of numbers in the JSON Lines (P&Ls in whole units); the generator writes the kinds deterministically and lists them in `testdata.yaml` ([section 22](#22-test-data-and-generators)) |
 | `tools/lake/stage.py`, `tools/lake/writers.py`, `tools/lake/build.py` | `lake build --vector` and both writers write a vector column as `list<double>` (pyarrow `pa.list_(pa.float64())` for the `deltalake` engine; type `vector` in Drishti's Java `LakeWriter`), the document keeping `{"$vector": "PNL"}` (the vector not stored twice); Snappy and default encodings (no `BYTE_STREAM_SPLIT` yet) |
 | the Delta plugin (`DeltaTable`, `DeltaSourcePlugin`) | streams a date's vectors (`SourcePlugin.vectors`, `VectorSink`, through `SourceRouter.vectors`) one buffer per read, reused for every row, so a date of millions of vectors is never held there; puts a vector back into a fetched document, so a page shows the P&L path unchanged; reading goes through Delta Kernel's own list reader (no custom fast path yet) |
-| Iceberg (`--store iceberg`) | **built.** `lake build --format iceberg` and `build_demo_lakes.py --store risk=iceberg` write the same `list<double>` column; the Iceberg plugin implements `vectors()`, `documents()`, `tableIdentity()`, `inventory()` and `refreshVersions()`, so VaR and exposure read their inputs from an Iceberg risk lake as from Delta. The same day on both formats gives VaR, ES, component VaR, the limit-letter nodes, intraday and the official records equal to the cent in USD and EUR (`VarFormatEqualityTest`), exposure too (`ExposureFormatEqualityTest`). Delta stays the default |
+| Iceberg (`--store iceberg`) | **built.** `lake build --format iceberg` and `lake demo-all --store risk=iceberg` write the same `list<double>` column; the Iceberg plugin implements `vectors()`, `documents()`, `tableIdentity()`, `inventory()` and `refreshVersions()`, so VaR and exposure read their inputs from an Iceberg risk lake as from Delta. The same day on both formats gives VaR, ES, component VaR, the limit-letter nodes, intraday and the official records equal to the cent in USD and EUR (`VarFormatEqualityTest`), exposure too (`ExposureFormatEqualityTest`). Delta stays the default |
 | the data pattern | unchanged ([BANK_DATA_GUIDE.md section 9](BANK_DATA_GUIDE.md#9-the-demo-data)): `data/testdata/<domain>/<kind>/*.jsonl.gz` → `lake demo` (`tools/lake/demo.py`, each day with `lake build`) → Delta → the connector `risk-store`, with `DRISHTI_LAKE_ENABLED` as for every pack and the demo connector off; in production the bank's batch writes Parquet or JSON Lines and the loader (`lake build`, `lake publish`) builds the same tables |
 | tests | a vector round trip (JSON Lines → Delta → `double[]` → document) equal to the bit: `DeltaVectorColumnTest`, `tools/lake/test_vectors.py` |
 
@@ -7066,7 +7066,7 @@ from the risk lake built into Iceberg. The build itself, the official results on
 build and its output are [tutorial 16, step 29](../tutorials/23-the-risk-lake-on-iceberg.md#step-1--build-the-var-data-into-iceberg)), then start the server again:
 
 ```bash
-python3 tools/build_demo_lakes.py --as-of data --store risk=iceberg \
+python3 tools/drishti.py lake demo-all --as-of data --store risk=iceberg \
   --only market-risk/scenario-pv,market-risk/fx-scenario,market-risk/scenario-set,market-risk/var-limit
 ```
 

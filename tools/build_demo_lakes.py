@@ -28,28 +28,28 @@
 
 Examples::
 
-    python tools/build_demo_lakes.py
-    python tools/build_demo_lakes.py --endur-dir C:\\Users\\me\\drishti-private\\endur
-    python tools/build_demo_lakes.py --endur-dir ~/private/endur --as-of 2026-10-16 --dry-run
+    python tools/drishti.py lake demo-all
+    python tools/drishti.py lake demo-all --endur-dir C:\\Users\\me\\drishti-private\\endur
+    python tools/drishti.py lake demo-all --endur-dir ~/private/endur --as-of 2026-10-16 --dry-run
 
 One part only, the rest of the lakes kept as they are::
 
-    python tools/build_demo_lakes.py --endur-dir C:\\…\\endur --files-only        # only your ENDUR files, nothing rebuilt
-    python tools/build_demo_lakes.py --source-dir C:\\…\\calypso --system calypso --files-only   # another system's files
-    python tools/build_demo_lakes.py --only trades/endur --as-of 2026-10-16          # only the synthetic ENDUR table
-    python tools/build_demo_lakes.py --only trades/calypso,trades/murex             # several datasets (folders of data/testdata)
+    python tools/drishti.py lake demo-all --endur-dir C:\\…\\endur --files-only        # only your ENDUR files, nothing rebuilt
+    python tools/drishti.py lake demo-all --source-dir C:\\…\\calypso --system calypso --files-only   # another system's files
+    python tools/drishti.py lake demo-all --only trades/endur --as-of 2026-10-16          # only the synthetic ENDUR table
+    python tools/drishti.py lake demo-all --only trades/calypso,trades/murex             # several datasets (folders of data/testdata)
 
 Each source system's trades in Delta Lake (the default) or Apache Iceberg, chosen per system::
 
-    python tools/build_demo_lakes.py --store calypso=iceberg                          # CALYPSO in Iceberg, ENDUR and MUREX in Delta
-    python tools/build_demo_lakes.py --store endur=delta --store calypso=iceberg --store murex=iceberg
-    python tools/build_demo_lakes.py --store all=iceberg                              # every system in Iceberg
-    python tools/build_demo_lakes.py --only trades/calypso --store calypso=iceberg --as-of 2026-10-16   # one system moved
+    python tools/drishti.py lake demo-all --store calypso=iceberg                          # CALYPSO in Iceberg, ENDUR and MUREX in Delta
+    python tools/drishti.py lake demo-all --store endur=delta --store calypso=iceberg --store murex=iceberg
+    python tools/drishti.py lake demo-all --store all=iceberg                              # every system in Iceberg
+    python tools/drishti.py lake demo-all --only trades/calypso --store calypso=iceberg --as-of 2026-10-16   # one system moved
 
 The risk domain (the market-risk pack's P&L vectors, scenario PVs, hierarchy and the rest of risk-store) in Iceberg instead of Delta::
 
-    python tools/build_demo_lakes.py --store risk=iceberg                             # every risk table copied into <data>/iceberg/risk
-    python tools/build_demo_lakes.py --only market-risk --store risk=delta            # back to Delta (the default)
+    python tools/drishti.py lake demo-all --store risk=iceberg                             # every risk table copied into <data>/iceberg/risk
+    python tools/drishti.py lake demo-all --only market-risk --store risk=delta            # back to Delta (the default)
 
 Delta is the default for every table; Iceberg is only ever chosen this way (or by a connector file). The risk tables are built as Delta
 by lake demo, copied by Drishti's Iceberg loader (vector columns as list<double>), their Delta copies removed, and the connector file
@@ -62,7 +62,7 @@ keeps each system it does not name in the store it has.
 
 A server that reads the lake::
 
-    python tools/build_demo_lakes.py --only trades/murex --server http://192.168.2.77:18480 --token-file ~/drishti-token.txt
+    python tools/drishti.py lake demo-all --only trades/murex --server http://192.168.2.77:18480 --token-file ~/drishti-token.txt
 
 No server is told by default (a build ran into the server on localhost:18480 whatever lake it built, QA3A-05): restart yours after a
 build, or let it pick the tables up at its next refresh. ``--server`` names the server that reads this lake; it is told once at the end,
@@ -267,9 +267,8 @@ def tell(server: str, token: str | None, pack: str, kind: str, day: str, dry: bo
         return f"no answer: {getattr(e, 'reason', e)}"
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
-                                 epilog=__doc__.split("\n\n", 1)[1])
+def add_arguments(ap: argparse.ArgumentParser) -> None:
+    """The words of ``drishti.py lake demo-all``."""
     ap.add_argument("--endur-dir", type=Path, help="a folder of your ENDUR files by the load rules: trade_endur.YYYY-MM-DD.jsonl (or "
                                                        ".jsonl.gz, .jsonl.zip) one per business date, or tars of trade_endur/YYYY-MM-DD/ folders")
     ap.add_argument("--source-dir", type=Path, help="the same for the system --system names (the same as --endur-dir with --system endur)")
@@ -297,8 +296,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true", help="say every step, change nothing (and print the names mapping)")
     ap.add_argument("--names", type=Path, default=ROOT / "config" / "demo" / "names.yaml",
                     help="the bank's own names (default config/demo/names.yaml): passed to lake demo, which renames them as it loads")
-    a = ap.parse_args(argv)
 
+
+def main(argv: list[str] | None = None) -> int:
+    """The same through ``drishti.py lake demo-all`` (a test calls this with the words)."""
+    ap = argparse.ArgumentParser(prog="drishti.py lake demo-all", description=__doc__.split("\n\n")[0],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__.split("\n\n", 1)[1])
+    add_arguments(ap)
+    return demo_all(ap.parse_args(argv), ap)
+
+
+def demo_all(a: argparse.Namespace, ap: argparse.ArgumentParser | None = None) -> int:
+    if ap is None:                                    # from drishti.py: the usage errors name this command
+        ap = argparse.ArgumentParser(prog="drishti.py lake demo-all")
+        add_arguments(ap)
     py = sys.executable
     try:                                              # lake demo writes with the deltalake package (the console's environment has it)
         import deltalake  # noqa: F401
@@ -552,7 +563,3 @@ def closing(a, system: str, files: list[tuple[str, Path]], outcomes: list[str] |
     else:
         out.append(f"  Then try:  TRD {trade} 60  ·  TRD {trade} 60 DIFF  ·  EQ EQ-CSCA 3M  ·  CPTY CP-NORTHPLAINS 30")
     return out
-
-
-if __name__ == "__main__":
-    sys.exit(main())

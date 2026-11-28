@@ -279,7 +279,6 @@ def readme_text(v: dict) -> str:
     else:
         w("  (no data/)       no real documents were given, so there is no dated store: the pack serves its samples")
     w("  config/          drishti-site.yaml: a ready server configuration overlay")
-    w("  run-server.sh    run-server.ps1: start a server on this folder only (JDK 21+ and the server jar needed)")
     w("  MANIFEST.json    what was generated: kinds, keys, links, counts, checksums\n")
     w("What was chosen for you (change any of it with the flags in docs/guides/DATA_GUIDE.md)")
     for k in v["kinds"]:
@@ -294,7 +293,8 @@ def readme_text(v: dict) -> str:
     w("\n2. DEPLOY")
     w("-" * 72)
     w("  Quickest, on this machine (nothing is copied):")
-    w("      DRISHTI_HOME=/path/to/drishti DRISHTI_PORT=18480 ./run-server.sh        (Windows: .\\run-server.ps1)")
+    for line in PM.start_lines(v["name"], v["store"]):
+        w(line)
     w("  On an existing server, any one of:")
     w(f"      Admin -> Packs -> Deploy archive: choose bundle/{v['name']}-{v['version']}.tar.gz (the page shows the checks and what changes, then you confirm);")
     w(f"      python3 tools/drishti.py pack deploy bundle/{v['name']}-{v['version']}.tar.gz --to /opt/drishti/packs;")
@@ -370,7 +370,6 @@ def make(a, cli) -> int:
     print("\n== pack verify")
     ver = cli.main(["pack", "verify", str(archive), *tool_args])
     PM.write_site_yaml(out, a.name, a.store)
-    PM.write_scripts(out, a.name, a.store)
     kinds_v = []
     for k in plan.kinds:
         docs = k.samples
@@ -390,7 +389,7 @@ def make(a, cli) -> int:
     print(f"\npack make: {out}")
     print(f"  {len(items)} Sutra(s) for {len(plan.kinds)} kind(s)" + (f" ({len(built.synthetic)} tested on synthetic samples only)" if built.synthetic else "")
           + f"; pack check {'passed' if chk == 0 else 'FAILED'}, pack verify {'passed' if ver == 0 else 'FAILED'}")
-    print(f"next: read {out / 'README.txt'}, then  DRISHTI_HOME=<install> DRISHTI_PORT=18480 {out / 'run-server.sh'}")
+    print(f"next: read {out / 'README.txt'}, then start a server on this folder with the lines of its step 2")
     return 1 if (chk or ver) else 0
 
 

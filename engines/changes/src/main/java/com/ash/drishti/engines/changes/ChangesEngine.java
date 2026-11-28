@@ -35,9 +35,17 @@ public final class ChangesEngine implements Engine {
 
     private volatile EngineContext context;
 
+    /** The jar's descriptor, read at the first call (ENGINE_SPEC 4.1: constant, at constant cost); every later call returns it. */
+    private volatile Descriptor descriptor;
+
     @Override
     public Descriptor descriptor() {
-        return Descriptors.of(ChangesEngine.class, ID);
+        Descriptor d = descriptor;
+        if (d == null) {
+            d = Descriptors.of(ChangesEngine.class, ID);
+            descriptor = d;
+        }
+        return d;
     }
 
     @Override

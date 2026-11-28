@@ -120,6 +120,9 @@ public final class HostedEngine implements AutoCloseable {
     private final AtomicLong answerMisses = new AtomicLong();
     /** The session key of the request on this thread: the input stamps a stamp names are that session's own (never another viewer's). */
     private static final ThreadLocal<Sessions.Key> ASKING = new ThreadLocal<>();
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(HostedEngine.class);
+    /** How many of the instance's log lines are already in the server's log. */
+    private final java.util.concurrent.atomic.AtomicInteger logged = new java.util.concurrent.atomic.AtomicInteger();
     private volatile Admission admission;
     private volatile ExecutorService executor;
     private volatile String by = "";
@@ -285,6 +288,20 @@ public final class HostedEngine implements AutoCloseable {
         return s == null ? 0 : s.memoryBytes();
     }
 
+    /** The engine's own log lines (its context's log) into the server's log, each once, as they are written. */
+    private void forwardLog() {
+        HostContext c = context;
+        if (c == null) {
+            return;
+        }
+        List<String> lines = c.logLines();
+        for (int k = logged.get(); k < lines.size(); k = logged.get()) {
+            if (logged.compareAndSet(k, k + 1)) {
+                LOG.info("engine {}: {}", id, lines.get(k));
+            }
+        }
+    }
+
     /** The answer cache's figures for Admin, Caches: entries, the limit, hits and misses since the start (zeros when off). */
     public long[] answerCache() {
         AnswerCache a = answers;
@@ -354,6 +371,7 @@ public final class HostedEngine implements AutoCloseable {
             admission = new Admission(file.limits().concurrent());
             instance = inst;
             sessions = new Sessions(inst, file.snapshot().hot(), this::inputsFor);
+            logged.set(0);
             answers = settings.answers() > 0 ? new AnswerCache(settings.answers()) : null;
             transition(actor, "init", () -> inst.init(ctx));
 
@@ -530,6 +548,7 @@ public final class HostedEngine implements AutoCloseable {
                     answer = hit;
                 } else {
                     answer = i.request(() -> lease.session().ask(request, control));
+                    forwardLog();
                     if (kept != null) {
                         answerMisses.incrementAndGet();
                         kept.put(answer);                               // under its own stamp; an interim answer is never kept

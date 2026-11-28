@@ -35,6 +35,15 @@ public interface Engines {
      */
     EngineAnswer ask(Person p, String engine, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot);
 
+    /**
+     * Data of {@code kind} was just written by this server (an official capture published): every engine that reads the kind drops its
+     * open sessions and the answers kept from them, so the next ask reads the kind again (a session keeps the rows it read). Returns how
+     * many engines read it.
+     */
+    default int inputsChanged(String kind) {
+        return 0;
+    }
+
     /** As {@link #ask(Person, String, List, Map, Map)}, for a module's request in hand (its {@code Principal}). */
     EngineAnswer ask(com.ash.drishti.kernel.api.security.Principal p, String engine, List<String> outputs, Map<String, Object> params,
             Map<String, String> snapshot);

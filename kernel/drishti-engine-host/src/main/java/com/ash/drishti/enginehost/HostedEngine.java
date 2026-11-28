@@ -521,14 +521,17 @@ public final class HostedEngine implements AutoCloseable {
      * cache off, a published ask, an interim answer): what a reader derives from the answer is kept there ({@link Answered#keep}), so it
      * is reachable only through the same stamp (the same question, rows and data) and leaves with the answer.
      */
-    public record Answered(Answer answer, AnswerCache.Kept kept, AnswerCache cache) {
+    public record Answered(Answer answer, AnswerCache.Kept kept, AnswerCache cache, String gate) {
 
-        /** Keeps a value derived from the answer under {@code name}, counted as {@code bytes}; returns the value kept first for that name. */
+        /**
+         * Keeps a value derived from the answer under {@code name} and the output gate's masks ({@code gate}: a shape made through one
+         * viewer's masks is never another's), counted as {@code bytes}; returns the value kept first for that name.
+         */
         public Object keep(String name, Object value, long bytes) {
             if (kept == null) {
                 return value;
             }
-            Object had = kept.shaped().putIfAbsent(name, value);
+            Object had = kept.shaped().putIfAbsent(gate + "|" + name, value);
             if (had != null) {
                 return had;
             }
@@ -538,7 +541,7 @@ public final class HostedEngine implements AutoCloseable {
 
         /** A value kept under {@code name}, or null. */
         public Object kept(String name) {
-            return kept == null ? null : kept.shaped().get(name);
+            return kept == null ? null : kept.shaped().get(gate + "|" + name);
         }
     }
 
@@ -634,7 +637,7 @@ public final class HostedEngine implements AutoCloseable {
             audit.record(viewer.actor(), "engine-ask", "engine/" + id, ask.outputs() + " " + auditParams(params) + " " + snapshot.text() + " -> "
                     + gated.status() + (gated.stamp() == null ? "" : " stamp " + gated.stamp().request()));
         }
-        return new Answered(gated, entry, answers);
+        return new Answered(gated, entry, answers, OutputGate.key(gated));
     }
 
     /** The longest list an audit line writes out item by item (specification 3.2); a longer one is named by its count. */

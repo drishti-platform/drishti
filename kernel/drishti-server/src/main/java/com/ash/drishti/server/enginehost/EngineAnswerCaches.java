@@ -91,6 +91,7 @@ public class EngineAnswerCaches implements CacheReport.Owner, com.ash.drishti.se
         }
         if (c != null) {
             each.put("evictions", c.evictions());
+            each.put("oversized", c.oversized());                       // answers larger than the maximum: the cache too small for them
         }
         return List.of(new CacheReport(NAME, "engine", "Engines' answers by stamp and what modules shaped from them (specification 13 rule 6)",
                 "heap", null, c == null ? 0L : c.bytes(), c == null ? 0L : c.maximum(), c == null ? 0L : (long) c.size(), null, null, null,

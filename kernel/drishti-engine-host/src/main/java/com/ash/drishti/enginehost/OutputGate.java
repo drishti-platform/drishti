@@ -87,6 +87,21 @@ final class OutputGate {
     }
 
     /** A table with some columns read as null in every row. */
+    /**
+     * What the gate did to an answer, as text: each table's masked columns, sorted ("" when nothing was masked). Values a reader shapes
+     * from a gated answer are kept under it, so a shape made through one viewer's masks never reaches a viewer with other masks (the
+     * cache's key, the stamp, names the visibility; under shared isolation it does not name the masks).
+     */
+    static String key(Answer gated) {
+        StringBuilder b = new StringBuilder();
+        for (Table t : gated.tables()) {
+            if (t instanceof Masked m) {
+                b.append(t.schema().name()).append(new java.util.TreeSet<>(m.masked())).append(';');
+            }
+        }
+        return b.toString();
+    }
+
     private record Masked(Table t, Set<String> masked) implements Table {
 
         @Override public TableSchema schema() { return t.schema(); }

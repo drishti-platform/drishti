@@ -17,6 +17,7 @@ package com.ash.drishti.server.enginehost;
 
 import com.ash.drishti.enginehost.HostedEngine;
 import com.ash.drishti.kernel.api.services.EngineAnswer;
+import com.ash.drishti.kernel.api.services.EngineColumn;
 import com.ash.drishti.kernel.api.services.EngineTable;
 import com.ash.engine.Answer;
 import com.ash.engine.ColumnSchema;
@@ -201,10 +202,69 @@ final class HostedAnswer implements EngineAnswer {
         }
 
         @Override
+        public EngineColumn column(String column) {
+            return new Column(t, column, array(column));
+        }
+
+        @Override
         public int find(String keyColumn, String key) {
             Index index = owner.shaped("find|" + name() + "|" + keyColumn, x -> Index.of(this, keyColumn));
             Integer r = index.rows().get(key);
             return r == null ? -1 : r;
+        }
+    }
+
+    /** One column resolved once: its array read by row (the table's null flags for a cell that is not text). */
+    private record Column(Table t, String name, Object array) implements EngineColumn {
+
+        @Override
+        public String text(int row) {
+            return array instanceof String[] s ? s[row] : isNull(row) ? null : String.valueOf(value(row));
+        }
+
+        @Override
+        public double number(int row) {
+            return array instanceof double[] d ? d[row] : array instanceof long[] l ? (t.isNull(name, row) ? Double.NaN : l[row]) : Double.NaN;
+        }
+
+        @Override
+        public long integer(int row) {
+            return array instanceof long[] l ? l[row] : array instanceof double[] d ? (long) d[row] : 0;
+        }
+
+        @Override
+        public boolean flag(int row) {
+            return array instanceof boolean[] f && f[row];
+        }
+
+        @Override
+        public double[] list(int row) {
+            return array instanceof double[][] l ? l[row] : null;
+        }
+
+        @Override
+        public boolean isNull(int row) {
+            return t.isNull(name, row);
+        }
+
+        @Override
+        public Object value(int row) {
+            if (t.isNull(name, row)) {
+                return null;
+            }
+            if (array instanceof String[] s) {
+                return s[row];
+            }
+            if (array instanceof long[] l) {
+                return l[row];
+            }
+            if (array instanceof double[] d) {
+                return d[row];
+            }
+            if (array instanceof boolean[] f) {
+                return f[row];
+            }
+            return ((double[][]) array)[row];
         }
     }
 

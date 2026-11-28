@@ -25,7 +25,8 @@ import org.slf4j.LoggerFactory;
 /**
  * One cache budget for the heap (CLUSTER_GUIDE.md section 5.2, D3, 2.9.7; decision PO-2): a share of {@code -Xmx}
  * ({@code drishti.memory.cache-share}, 0.5) divided into weighted pools. Every Caffeine cache weighed in bytes that joins a pool gets its
- * pool's share as its maximum (split evenly between the pool's members, or by their own limits when those are smaller), set at start and
+ * pool's share as its maximum (split evenly between the pool's members, each held to its own limit when that is smaller, and
+ * what a held member leaves shared among the others), set at start and
  * again on a change; when the heap after a collection passes {@code squeeze-at} (0.85 of {@code -Xmx}) the pools with the highest
  * squeeze order are halved for a minute. The open dates' skeletons are not in it (bounded by {@code hot-dates}); hot files and the page
  * cache are outside the heap (the disk budget covers them).
@@ -123,15 +124,37 @@ public final class MemoryBudget {
         apply(p);
     }
 
-    /** Sets each member's maximum: the pool's bytes split evenly, never above a member's own limit. */
+    /**
+     * Sets each member's maximum: the pool's bytes split evenly, never above a member's own limit, and what a member's own limit leaves
+     * of its even part shared among the others (a fair split: a small cache never holds room a large one needs; the host's one answer
+     * cache beside the in-tree caches of 64 MB gets the rest of the pool, not a sixth of it).
+     */
     void apply(Pool p) {
         List<Member> ms = p.members();
         if (ms.isEmpty()) {
             return;
         }
-        long each = poolBytes(p.name()) / ms.size();
+        long left = poolBytes(p.name());
+        List<Member> open = new java.util.ArrayList<>(ms);
+        Map<Member, Long> set = new java.util.IdentityHashMap<>();
+        boolean capped = true;
+        while (capped && !open.isEmpty()) {                             // members whose own limit is under the even part take their limit
+            capped = false;
+            long each = left / open.size();
+            for (java.util.Iterator<Member> it = open.iterator(); it.hasNext(); ) {
+                Member m = it.next();
+                if (m.ownLimit() > 0 && m.ownLimit() <= each) {
+                    set.put(m, m.ownLimit());
+                    left -= m.ownLimit();
+                    it.remove();
+                    capped = true;
+                }
+            }
+        }
+        long each = open.isEmpty() ? 0 : left / open.size();
+        open.forEach(m -> set.put(m, each));
         for (Member m : ms) {
-            m.maximum(m.ownLimit() > 0 ? Math.min(m.ownLimit(), each) : each);
+            m.maximum(set.get(m));
         }
     }
 

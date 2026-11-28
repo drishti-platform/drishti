@@ -45,8 +45,9 @@ import org.junit.jupiter.api.Test;
  * <p>R2_ENGINE_SPEED_DESIGN step 0: both opens are cold (in-tree's start-up capture and preload off); the host's engine asks and cache
  * misses per headline of each phase (Admin, Caches: {@code engines.answers}); the engine's card (sessions, memory) after the open and at
  * the end; with sign-in on ({@code -Dspeed.second-viewer}, default on) a desk-limited second viewer's first ask, figures and alternation
- * with the administrator; {@code -Dspeed.gate=true} asserts the criteria of the design's section 6 the run measures (a criterion it does
- * not measure fails the gate, never passes it).
+ * with the administrator; {@code -Dspeed.gate=true} asserts the i8 flip gate (no figure differs, every page family within the page bar);
+ * the design's section 6 is reported as the i9 targets ({@code i9_targets_not_met}). A warm repeat of the bank headline that misses the
+ * host's answer cache stops the run at once (the partial JSON says why).
  */
 class RiskSpeedCheckTest {
 
@@ -57,9 +58,11 @@ class RiskSpeedCheckTest {
     static Path folder;
     static PackagedServer server;
     static Path work0;
+    /** The server's start (packaged server up and answering), in ms: part of the run's wall time, reported with the phases. */
+    static long startMs;
     /** {@code -Dspeed.zero-copy=on}: the host's float32 rows handed to the engine in place (R2_CUT_PLAN 3a); off: the engine builds its own. */
     static final String ZERO_COPY = System.getProperty("speed.zero-copy", "off");
-    /** {@code -Dspeed.gate=true}: the R2 speed gate's criteria (R2_ENGINE_SPEED_DESIGN section 6) asserted, not only recorded. */
+    /** {@code -Dspeed.gate=true}: the i8 R2 flip gate asserted (figures, page families: {@link #gate}); section 6 is reported as i9's. */
     static final boolean GATE = Boolean.getBoolean("speed.gate");
     /** {@code -Dspeed.second-viewer} (default on): sign-in on, and a desk-limited second viewer asks after the administrator. */
     /**
@@ -126,7 +129,9 @@ class RiskSpeedCheckTest {
         }
         env.put("SPRING_APPLICATION_JSON", PackagedServer.JSON.writeValueAsString(Map.of("drishti", settings)));
         work0 = work;
+        long s0 = System.nanoTime();
         server = PackagedServer.start(work, lake, DATE, env, SECOND_VIEWER ? bearer("speed-admin", "speed-admin") : null);
+        startMs = (System.nanoTime() - s0) / 1_000_000;
     }
 
     @AfterAll
@@ -155,6 +160,7 @@ class RiskSpeedCheckTest {
         out.put("positions", positions);
         out.put("tier", System.getProperty("sbs.tier", "").isBlank() ? "mapped" : System.getProperty("sbs.tier"));
         out.put("zero_copy", ZERO_COPY);
+        out.put("server_start_ms", startMs);
         out.put("rss_mb_start", rssMb());
         out.put("engine_card_start", card());
         long t0 = System.nanoTime();                                       // the cold open of each path: nothing opened the date before
@@ -168,6 +174,21 @@ class RiskSpeedCheckTest {
         out.put("open_engine_asks", answers()[0] + answers()[1] - c0[0] - c0[1]);
         out.put("rss_mb_after_engine_open", rssMb());
         out.put("engine_card_after_open", card());
+        // fail fast: a warm repeat of the same headline must come from the host's answer cache (a cache that cannot keep the date's
+        // index makes every ask a miss, and the run would take most of an hour before it said so)
+        long[] w0 = answers();
+        for (int i = 0; i < 2; i++) {
+            server.get(headline("MGMT~BANK", "engine"));
+        }
+        long[] w1 = answers();
+        double warmMisses = (w1[1] - w0[1]) / 2.0;
+        out.put("warm_repeat_misses_per", warmMisses);
+        cacheState(out, "after_open");
+        if (warmMisses > 0.5) {
+            Files.writeString(folder.resolve("speed-" + out.get("tier") + "-zc-" + ZERO_COPY + ".partial.json"), PackagedServer.JSON.writeValueAsString(out) + "\n");
+            throw new AssertionError("the host's answer cache misses on a warm repeat of the bank headline (" + warmMisses + " misses per ask, "
+                    + "cache " + out.get("cache_after_open") + "): stopped before the phases; " + out);
+        }
         List<String> nodes = new ArrayList<>();
         List<String> leaves = new ArrayList<>();
         for (JsonNode n : server.get("/api/v1/risk/var/tree?hierarchy=MGMT&asOf=" + DATE + "&path=in-tree").path("nodes")) {
@@ -177,6 +198,7 @@ class RiskSpeedCheckTest {
         if (innerAsked < nodes.size()) {
             nodes = new ArrayList<>(nodes.subList(0, innerAsked));
         }
+        out.put("opens_done_ms", (System.nanoTime() - started) / 1_000_000);
         out.put("nodes", nodes.size());
         out.put("leaves", leaves.size());
         List<String> differ = new ArrayList<>();
@@ -185,6 +207,7 @@ class RiskSpeedCheckTest {
                 server.get(headline(id, path));
             }
         }
+        out.put("warmup_done_ms", (System.nanoTime() - started) / 1_000_000);
         Map<String, List<Long>> inner = new LinkedHashMap<>();
         Map<String, List<Long>> leaf = new LinkedHashMap<>();
         Map<String, List<Long>> tree = new LinkedHashMap<>();
@@ -258,14 +281,16 @@ class RiskSpeedCheckTest {
         out.put("engine_answers_hits", all[0]);
         out.put("engine_answers_misses", all[1]);
         out.put("engine_answers_bytes", all[2]);
+        cacheState(out, "end");
         List<String> gate = gate(out);
         out.put("gate_failed", gate);
+        out.put("i9_targets_not_met", i9Targets(out));
         String line = PackagedServer.JSON.writeValueAsString(out);
         System.out.println("speed check: " + line + "; first differences " + differ.stream().limit(5).toList());
         Files.writeString(folder.resolve("speed-" + out.get("tier") + "-zc-" + ZERO_COPY + ".json"), line + "\n");
         assertThat(differ).as("VaR and ES that differ between the paths").isEmpty();
         if (GATE) {
-            assertThat(gate).as("the R2 speed gate (R2_ENGINE_SPEED_DESIGN section 6)").isEmpty();
+            assertThat(gate).as("the i8 R2 flip gate (R2_CUT_PLAN gate brief: figures, pages)").isEmpty();
         }
     }
 
@@ -369,12 +394,59 @@ class RiskSpeedCheckTest {
         out.put("pages", result);
     }
 
-    /** The criteria of the gate this run can measure; each failure in words. A criterion not measured here is not a pass. */
+    /**
+     * The i8 R2 flip gate this run measures (the owner, 2026-11-28: decent, not maximal speed): no figure differs; every page family warm
+     * within 2 s at p99 and at its slowest (the bar {@code 2s}), or, failing that, within 3 s at p99 (the bar {@code 3s}, the owner's
+     * fallback); the bar met is in the result ({@code page_bar}). The owner's aspirational goals (p95 300 ms, p99 600 ms, max 1.5 s) are
+     * reported per family ({@code aspirational}), not required. "No ask waits on an open after a start or a load" is PreparedDateTest's.
+     */
+    @SuppressWarnings("unchecked")
     private static List<String> gate(Map<String, Object> o) {
         List<String> f = new ArrayList<>();
         if (((Number) o.get("figures_differ")).intValue() != 0) {
             f.add("figures differ");
         }
+        if (!(o.get("pages") instanceof Map<?, ?> pages)) {
+            f.add("pages not measured (-Dspeed.pages=true)");
+            o.put("page_bar", "not measured");
+            return f;
+        }
+        boolean two = true;
+        boolean three = true;
+        List<String> slow = new ArrayList<>();
+        for (Map.Entry<?, ?> e : pages.entrySet()) {
+            if (!(e.getValue() instanceof Map<?, ?> m) || !(m.get("p99") instanceof Number p99)) {
+                continue;
+            }
+            long max = ((Number) m.get("max")).longValue();
+            if (((Number) m.get("pages")).intValue() == 0) {
+                slow.add(e.getKey() + ": no page answered (" + m.get("refused") + " refused)");
+                two = false;
+                three = false;
+                continue;
+            }
+            if (p99.longValue() > 2_000 || max > 2_000) {
+                two = false;
+                slow.add(e.getKey() + " p99 " + p99 + " ms, max " + max + " ms");
+            }
+            if (p99.longValue() > 3_000) {
+                three = false;
+            }
+            ((Map<String, Object>) m).put("aspirational", ((Number) m.get("p95")).longValue() <= 300 && p99.longValue() <= 600 && max <= 1_500);
+        }
+        o.put("page_bar", two ? "2s" : three ? "3s" : "none");
+        if (!three) {
+            f.add("pages beyond the 3 s fallback bar: " + slow);
+        }
+        return f;
+    }
+
+    /**
+     * R2_ENGINE_SPEED_DESIGN section 6, reported as the i9 targets (not the i8 gate): each criterion this run measures that is not met, in
+     * words; a criterion not measured here is listed as such.
+     */
+    private static List<String> i9Targets(Map<String, Object> o) {
+        List<String> f = new ArrayList<>();
         bound(f, o, "inner_p50", 1.2, 5);
         bound(f, o, "inner_p99", 1.5, 15);
         bound(f, o, "leaf_p50", 1.2, 5);
@@ -432,14 +504,24 @@ class RiskSpeedCheckTest {
         out.put(phase + "_misses_per", Math.round(100.0 * (after[1] - before[1]) / Math.max(1, headlines)) / 100.0);
     }
 
-    /** The answer cache's hits, misses and bytes (Admin, Caches: {@code engines.answers}). */
+    /**
+     * The answer cache's hits, misses, bytes, maximum, entries, evictions and answers larger than its maximum (Admin, Caches:
+     * {@code engines.answers}).
+     */
     private static long[] answers() throws Exception {
         for (JsonNode c : server.get("/api/v1/admin/caches").path("caches")) {
             if (c.path("name").asText().equals("engines.answers")) {
-                return new long[] {c.path("hits").asLong(), c.path("misses").asLong(), c.path("bytes").asLong(-1)};
+                return new long[] {c.path("hits").asLong(), c.path("misses").asLong(), c.path("sizeBytes").asLong(-1), c.path("limitBytes").asLong(-1),
+                    c.path("entries").asLong(-1), c.path("stats").path("evictions").asLong(-1), c.path("stats").path("oversized").asLong(-1)};
             }
         }
-        return new long[] {0, 0, -1};
+        return new long[] {0, 0, -1, -1, -1, -1, -1};
+    }
+
+    /** The answer cache's state in the result: bytes, maximum, entries, evictions, oversized answers. */
+    private static void cacheState(Map<String, Object> out, String when) throws Exception {
+        long[] a = answers();
+        out.put("cache_" + when, Map.of("mb", a[2] >> 20, "max_mb", a[3] >> 20, "entries", a[4], "evictions", a[5], "oversized", a[6]));
     }
 
     /** The engine's Admin card: state, isolation, sessions, memory, and each session's stage when the host reports one. */

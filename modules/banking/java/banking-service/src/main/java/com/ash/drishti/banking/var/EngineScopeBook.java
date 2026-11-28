@@ -18,6 +18,7 @@ package com.ash.drishti.banking.var;
 import com.ash.drishti.banking.compute.var.ScopeResolver;
 import com.ash.drishti.compute.vector.OrdinalSet;
 import com.ash.drishti.kernel.api.services.EngineAnswer;
+import com.ash.drishti.kernel.api.services.EngineColumn;
 import com.ash.drishti.kernel.api.services.EngineTable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,7 +47,12 @@ final class EngineScopeBook implements ScopeResolver.Book, EngineAnswer.Sized {
     private final int[][] positionRuns;
     private final Map<String, Integer> positionUpper = new HashMap<>();
     private final Map<String, Integer> positionExact = new HashMap<>();
-    private final List<Map<String, Object>> positionValues;
+    /** The positions' values read in place from {@code scope-position-values} (one copy: the answer's): each position's rows. */
+    private final EngineColumn valueColumn;
+    private final EngineColumn valueText;
+    private final EngineColumn valueNumber;
+    private final int[] valueStart;
+    private final int[] valueRows;
     private final Map<String, OrdinalSet> nodes = new LinkedHashMap<>();
     private final Map<String, Double> nodeLimits = new HashMap<>();
     private final Map<String, String> roots = new LinkedHashMap<>();
@@ -70,14 +76,23 @@ final class EngineScopeBook implements ScopeResolver.Book, EngineAnswer.Sized {
         cancelled = new boolean[n];
         String[] cpty = new String[n];
         String[] le = new String[n];
-        for (int r = 0; r < n; r++) {
-            int o = (int) idx.integer("ORDINAL", r);
-            trades[o] = String.valueOf(idx.value("TRADE_ID", r));
-            positionOf[o] = (int) idx.integer("POSITION", r);
-            supplied[o] = !idx.isNull("SUPPLIED", r) && idx.flag("SUPPLIED", r);
-            cancelled[o] = !idx.isNull("CANCELLED", r) && idx.flag("CANCELLED", r);
-            cpty[o] = idx.text("COUNTERPARTY", r);
-            le[o] = idx.text("LEGAL_ENTITY", r);
+        if (n > 0) {                                                    // each column resolved once, its cells read by row
+            EngineColumn ord = idx.column("ORDINAL");
+            EngineColumn trade = idx.column("TRADE_ID");
+            EngineColumn position = idx.column("POSITION");
+            EngineColumn sup = idx.column("SUPPLIED");
+            EngineColumn can = idx.column("CANCELLED");
+            EngineColumn cp = idx.column("COUNTERPARTY");
+            EngineColumn entity = idx.column("LEGAL_ENTITY");
+            for (int r = 0; r < n; r++) {
+                int o = (int) ord.integer(r);
+                trades[o] = String.valueOf(trade.value(r));
+                positionOf[o] = (int) position.integer(r);
+                supplied[o] = !sup.isNull(r) && sup.flag(r);
+                cancelled[o] = !can.isNull(r) && can.flag(r);
+                cpty[o] = cp.text(r);
+                le[o] = entity.text(r);
+            }
         }
         tradeTexts.put("COUNTERPARTY", cpty);
         tradeTexts.put("LEGAL_ENTITY", le);
@@ -90,29 +105,46 @@ final class EngineScopeBook implements ScopeResolver.Book, EngineAnswer.Sized {
         int np = pos == null ? 0 : pos.rows();
         positionIds = new String[np];
         positionRuns = new int[np][];
-        for (int r = 0; r < np; r++) {
-            int p = (int) pos.integer("POSITION", r);
-            positionIds[p] = String.valueOf(pos.value("POSITION_ID", r));
-            positionRuns[p] = ints(pos.list("RUNS", r));
-            positionExact.putIfAbsent(positionIds[p], p);
-            positionUpper.putIfAbsent(positionIds[p].toUpperCase(Locale.ROOT), p);
-            b += 160 + 4L * positionRuns[p].length;
-        }
-        positionValues = new ArrayList<>(np);
-        for (int p = 0; p < np; p++) {
-            positionValues.add(new HashMap<>());
+        if (np > 0) {
+            EngineColumn position = pos.column("POSITION");
+            EngineColumn id = pos.column("POSITION_ID");
+            EngineColumn runs = pos.column("RUNS");
+            for (int r = 0; r < np; r++) {
+                int p = (int) position.integer(r);
+                positionIds[p] = String.valueOf(id.value(r));
+                positionRuns[p] = ints(runs.list(r));
+                positionExact.putIfAbsent(positionIds[p], p);
+                positionUpper.putIfAbsent(positionIds[p].toUpperCase(Locale.ROOT), p);
+                b += 160 + 4L * positionRuns[p].length;
+            }
         }
         EngineTable pv = answer.table("scope-position-values");
-        for (int r = 0; pv != null && r < pv.rows(); r++) {
-            int p = (int) pv.integer("POSITION", r);
-            String c = String.valueOf(pv.value("COLUMN", r));
-            Object v = !pv.isNull("TEXT", r) ? pv.text("TEXT", r) : pv.isNull("NUMBER", r) ? null : (Object) pv.number("NUMBER", r);
-            if (v instanceof String t && c.equals("TAGS")) {              // a list column, written a|b|c (Columns.value)
-                v = t.isEmpty() ? List.of() : List.of(t.split("\\|"));
+        int nv = pv == null ? 0 : pv.rows();
+        valueStart = new int[np + 1];
+        valueRows = new int[nv];
+        if (nv > 0) {                                                   // each position's rows, in row order (a counting sort: ints only)
+            EngineColumn position = pv.column("POSITION");
+            int[] of = new int[nv];
+            for (int r = 0; r < nv; r++) {
+                of[r] = (int) position.integer(r);
+                valueStart[of[r] + 1]++;
             }
-            positionValues.get(p).put(c, v);
-            b += 96;
+            for (int p = 0; p < np; p++) {
+                valueStart[p + 1] += valueStart[p];
+            }
+            int[] next = java.util.Arrays.copyOf(valueStart, np);
+            for (int r = 0; r < nv; r++) {
+                valueRows[next[of[r]]++] = r;
+            }
+            valueColumn = pv.column("COLUMN");
+            valueText = pv.column("TEXT");
+            valueNumber = pv.column("NUMBER");
+        } else {
+            valueColumn = null;
+            valueText = null;
+            valueNumber = null;
         }
+        b += 4L * (np + 1) + 4L * nv;
         EngineTable nodeTable = answer.table("scope-nodes");
         for (int r = 0; nodeTable != null && r < nodeTable.rows(); r++) {
             String id = String.valueOf(nodeTable.value("NODE_ID", r));
@@ -245,6 +277,19 @@ final class EngineScopeBook implements ScopeResolver.Book, EngineAnswer.Sized {
 
     @Override
     public Object positionValue(String column, int position) {
-        return positionValues.get(position).get(column);
+        if (valueColumn == null || position < 0 || position >= valueStart.length - 1) {
+            return null;
+        }
+        for (int i = valueStart[position]; i < valueStart[position + 1]; i++) {
+            int r = valueRows[i];
+            if (column.equals(valueColumn.text(r))) {
+                Object v = !valueText.isNull(r) ? valueText.text(r) : valueNumber.isNull(r) ? null : (Object) valueNumber.number(r);
+                if (v instanceof String t && column.equals("TAGS")) {    // a list column, written a|b|c (Columns.value)
+                    return t.isEmpty() ? List.of() : List.of(t.split("\\|"));
+                }
+                return v;
+            }
+        }
+        return null;
     }
 }

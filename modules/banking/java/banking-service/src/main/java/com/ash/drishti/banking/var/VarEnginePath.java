@@ -1166,8 +1166,13 @@ public class VarEnginePath {
             all.addAll(r);
             all.add(-1);
         }
-        params.put("parts", all);
-        List<String> outputs = hp.parts().isEmpty() ? List.of("scope-var") : List.of("scope-var", "scope-contributions");
+        List<String> outputs;
+        if (hp.parts().isEmpty()) {                                      // a supplied position or a trade: no parts; scope-var alone takes none
+            outputs = List.of("scope-var");
+        } else {
+            params.put("parts", all);
+            outputs = List.of("scope-var", "scope-contributions");
+        }
         EngineAnswer a = ask(p, outputs, params, Map.of("date", date.toString()));
         List<Map<String, Object>> sv = rows(a, "scope-var");
         if (sv.isEmpty()) {

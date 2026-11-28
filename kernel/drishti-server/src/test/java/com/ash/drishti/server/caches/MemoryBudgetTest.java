@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * One cache budget (2.9.7, CLUSTER_GUIDE.md section 5.2, D3, PO-2): every pool filled to its limit at once stays within the share of
- * a 2 GB heap; a pool's members split its share (each held to its own limit when smaller); a squeeze halves the connectors' and small pools
+ * a 2 GB heap; a pool's members split its share (each held to its own limit when smaller, what it leaves shared among the others); a squeeze halves the connectors' and small pools
  * for a minute and the answers' pool keeps its share.
  */
 class MemoryBudgetTest {
@@ -63,6 +63,28 @@ class MemoryBudgetTest {
     }
 
     @Test
+    void theHostsAnswerCacheGetsWhatTheSmallCachesOfItsPoolLeave() {
+        MemoryBudget b = new MemoryBudget(0.5, Map.of(), 0.85, 6L << 30);    // the speed check's -Xmx6g: the pool is 614 MB
+        long pool = b.poolBytes("engine.answers");
+        List<Cache<Integer, byte[]>> small = new ArrayList<>();
+        for (String n : List.of("var.answers", "exposure.answers", "bi.results")) {
+            Cache<Integer, byte[]> c = cache();
+            b.join("engine.answers", MemoryBudget.of(n, c, 64L << 20));
+            small.add(c);
+        }
+        List<Cache<Integer, byte[]>> large = new ArrayList<>();
+        for (String n : List.of("exposure.trade-paths", "pivot.states", "engines.answers")) {
+            Cache<Integer, byte[]> c = cache();
+            b.join("engine.answers", MemoryBudget.of(n, c, 256L << 20));
+            large.add(c);
+        }
+        small.forEach(c -> assertThat(c.policy().eviction().orElseThrow().getMaximum()).isEqualTo(64L << 20));
+        long each = (pool - 3 * (64L << 20)) / 3;
+        large.forEach(c -> assertThat(c.policy().eviction().orElseThrow().getMaximum()).isEqualTo(Math.min(256L << 20, each)));
+        assertThat(each).as("more than an even sixth of the pool").isGreaterThan(pool / 6);
+    }
+
+    @Test
     void aMemberKeepsItsOwnLimitAndASqueezeHalvesTheLowerPools() {
         MemoryBudget b = new MemoryBudget(0.5, Map.of("engine.answers", 40), 0.85, HEAP);
         Cache<Integer, byte[]> small = cache();
@@ -73,11 +95,12 @@ class MemoryBudgetTest {
         b.join("connector.columns", MemoryBudget.of("cols", cols, 0));
         assertThat(small.policy().eviction().orElseThrow().getMaximum()).isEqualTo(8L << 20);
         long answers = b.poolBytes("engine.answers");
-        assertThat(big.policy().eviction().orElseThrow().getMaximum()).isEqualTo(answers / 2);
+        assertThat(big.policy().eviction().orElseThrow().getMaximum()).as("what the small cache's own limit leaves goes to the big one")
+                .isEqualTo(answers - (8L << 20));
         long columns = cols.policy().eviction().orElseThrow().getMaximum();
         b.squeeze();
         assertThat(cols.policy().eviction().orElseThrow().getMaximum()).isEqualTo(columns / 2);
-        assertThat(big.policy().eviction().orElseThrow().getMaximum()).as("the answers are kept longest").isEqualTo(answers / 2);
+        assertThat(big.policy().eviction().orElseThrow().getMaximum()).as("the answers are kept longest").isEqualTo(answers - (8L << 20));
         assertThat((Integer) b.describe().get("squeezes")).isEqualTo(1);
         assertThat(new MemoryProperties(null, null, null).cacheShare()).isEqualTo(0.5);
         assertThat(new MemoryProperties(null, null, null).squeezeAt()).isEqualTo(0.85);

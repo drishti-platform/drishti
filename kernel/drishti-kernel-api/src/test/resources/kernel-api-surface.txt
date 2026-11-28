@@ -611,8 +611,17 @@
   services.EngineAnswer public abstract java.util.List<java.lang.String> com.ash.drishti.kernel.api.services.EngineAnswer.notes()
   services.EngineAnswer public abstract java.util.Map<java.lang.String, java.lang.String> com.ash.drishti.kernel.api.services.EngineAnswer.inputStamps()
   services.EngineAnswer$Sized public abstract long com.ash.drishti.kernel.api.services.EngineAnswer$Sized.bytes()
+  services.EngineColumn public abstract boolean com.ash.drishti.kernel.api.services.EngineColumn.flag(int)
+  services.EngineColumn public abstract boolean com.ash.drishti.kernel.api.services.EngineColumn.isNull(int)
+  services.EngineColumn public abstract double com.ash.drishti.kernel.api.services.EngineColumn.number(int)
+  services.EngineColumn public abstract double[] com.ash.drishti.kernel.api.services.EngineColumn.list(int)
+  services.EngineColumn public abstract java.lang.Object com.ash.drishti.kernel.api.services.EngineColumn.value(int)
+  services.EngineColumn public abstract java.lang.String com.ash.drishti.kernel.api.services.EngineColumn.name()
+  services.EngineColumn public abstract java.lang.String com.ash.drishti.kernel.api.services.EngineColumn.text(int)
+  services.EngineColumn public abstract long com.ash.drishti.kernel.api.services.EngineColumn.integer(int)
   services.EngineTable public abstract boolean com.ash.drishti.kernel.api.services.EngineTable.flag(java.lang.String,int)
   services.EngineTable public abstract boolean com.ash.drishti.kernel.api.services.EngineTable.isNull(java.lang.String,int)
+  services.EngineTable public abstract com.ash.drishti.kernel.api.services.EngineColumn com.ash.drishti.kernel.api.services.EngineTable.column(java.lang.String)
   services.EngineTable public abstract double com.ash.drishti.kernel.api.services.EngineTable.number(java.lang.String,int)
   services.EngineTable public abstract double[] com.ash.drishti.kernel.api.services.EngineTable.list(java.lang.String,int)
   services.EngineTable public abstract int com.ash.drishti.kernel.api.services.EngineTable.find(java.lang.String,java.lang.String)
@@ -843,6 +852,7 @@ services.BusinessDates
 services.CellSet
 services.EngineAnswer
 services.EngineAnswer$Sized
+services.EngineColumn
 services.EngineTable
 services.Engines
 services.History

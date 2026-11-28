@@ -44,6 +44,12 @@ public interface EngineTable {
 
     boolean isNull(String column, int row);
 
+    /**
+     * The column {@code column}, resolved once: a reader of every row reads its cells through it (no look-up of the column per cell).
+     * An unknown column is refused ({@link IllegalArgumentException}, naming the table's columns).
+     */
+    EngineColumn column(String column);
+
     /** The cell as an object (String, Long, Double, Boolean, double[] or null): for a reader that shapes a few rows generically. */
     Object value(String column, int row);
 

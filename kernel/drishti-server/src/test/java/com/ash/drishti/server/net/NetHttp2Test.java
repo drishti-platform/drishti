@@ -72,7 +72,7 @@ class NetHttp2Test {
         String toId = cluster.node(to).net().nodeId();
         String obo = OnBehalfOf.mint(f.key(), "rita", List.of("risk"), null, f.nodeId(), "r-h2", toId);
         return f.http().send(cluster.node(to).url(), "GET", "/api/v1/views/trade/" + id, Map.of(NetHeaders.ON_BEHALF_OF, obo, NetHeaders.HOP, "1"),
-                null, Duration.ofSeconds(20));
+                null, Duration.ofSeconds(com.ash.drishti.testkit.MachineSpeed.scaled(20L)));
     }
 
     @Test

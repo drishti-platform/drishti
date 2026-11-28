@@ -52,6 +52,7 @@ class TableCataloguePathsGuardTest {
             "modules/banking/java/banking-service/src/main/java/com/ash/drishti/banking/official/OfficialSink.java",   // the folder's one constant
             "kernel/drishti-packs/src/main/java/com/ash/drishti/packs/OfficialReaders.java",         // recognises the official results' reader
             "kernel/drishti-packs/src/main/java/com/ash/drishti/packs/OfficialResults.java",
+            "kernel/drishti-server/src/main/java/com/ash/drishti/server/memlake/LakeTableFigures.java",   // compares a run log's "domain/kind" label, not a location
             "kernel/drishti-server/src/main/java/com/ash/drishti/server/design/PackFragment.java");   // a zip entry of a pack's Sutra, not a lake path
 
     @Test

@@ -229,6 +229,16 @@ public final class PackReloader implements AutoCloseable {
         if (!lock.tryLock()) {
             return;                                                  // a reload is running; the next look sees what is left
         }
+        lookLocked();
+    }
+
+    /** The same look, asked for by an Admin action: it waits for a reload that is running, so the answer it gives never misses the change. */
+    public void checkNow() {
+        lock.lock();
+        lookLocked();
+    }
+
+    private void lookLocked() {
         try {
             Map<String, String> now = fingerprints();
             if (now.equals(seen)) {

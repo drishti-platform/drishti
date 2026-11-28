@@ -200,7 +200,7 @@ class NetGossipBusyTest {
             c.bean(GossipConnector.class).close();
             cluster.closePort("c");
             AtomicLong suspectAt = new AtomicLong();
-            assertThat(NetNodes.await(15_000, () -> {
+            assertThat(NetNodes.await(com.ash.drishti.testkit.MachineSpeed.scaled(15_000L), () -> {
                 boolean all = List.of("a", "b").stream().allMatch(o -> cluster.node(o).net().node().orElseThrow().table().known(cid)
                         .map(k -> k.member().state() != MemberState.ALIVE).orElse(false));
                 if (all) {

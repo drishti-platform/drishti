@@ -110,18 +110,18 @@ class NetSecurityTest {
         String[] old = {"DRISHTI_NET_SECRET", "DRISHTI_NET_NEW_SECRET"};
         for (String n : List.of("a", "b", "c")) {
             keys(n, old[0], old[1]);                       // step 1: every node accepts the new key
-            Thread.sleep(300);
+            Thread.sleep(com.ash.drishti.testkit.MachineSpeed.scaled(300L));
         }
         for (String n : List.of("a", "b", "c")) {
             keys(n, old[1], old[0]);                       // step 2: every node signs with it
-            Thread.sleep(300);
+            Thread.sleep(com.ash.drishti.testkit.MachineSpeed.scaled(300L));
         }
         assertThat(cluster.node("a").net().key().previousSet()).isTrue();
         for (String n : List.of("a", "b", "c")) {
             keys(n, old[1], null);                         // step 3: the old key is dropped
-            Thread.sleep(300);
+            Thread.sleep(com.ash.drishti.testkit.MachineSpeed.scaled(300L));
         }
-        Thread.sleep(1500);
+        Thread.sleep(com.ash.drishti.testkit.MachineSpeed.scaled(1500L));
         running.set(false);
         load.join();
         System.out.println("net: " + calls.get() + " signed calls through a three-step key rollover, " + failed.get() + " refused");

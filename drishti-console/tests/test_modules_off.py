@@ -28,8 +28,8 @@ from core import modules, plugins
 from test_edition import _app, _client
 
 FULL = {"product": "Drishti", "tagline": "Any data. Any domain. One grammar.", "edition": None, "lenses": []}
-BANKING_OFF = {**FULL, "modules": ["core", "economy", "capitalmarkets"]}
-ALL_ON = {**FULL, "modules": ["core", "banking", "economy", "capitalmarkets"]}
+BANKING_OFF = {**FULL, "modules": ["core", "external-data", "market-data"]}
+ALL_ON = {**FULL, "modules": ["core", "banking", "external-data", "market-data"]}
 CORE_ASSET = "/static/js/drishti_keys.js"
 BANKING_ASSETS = ["/static/js/drishti_var-explorer.js", "/static/css/drishti_var.css", "/static/js/drishti_exposure-explorer.js",
                   "/static/js/drishti_exposure-predeal.js",
@@ -38,10 +38,10 @@ BANKING_ASSETS = ["/static/js/drishti_var-explorer.js", "/static/css/drishti_var
 
 def _answer(off_modules=(), functions=(), lenses=None):
     """The person's answer as the server writes it (ModuleAdminController.mine)."""
-    loaded = [m for m in ("core", "banking", "economy", "capitalmarkets") if m not in off_modules]
+    loaded = [m for m in ("core", "banking", "external-data", "market-data") if m not in off_modules]
     return {"modules": [{"id": m, "title": m, "domain": m} for m in loaded],
             "off": [{"id": m, "title": m, "domain": m, "reason": "switched off (setting drishti.modules.%s.enabled)" % m} for m in off_modules],
-            "lenses": lenses if lenses is not None else [{"id": "world", "title": "World", "modules": ["economy"], "functions": []}],
+            "lenses": lenses if lenses is not None else [{"id": "world", "title": "World", "modules": ["external-data"], "functions": []}],
             "functions": {"off": [{"word": w, "module": mod, "reason": "an administrator switched it off (Admin -> Functions)",
                                    "text": f"{w} is not available to you: ask your administrator"} for w, mod in functions]}}
 
@@ -73,7 +73,7 @@ def test_banking_off_is_gone_from_every_door(backend, monkeypatch):
     links = _menu_links(t)
     assert "/var" not in links and "/exposure" not in links      # Risk (the engines' pages): banking's menu gone
     assert "/admin/scopes" not in t                                                                   # the Admin strip's Saved VaR baskets
-    assert '<meta name="drishti-modules" content="capitalmarkets economy">' in t                                     # the Elements loader refuses drishti-risk
+    assert '<meta name="drishti-modules" content="external-data">' in t                                     # the Elements loader refuses drishti-risk
     for page in ("/var", "/var/reports", "/exposure", "/predeal", "/frtb", "/simm", "/smat", "/play", "/mcube", "/admin/scopes"):
         assert c.get(page, follow_redirects=False).status_code == 404, page
     for api in ("/api/var/scope?scope=BANK", "/api/exposure/scope?scope=BANK", "/api/frtb/sa", "/api/simm/versions", "/api/pivot/mr/versions",
@@ -96,7 +96,7 @@ def test_banking_off_is_gone_from_every_door(backend, monkeypatch):
     for asset in BANKING_ASSETS:                                                                      # its files are not served
         assert c.get(asset).status_code == 404, asset
     assert c.get(CORE_ASSET).status_code == 200
-    assert c.get("/m/economy/static/1.0.0/js/drishti_world-landing.js").status_code == 200           # another module's still are (hosted)
+    assert c.get("/m/external-data/static/1.0.0/js/drishti_world-landing.js").status_code == 200           # another module's still are (hosted)
 
 
 def test_the_command_lines_examples_are_only_what_the_person_may_type(backend, monkeypatch):
@@ -116,7 +116,7 @@ def test_banking_on_draws_every_door_again(backend, monkeypatch):
     c = _client(app)
     t = c.get("/t").text
     assert "/var" in _menu_links(t)
-    assert 'content="banking capitalmarkets economy"' in t
+    assert 'content="banking external-data"' in t
     assert c.get("/help/docs-guides-var-guide").status_code == 200
     assert 'data-kind="var-baskets"' in c.get("/build").text
     for asset in BANKING_ASSETS:
@@ -134,8 +134,8 @@ def test_an_older_server_that_says_nothing_hides_nothing(backend, monkeypatch):
 
 def test_capital_markets_off_its_functions_are_gone(backend, monkeypatch):
     words = ("USEQ", "IDX", "EDGAR", "FUND", "CRV")
-    app = _console(backend, monkeypatch, {**FULL, "modules": ["core", "banking", "economy"]},
-                   _answer(off_modules=("capitalmarkets",), functions=[(w, "capitalmarkets") for w in words]))
+    app = _console(backend, monkeypatch, {**FULL, "modules": ["core", "banking", "market-data"]},
+                   _answer(off_modules=("external-data",), functions=[(w, "external-data") for w in words]))
 
     async def suggest(q, user, limit=10):
         return [{"mnemonic": "USEQ", "complete": "USEQ ", "title": "US equities"}, {"mnemonic": "FUND", "complete": "FUND ", "title": "Funds"},
@@ -149,7 +149,7 @@ def test_capital_markets_off_its_functions_are_gone(backend, monkeypatch):
         [s.get("mnemonic") for s in items]
     assert "USEQ" not in shown and "FUND" not in shown and "TRD" in shown
     assert "/var" in _menu_links(c.get("/t").text)                                                    # banking stays
-    assert c.get("/help/docs-guides-funds-guide").status_code == 404                                 # its Help pages (domain: capitalmarkets)
+    assert c.get("/help/docs-guides-funds-guide").status_code == 404                                 # its Help pages (domain: external-data)
     assert c.get("/help/docs-guides-var-guide").status_code == 200                                   # another module's stay
 
 
@@ -192,7 +192,7 @@ def test_a_function_waiting_for_data_explains_itself(backend, monkeypatch):
 
 def test_a_lens_never_hides_a_modules_assets(backend, monkeypatch):
     app = _console(backend, monkeypatch, {**ALL_ON, "lenses": ["world"]},
-                   _answer(lenses=[{"id": "world", "modules": ["economy"]}, {"id": "risk", "modules": ["banking"]}]))
+                   _answer(lenses=[{"id": "world", "modules": ["external-data"]}, {"id": "risk", "modules": ["banking"]}]))
 
     async def settings(ident=None):
         return {"lens": "world"} if ident is not None and ident.user == "wendy" else {}
@@ -201,7 +201,7 @@ def test_a_lens_never_hides_a_modules_assets(backend, monkeypatch):
     for asset in BANKING_ASSETS:
         assert wendy.get(asset).status_code == 200, asset                                             # the World lens arranges, never hides
         assert alice.get(asset).status_code == 200, asset                                             # the full product: every module on
-    assert wendy.get("/m/economy/static/1.0.0/js/drishti_world-landing.js").status_code == 200
+    assert wendy.get("/m/external-data/static/1.0.0/js/drishti_world-landing.js").status_code == 200
     assert wendy.get(CORE_ASSET).status_code == 200
 
 

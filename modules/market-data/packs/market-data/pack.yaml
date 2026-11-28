@@ -378,6 +378,7 @@ connectors:
     engine:
       type: java
       class: com.ash.drishti.banking.compute.analytics.CorrelationEngine
+      optional: true
       version: '1.0'
     triggers:
     - 'on': data-version
@@ -431,6 +432,7 @@ connectors:
     engine:
       type: java
       class: com.ash.drishti.banking.compute.analytics.BetaEngine
+      optional: true
       version: '1.0'
     triggers:
     - 'on': data-version

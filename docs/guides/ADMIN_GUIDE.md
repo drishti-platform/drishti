@@ -245,7 +245,7 @@ that offer Calc hold `calc`: `trader`, `market-risk` and `credit-risk`; the role
 role has `layout`, and so has every role you define in Admin → Roles unless you untick *Customise layouts*. A pack declares one like this:
 
 ```yaml
-# modules/economy/packs/world-economy/pack.yaml
+# modules/external-data/packs/world-economy/pack.yaml
 roles:
   economist:
     kinds: [economy, macro-indicator, economic-forecast, labour-market, fiscal-position, country-group, ...]
@@ -775,7 +775,7 @@ The shipped lenses:
 | **Drishti Risk** | `risk` | banking | [`config/lenses/banking/risk.yaml`](../../config/lenses/banking/risk.yaml) | banking | core: core · banking: market-data, trading, counterparty-risk, market-risk |
 | **Drishti Trading** | `trading` | banking | [`config/lenses/banking/trading.yaml`](../../config/lenses/banking/trading.yaml) | banking | core: core · banking: market-data, trading, market-risk, counterparty-risk |
 | **Drishti Market** | `market` | banking | [`config/lenses/banking/market.yaml`](../../config/lenses/banking/market.yaml) | capitalmarkets, banking | core: core · banking: market-data |
-| **Drishti World** | `world` | economy | [`config/lenses/economy/world.yaml`](../../config/lenses/economy/world.yaml) | economy (capitalmarkets for its company, filing and fund parts) | economy: world-economy, news-and-markets, official-news, gdelt-events · capitalmarkets: us-equities, funds · core: gleif |
+| **Drishti World** | `world` | economy | [`config/lenses/external-data/world.yaml`](../../config/lenses/external-data/world.yaml) | economy (capitalmarkets for its company, filing and fund parts) | economy: world-economy, news-and-markets, official-news, gdelt-events · capitalmarkets: us-equities, funds · core: gleif |
 | **Public sector** | `publicsector` | economy | none: the registry entry | economy | the public sector's six packs ([section 16.5](#165-public-sector)) |
 
 The registry also lists lenses that have no lens file or Home yet (CRO, MR cube, CCR cube, CIO, Oversight); they are not offered to people.
@@ -1160,7 +1160,7 @@ and world events: the packs world-development, central-banks, national-statistic
 
 With the economy module off, all its packs and functions are gone and neither World nor Public sector is offered. It ships no lens file and
 no landing template of its own, so it is not run as a whole instance's lens; to do that, or to give it landings, write a lens file for it
-in `config/lenses/economy/` ([section 18](#18-make-your-own-lens)).
+in `config/lenses/external-data/` ([section 18](#18-make-your-own-lens)).
 
 ## 17. Customise a lens without forking it, and white-label it
 

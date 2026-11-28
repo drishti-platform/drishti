@@ -82,7 +82,14 @@ public final class ReactiveSourcePlugin implements SourcePlugin {
         EngineRunner runner = "java".equals(s.engine().type()) ? new DeferredJava(s.engine().entry(), source, hub)
                 : new PythonRunner(() -> hub.host().compute(), s.engine(), s.engine().reduce());
         if ("java".equals(s.engine().type()) && s.engine().entry().startsWith("com.ash.drishti.")) {
-            ((DeferredJava) runner).resolve();                          // Drishti's own: load it now, so a wrong class name fails the start
+            try {
+                ((DeferredJava) runner).resolve();                      // Drishti's own: load it now, so a wrong class name fails the start
+            } catch (IllegalArgumentException x) {
+                if (s.engine().optional() && x.getCause() instanceof ClassNotFoundException) {
+                    throw new com.ash.drishti.api.OptionalAbsent(source + ": the optional engine " + s.engine().entry() + " is not installed", x.getCause());
+                }
+                throw x;
+            }
         }
         spec = s;
         connector = new ReactiveConnector(source, s, runner, hub, context.scheduler(), Clock.systemUTC()).start();

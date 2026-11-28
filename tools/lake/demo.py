@@ -133,6 +133,10 @@ class Manifest:
         self.datasets: list[dict] = m["datasets"]
 
 
+#: the example packs whose samples the saved test data holds (the reactive-panels demo)
+EXAMPLE_PACKS = ("compute-demo",)
+
+
 class Packs:
     """The seven packs' manifests: where each connector's tables live (domain, table name) and its template."""
 
@@ -141,7 +145,11 @@ class Packs:
         self.dir = packs_dir
         sys.path.insert(0, str(ROOT / "tools"))
         import packlake                               # a lake-form template read with the pack's lake: entries
-        raw = {name: yaml.safe_load((p / "pack.yaml").read_text(encoding="utf-8")) for name, p in pack_dirs(packs_dir).items()}
+        folders = dict(pack_dirs(packs_dir))
+        for name in EXAMPLE_PACKS:                    # an example pack the saved test data fills (it belongs to no module: examples/packs)
+            if name not in folders and (ROOT / "examples" / "packs" / name / "pack.yaml").is_file():
+                folders[name] = ROOT / "examples" / "packs" / name
+        raw = {name: yaml.safe_load((p / "pack.yaml").read_text(encoding="utf-8")) for name, p in folders.items()}
         self.specs = {name: packlake.view(m) for name, m in raw.items()}
         # the connectors a source module brings (modules/source-<system>/connectors/delta.yaml): the server does not generate them
         self.module_connectors = {n for name, m in raw.items() for n in (self.specs[name].get("connectors") or {})

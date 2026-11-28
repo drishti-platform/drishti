@@ -62,6 +62,12 @@ class RiskSpeedCheckTest {
     /** {@code -Dspeed.gate=true}: the R2 speed gate's criteria (R2_ENGINE_SPEED_DESIGN section 6) asserted, not only recorded. */
     static final boolean GATE = Boolean.getBoolean("speed.gate");
     /** {@code -Dspeed.second-viewer} (default on): sign-in on, and a desk-limited second viewer asks after the administrator. */
+    /**
+     * {@code -Dspeed.pages=true}: the end-to-end page answers of the risk page families on the engine path (the owner's page goals, not a
+     * gate: 95 % within 300 ms, 99 % within 600 ms, none beyond 1.5 s): the bank, desk and book headlines, the VaR tree, a book's positions,
+     * a position page, the role Homes; p95, p99 and max per family and every page over 1.5 s.
+     */
+    static final boolean PAGES = Boolean.getBoolean("speed.pages");
     static final boolean SECOND_VIEWER = Boolean.parseBoolean(System.getProperty("speed.second-viewer", "true"));
     static final String SECRET = "speed-check-secret-that-is-at-least-32-bytes";
     static final String DESK = "DESK-000";
@@ -107,6 +113,10 @@ class RiskSpeedCheckTest {
         env.put("DRISHTI_MARKET_RISK_MEMORY_MB", System.getProperty("speed.engine-memory-mb", "3000"));   // the engine's books of the date
         // the cold open of both paths (R2_ENGINE_SPEED_DESIGN step 0): in-tree's start-up capture and its preload of the date before off
         env.put("DRISHTI_VAR_PRELOAD_PREVIOUS_DATE", "false");
+        if (PAGES) {                                                    // the pages that read VaR figures inside Drishti ask the engine
+            env.put("DRISHTI_VAR_CONSUMERS_ROUTE", "engine");
+            env.put("DRISHTI_HOMES_ROLES_*", String.join(",", HomesSideBySideTest.HOMES));
+        }
         Map<String, Object> settings = new LinkedHashMap<>();
         settings.put("var", Map.of("official", Map.of("on-start", false)));
         if (SECOND_VIEWER) {                                            // sign-in on: an administrator and a desk-limited second viewer
@@ -140,6 +150,7 @@ class RiskSpeedCheckTest {
 
     @Test
     void theEnginePathAgainstInTreeAtSpeedPositions() throws Exception {
+        long started = System.nanoTime();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("positions", positions);
         out.put("tier", System.getProperty("sbs.tier", "").isBlank() ? "mapped" : System.getProperty("sbs.tier"));
@@ -184,12 +195,14 @@ class RiskSpeedCheckTest {
             }
         }
         perAsk(out, "inner", before, 2 * nodes.size());
+        out.put("inner_done_ms", (System.nanoTime() - started) / 1_000_000);
         List<String> sample = leaves.subList(0, Math.min(leaves.size(), Integer.getInteger("speed.leaves", 200)));
         before = answers();
         for (String id : sample) {
             compare(id, leaf, differ);
         }
         perAsk(out, "leaf", before, sample.size());
+        out.put("leaf_done_ms", (System.nanoTime() - started) / 1_000_000);
         for (String path : List.of("in-tree", "engine")) {
             out.put("inner_p50_ms_" + path, pct(inner.get(path), 0.50));
             out.put("inner_p99_ms_" + path, pct(inner.get(path), 0.99));
@@ -222,8 +235,18 @@ class RiskSpeedCheckTest {
             out.put("tree_first_ms_" + path, tree.get(path).get(0));
             out.put("tree_p50_ms_" + path, pct(tree.get(path), 0.50));
         }
+        out.put("phases_done_ms", (System.nanoTime() - started) / 1_000_000);
+        Files.writeString(folder.resolve("speed-" + out.get("tier") + "-zc-" + ZERO_COPY + ".partial.json"), PackagedServer.JSON.writeValueAsString(out) + "\n");
         if (SECOND_VIEWER) {
-            secondViewer(out, nodes, differ);
+            try {
+                secondViewer(out, nodes, differ);
+            } catch (RuntimeException e) {
+                out.put("viewer2_error", e.getMessage());
+                differ.add("second viewer: " + e.getMessage());
+            }
+        }
+        if (PAGES) {
+            pages(out, nodes, leaves);
         }
         out.put("figures_differ", differ.size());
         out.put("rss_mb_end", rssMb());
@@ -266,7 +289,7 @@ class RiskSpeedCheckTest {
         }
         out.put("viewer2_trades", e.path("trades").asLong());
         List<Long> alternate = new ArrayList<>();
-        String node = nodes.isEmpty() ? "MGMT~BANK" : nodes.get(nodes.size() / 2);
+        String node = "MGMT~BANK";                                     // a node both viewers see (each sees their own rows of it)
         for (int i = 0; i < 4; i++) {
             long t1 = System.nanoTime();
             if (i % 2 == 0) {
@@ -277,6 +300,73 @@ class RiskSpeedCheckTest {
             alternate.add((System.nanoTime() - t1) / 1_000_000);
         }
         out.put("viewer2_alternate_ms", alternate);
+    }
+
+    /** The page families' answer times on the engine path: p95, p99 and max per family, and each page over 1.5 s with its words. */
+    private static void pages(Map<String, Object> out, List<String> nodes, List<String> leaves) throws Exception {
+        Map<String, List<String>> families = new LinkedHashMap<>();
+        families.put("headline_bank", java.util.Collections.nCopies(20, headline("MGMT~BANK", "engine")));
+        List<String> desks = new ArrayList<>();
+        for (JsonNode n : server.get("/api/v1/risk/var/tree?hierarchy=MGMT&asOf=" + DATE + "&path=in-tree").path("nodes")) {
+            if (n.path("level").asText().equals("desk")) {
+                desks.add(headline(n.path("id").asText(), "engine"));
+            }
+        }
+        families.put("headline_desk", desks);
+        List<String> books = leaves.subList(0, Math.min(leaves.size(), 100)).stream().map(b -> headline(b, "engine")).toList();
+        families.put("headline_book", books);
+        families.put("tree", java.util.Collections.nCopies(5, "/api/v1/risk/var/tree?hierarchy=MGMT&asOf=" + DATE + "&path=engine"));
+        families.put("book_positions", leaves.subList(0, Math.min(leaves.size(), 50)).stream().map(b -> "/api/v1/risk/var/scope/contributions?scope="
+                + URLEncoder.encode("NODE:" + b, StandardCharsets.UTF_8) + "&asOf=" + DATE + "&path=engine").toList());
+        List<String> positionPages = new ArrayList<>();
+        for (String b : leaves.subList(0, Math.min(leaves.size(), 5))) {
+            JsonNode c = server.get("/api/v1/risk/var/scope/contributions?scope=" + URLEncoder.encode("NODE:" + b, StandardCharsets.UTF_8) + "&asOf="
+                    + DATE + "&path=in-tree");
+            for (int i = 0; i < Math.min(4, c.path("rows").size()); i++) {
+                positionPages.add("/api/v1/views/position/" + URLEncoder.encode(c.path("rows").get(i).path("key").asText(), StandardCharsets.UTF_8)
+                        + "?asOf=" + DATE);
+            }
+        }
+        families.put("position", positionPages);
+        List<String> homes = new ArrayList<>();
+        for (String h : HomesSideBySideTest.HOMES) {
+            for (String t : HomesSideBySideTest.TABLES) {
+                homes.add("/api/v1/homes/" + h + "/tables/" + t);
+            }
+        }
+        families.put("home", homes);
+        Map<String, Object> result = new LinkedHashMap<>();
+        List<String> slow = new ArrayList<>();
+        for (Map.Entry<String, List<String>> f : families.entrySet()) {
+            List<Long> ms = new ArrayList<>();
+            int refused = 0;
+            for (String q : f.getValue()) {
+                long t0 = System.nanoTime();
+                PackagedServer.Answer a = server.send("GET", q);
+                long t = (System.nanoTime() - t0) / 1_000_000;
+                if (a.status() != 200) {
+                    refused++;
+                    if (refused == 1) {
+                        result.put(f.getKey() + "_refused_example", a.status() + " " + a.text().substring(0, Math.min(200, a.text().length())));
+                    }
+                    continue;
+                }
+                ms.add(t);
+                if (t > 1_500) {
+                    slow.add(f.getKey() + " " + t + " ms " + q);
+                }
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("pages", ms.size());
+            m.put("refused", refused);
+            m.put("p95", pct(ms, 0.95));
+            m.put("p99", pct(ms, 0.99));
+            m.put("max", ms.isEmpty() ? -1 : Collections.max(ms));
+            m.put("within_300", ms.isEmpty() ? null : Math.round(1000.0 * ms.stream().filter(x -> x <= 300).count() / ms.size()) / 10.0);
+            result.put(f.getKey(), m);
+        }
+        result.put("over_1500", slow);
+        out.put("pages", result);
     }
 
     /** The criteria of the gate this run can measure; each failure in words. A criterion not measured here is not a pass. */

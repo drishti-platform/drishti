@@ -396,6 +396,62 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
 - **Infrastructure**: from 05:4x this lane builds into its own Maven repository (`~/drishti-bench-scratch/i8-m2-r2b`, the lead's
   instruction after this lane's kernel SNAPSHOTs replaced lane A's in the shared `i8-m2`).
 
+### Status, speed lane S1 (2026-11-28 11:4x, branch `r2/speed-host`; drishti-engine `r2/speed-host`; handed over to a fresh lane)
+
+Builds R2_ENGINE_SPEED_DESIGN steps 0, 1, 3, 4, 10, 11 (host, module, kernel API). The owner's rules held: layered (the kernel names no
+engine), one cache (the host's), no section 4 hack, no tolerance, no default flipped, nothing in-tree removed.
+
+**Done (committed, pushed; proof not yet green, see RUN 1):**
+
+- **Step 0** (ae560aff6, harness 2 uncommitted then committed as wip, below): `RiskSpeedCheckTest` opens both paths cold (in-tree's
+  start-up capture and preload off), counts the host's engine asks and cache misses per headline of each phase (`engines.answers`
+  counters), records the engine card, a desk-limited second viewer with sign-in on (`-Dspeed.second-viewer`, default on: tokens minted
+  in the test), `-Dspeed.gate=true` asserts section 6 (an unmeasured criterion fails the gate), `-Dspeed.lake=<folder>` reads one shared
+  read-only lake (`~/drishti-bench-scratch/lake-100k`: lake/ and vargen/, never rebuilt per run); `-Dspeed.pages=true` (wip) times the
+  risk page families on the engine path (bank, desk and book headlines, the tree, a book's positions, position pages, the role Homes:
+  p95, p99, max, pages over 1.5 s) for the owner's page goals (95 % within 300 ms, 99 % within 600 ms, none over 1.5 s; not a gate).
+- **Step 1** (8502ec004): `VarEnginePath` resolves the engines, the VaR service and the risk limits once (`SingletonSupplier`); the
+  date's index once per request (a request attribute keyed by person, date, currency); the tree reads the hierarchies, the limits rule and
+  the lens once; node names kept once per date, hierarchies and reference-data version (`VarLoader.names(date, hs)`, `KeptNames`
+  weighed in bytes, Admin, Caches `var.names` in the small pool, purged with `var.views`).
+- **Steps 3 and 4** (12b3199f8, 2cd9e2c79; drishti-engine f4730dc, 8a162e6): `Engines.ask` returns `EngineAnswer` (`EngineTable` read
+  in place, `find`, `shaped`, `Sized`); the host's ONE answer cache (`EngineHost.answers`, drishti-engine `AnswerCache`): bytes
+  (`drishti.engine-lib.answers-mb` 256, replacing the count `drishti.engine-lib.answers`; CONFIGURATION.md regenerated), joined to the
+  memory budget's `engine.answers` pool, keyed by the stamp (the inputs' lake data versions and the caller's visibility), dropped by the
+  data-version look (stale), when a snapshot's last session closes (`Sessions` closed callback), at an instance's start and shutdown, by
+  Admin whole or per business date; shaped values live in the cache entry. `VarEnginePath.indexes` deleted (it was a second cache AND a
+  session-isolation defect: it served the administrator's 100,000-row index to a desk-limited viewer of the same date and data, whose
+  engine book has 1,000 rows; the step 0 harness found it: `DRS-1022 row 1000 is not a row of this date's book (0 to 999)`). The index
+  is a shaped `EngineScopeBook`, node-var rows by `find`, parametric figures shaped once per answer. Exposure and SIMM paths moved.
+  Step 4: request hashed once and carried (`Request.hash`, `HostContext.stamp` reuses it), options hashed once, input stamps from data
+  versions without a read (`LakeInputs.Table.stamp`, fixed per session), audit line names a list over 32 items by its count, log read
+  from an index, session inputs released at close. Guards: `ShapedAnswersGuardTest` (no shape function reads the caller),
+  `CachesWeighedInBytesTest`, `ArchitectureRulesTest` green; `EngineHostTest`, `AnswerCacheTest`, `SessionsTest`, `ApiSurfaceTest`
+  (surface regenerated) green. Spec text (drishti-engine SPEC 3.2, 3.3, 5.2 rule 8, 13 rule 6), ENGINES_IN_DRISHTI.md, EN-76 and EN-77
+  written. origin/r2/vres merged (72551491f; `inputsChanged` now drops the engine's entries of the one cache).
+- **Not done in step 4, with the reason**: signature and visibility "per entitlements version": the kernel has no entitlements version
+  (roles, packs and the user directory each change it); adding one is a kernel change outside the host, for under 1 % of a warm ask.
+
+**RUN 1** (11:17; incremental reactor build, risk JARs rebuilt): `ConsumersSideBySideTest` **green** (117 answers, 0 differences, mapped).
+`RiskSpeedCheckTest` 100K mapped **failed in the harness, not in a figure**: `404 ... the engine market-risk has no node MGMT~DESK-047 on
+2026-09-30` at the second viewer's alternation (it asked a node the desk-limited viewer cannot see; fixed in the wip harness: the
+alternation asks MGMT~BANK). Every phase before it ran (cold opens, inner, leaf, tree: their differ list was empty, else the test would
+have failed on them later); but the JSON is written only at the end, so RUN 1 has **no figures**. The test took 2,615 s, far longer than
+lane B2's runs: not yet explained (the wip harness now writes a partial JSON with `inner_done_ms`, `leaf_done_ms`, `phases_done_ms`
+before the second viewer, so the next run says which phase). `RiskSideBySideTest` was stopped by the hand-over (not run to the end).
+
+**What remains:** (1) rerun the light proof (RiskSpeedCheckTest 100K mapped with `-Dspeed.lake`, RiskSideBySideTest mapped) on this
+branch and read the phase times; if the 2,615 s is the engine path, profile (`PROF=1` in `~/drishti-bench-scratch/speedA/combo.sh`).
+(2) Step 10 (rows, row-groups, RowSet.digest; scope outputs `group-by`; `hostPositions` from the index) after S2's step 8 is merged.
+(3) Step 11: the gate run, both tiers, `-Dspeed.gate=true -Dspeed.pages=true`, the full proof P, BENCHMARK.md section 23 rewritten
+(before: lane B2's figures in section 23 today).
+
+**Traps:** the harness `combo.sh` copies is `~/drishti-bench-scratch/speedA/combo.sh` (Maven repo `i8-m2-speedA`; `--engine` installs
+drishti-engine `r2/speed-host`, which Drishti and drishti-risk compile against: `Request` gained a component, its 7-argument constructor
+kept); the test log name is cut at 90 characters, so two runs of the speed check share one log file; `target/g14` of this worktree is a
+link to `~/drishti-bench-scratch/speedA/g14` (never `mvn clean` it without `-Dspeed.lake`); the settings catalogue needs
+`DRISHTI_TOOLS_HOME=~/IdeaProjects/drishti-lanes/tools-111` (never the platform folder). EN numbers 76 and 77 are taken: S2 starts at 78.
+
 ### Status, R2 lane V (2026-11-28 10:2x, branch `r2/vres`; drishti-risk `r2/vres`)
 
 - **VRES side by side: green on both tiers, now part of the default run** (the `-Dsbs.vres` gate dropped). Built fresh (full reactor

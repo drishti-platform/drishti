@@ -329,18 +329,16 @@ public final class HostedEngine implements AutoCloseable {
     }
 
     /**
-     * Data of {@code kind} was written by this server: when this engine binds the kind, its open sessions are stale (the next ask opens a
-     * fresh one, which reads its inputs again) and the kept answers are dropped. True when it binds the kind.
+     * Data of {@code kind} was written by this server (a capture's publish: the lake's commit): when this engine binds the kind, the
+     * data-version look runs now instead of at its next poll (ENGINE_SPEC 9.3 rule 5: the one way the host learns that inputs changed). A
+     * session whose inputs' versions moved is stale and answers, noted, until its successor is ready; the kept answers need no purge (a new
+     * data version is a new stamp). True when it binds the kind.
      */
     public boolean inputsChanged(String kind) {
         if (binding.inputs().values().stream().noneMatch(b -> b.kinds().contains(kind))) {
             return false;
         }
-        Sessions s = sessions;
-        if (s != null) {
-            s.keys().stream().map(Sessions.Key::snapshot).distinct().toList().forEach(s::stale);
-        }
-        purgeAnswers();
+        lookAtDataVersions();
         return true;
     }
 
@@ -821,7 +819,7 @@ public final class HostedEngine implements AutoCloseable {
         if ("latest".equals(snap.get("date"))) {
             snap.put("date", latestDate().map(LocalDate::toString).orElse(null));
             if (snap.get("date") == null) {
-                throw new EngineException("ENG-2001", Kind.NOT_FOUND, id + ": no input of its data-version trigger holds a date yet");
+                throw new EngineException("ENG-2001", Kind.UNAVAILABLE, id + ": no input of its data-version trigger holds a date yet");
             }
         }
         // a prepare ask opens the session and fills the answer cache, published nowhere (9.3 rule 4); any other publishes its tables

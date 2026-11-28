@@ -28,6 +28,8 @@ data:
   mnem:      { table: home_mnemonics }
   digest:    { table: home_digest }
   loads:     { table: home_loads }
+  needs:     { table: home_needs }
+  pinned:    { table: home_pinned }
 layout:
   user-can-arrange: true
   areas:
@@ -71,6 +73,21 @@ panels:
     with:
       title: Data freshness and checks
       rows: { from: $.fresh, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/exceptions-list@1
+    as: needs
+    area: rail
+    with:
+      title: Needs you
+      rows: { from: $.needs, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: rail
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
   - use: core/data-table@1
     as: mnem
     area: rail

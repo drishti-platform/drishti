@@ -32,8 +32,9 @@ data:
   manh:      { table: genomics_manhattan }
   clin:      { table: genomics_clinvar }
   gld:       { table: genomics_loads }
-  needs:     { table: genomics_needs }
+  modneeds:  { table: genomics_needs }
   loads:     { table: home_loads }
+  pinned:    { table: home_pinned }
 layout:
   user-can-arrange: true
   areas:
@@ -45,7 +46,7 @@ layout:
     - "loads loads loads"
     - "visit visit visit"
   columns: [4, 5, 3]
-  phone: [kpis, exc, chg, rail, gwas, manh, clin, gld, needs, loads, visit]
+  phone: [kpis, exc, chg, rail, gwas, manh, clin, gld, modneeds, loads, visit]
 panels:
   - use: core/kpi-strip@1
     as: kpi
@@ -67,6 +68,15 @@ panels:
       title: Since
       since: "first($.meta).SINCE"
       rows: { from: $.chg, columns: { key: SUBJECT, measure: MEASURE, before: THEN, after: NOW, change: CHANGE, why: WHY, kind: KIND, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: rail
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
   - use: core/data-table@1
     as: mnem
     area: rail
@@ -112,13 +122,13 @@ panels:
       rows: $.gld
       columns: [ { label: Source, bind: "@.SOURCE" }, { label: What, bind: "@.WHAT" }, { label: Date, bind: "@.DATE" }, { label: State, bind: "@.STATE" } ]
   - use: core/data-table@1
-    as: needs
-    area: needs
+    as: modneeds
+    area: modneeds
     with:
-      title: Needs you
+      title: Pipeline needs you
       search: false
       limit: 8
-      rows: $.needs
+      rows: $.modneeds
       columns: [ { label: What, bind: "@.WHAT" }, { label: Detail, bind: "@.DETAIL" } ]
   - use: core/data-table@1
     as: loads

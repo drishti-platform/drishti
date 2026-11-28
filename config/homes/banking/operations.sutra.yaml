@@ -27,6 +27,8 @@ data:
   exc:       { table: home_exceptions }
   chg:       { table: home_changes }
   loads:     { table: home_loads }
+  needs:     { table: home_needs }
+  pinned:    { table: home_pinned }
   held:      { table: home_held_changes }
   mnem:      { table: home_mnemonics }
   cal:       { table: home_calendar }
@@ -68,6 +70,21 @@ panels:
     area: held
     with:
       changes: { from: $.held, columns: { change: CHANGE, state: STATE, summary: SUMMARY, by: BY, at: AT, message: MESSAGE } }
+  - use: core/exceptions-list@1
+    as: needs
+    area: rail
+    with:
+      title: Needs you
+      rows: { from: $.needs, columns: { severity: SEVERITY, message: MESSAGE, key: SUBJECT, open: COMMAND } }
+  - use: core/data-table@1
+    as: pinned
+    area: rail
+    with:
+      title: Pinned
+      search: false
+      limit: 8
+      rows: $.pinned
+      columns: [ { label: Kind, bind: "@.KIND" }, { label: Id, bind: "@.ID" } ]
   - use: core/data-table@1
     as: mnem
     area: rail

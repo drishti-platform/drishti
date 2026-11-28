@@ -263,6 +263,14 @@ def _prepare_work(work: Path) -> None:
         for sub in (ROOT / "config").iterdir():    # each committed part linked; the site's own parts never (SITE_CONFIG)
             if sub.name not in SITE_CONFIG:
                 (work / "config" / sub.name).symlink_to(sub)
+        site_packs = work / "config" / "packs"      # the site's packs folder: the committed one (if any) and the examples' compute-demo (a pack of
+        if site_packs.is_symlink():                 # no module: examples/packs holds it, a test enables it by name)
+            site_packs.unlink()
+        site_packs.mkdir(exist_ok=True)
+        for src in ((ROOT / "config" / "packs").iterdir() if (ROOT / "config" / "packs").is_dir() else []):
+            (site_packs / src.name).symlink_to(src)
+        if (ROOT / "examples" / "packs" / "compute-demo").is_dir() and not (site_packs / "compute-demo").exists():
+            (site_packs / "compute-demo").symlink_to(ROOT / "examples" / "packs" / "compute-demo")
         (work / "config" / "connectors").mkdir()   # empty: the server writes the packs' connector files there at its first start, as in a
                                                    # clean checkout, and a deployed test pack's file lands in the scratch copy
     for name in ("modules", "lib"):                # the module folders (the kernel's packs and jars) beside the config, as the server reads them

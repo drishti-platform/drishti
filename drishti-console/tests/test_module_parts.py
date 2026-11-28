@@ -111,12 +111,12 @@ def test_a_part_carrying_elements_code_or_a_private_template_is_refused(client, 
     assert "a copy of a Drishti Elements" in why and "runs no code" in why and "reaches terminal/_topbar.html" in why
 
 
-def test_the_economy_world_page_is_served_from_the_module(client, tmp_path, monkeypatch):
+def test_the_external_data_world_page_is_served_from_the_module(client, tmp_path, monkeypatch):
     parts = _fresh(client, tmp_path, monkeypatch)
     client.get("/t")
-    p = parts.part("economy")
+    p = parts.part("external-data")
     assert p is not None and p.source == "server" and (p.folder / "console" / "templates" / "world_landing.html").is_file()
-    js = client.get(f"/m/economy/static/{p.version}/js/drishti_world-landing.js")
+    js = client.get(f"/m/external-data/static/{p.version}/js/drishti_world-landing.js")
     assert js.status_code == 200 and "Drishti.elements.grid" in js.text
     html = (p.folder / "console" / "templates" / "world_landing.html").read_text(encoding="utf-8")
     assert "<table" not in html and "elements.grid(" in html and 'extends "kernel/page.html"' in html

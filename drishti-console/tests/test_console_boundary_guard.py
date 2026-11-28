@@ -72,7 +72,6 @@ PENDING: dict[str, str] = {
 YAML_UP_ALLOWED = {"help.docs_dir", "features.examples_dir", "builder.tools_dir"}
 YAML_UP_PENDING = {
     "lakes.data_dir": "B4 table registry lane (see core/lakes.py)",
-    "packs.dir": "dead since the thin console: no console code reads packs.dir, installed_dir or extra_dirs (a pack's content comes from the server's answer); delete the three keys with their CONFIGURATION.md rows (B3 site-config lane owns that file)",
 }
 
 

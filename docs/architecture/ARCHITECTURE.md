@@ -542,7 +542,7 @@ and the export read. When a tick changes the panel, the console renders it again
 | `waterfall`, `histogram`, `scatter`, `candlestick`, `graph` | the macro of the same name (`xchart`, `data-xchart` JSON) | `drishti_charts.js` |
 | `timeline` | `timeline` | none |
 | `map` | `geomap` | drishti-chart's geo part, `drishti_charts.js` |
-| `pivot` | `pivot`, `pivot_table` | `drishti_tree-rows.js`, `drishti_pivot-grid.js` |
+| `pivot` | `pivot`, `pivot_table` | `drishti_tree-rows.js`, `drishti-grid` |
 
 ### Example 2: a kind with no Sutra
 
@@ -1895,7 +1895,7 @@ The server wires it (`server.pivot`: `PivotController`, `PivotViews`, `PivotView
 `PanelSources`, `DatasetLayers`, the document fields, the Python process client, the scale and live configuration): Export data's tables
 as sources, the VaR, FRTB-SA and SIMM providers (which implement the SPI; the vector arithmetic stays where it is), REST, busy protection,
 the memory budget for the cache, saved views and audit. The console's `drishti_pivot-engine.js` asks and lays the answer out;
-`drishti_pivot-grid.js` is the one grid; the presets are `drishti-console/config/pivot-presets.yaml`.
+`drishti-grid` (Drishti Elements) is the one grid; the presets are `drishti-console/config/pivot-presets.yaml`.
 
 ### 26.11 The screen, charts and export
 

@@ -50,10 +50,6 @@ Vega and Vega-Lite (with their embedding and expression-interpreter packages) ar
 drawing engine). A report's `vega-lite` visual and a Python visual's `output: vega-lite` are translated by drishti-chart's `fromVegaLite`
 and drawn by drishti-chart; a feature it does not translate is refused in words with what to use instead.
 
-## Perspective's chart plugin and the settings panel (wave C)
-
-The d3fc chart plugin (already vendored) is loaded by a page that holds a `perspective-chart`; it writes two more `<style>` texts than a grid does (`CHART_STYLE_HASHES` in `core/perspective_csp.py`, the same two the phase 0 page lists), which only such a page is given. The settings panel writes no more styles but sets about a dozen `style` **attributes** through `setAttribute`, which the policy refuses (`style-src-attr`); the panel works. The Chromium test of the chart page asserts both: every `<style>` is on the list, and nothing but those attributes is refused.
-
 ## Licence policy
 
 Only these licences are vendored (besides Drishti Elements, by the same owner as Drishti, under the same proprietary `LICENSE`): MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, SIL OFL 1.1, MPL-2.0 (unmodified), public domain or CC0, PSF.

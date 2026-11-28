@@ -773,6 +773,7 @@ From `drishti-console/config/application.yaml`, resolved from environment variab
 | `DRISHTI_BACKEND_DISCOVER` | `backend.discover` | `true` | With `backend.urls`: pull the member list from the server in use every `discover_every` and keep it. |
 | `DRISHTI_CONSOLE_DATA_DIR` | `backend.data_dir` | empty | What the console keeps between runs (`net/servers.json`); empty: `<data dir>/console`. |
 | `DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS` | `backend.check_seconds` | `5` | How often the console asks each server if it is there (`0` = never). Pages show a banner and recover by themselves when it returns. |
+| `DRISHTI_CONSOLE_REQUIRE_API` | `backend.require_compatible_api` | `true` | At start the console asks the server's API version (`GET /api/v1/version`) and refuses to start against a server outside the range it supports, with one line. `false` skips the check. |
 | `DRISHTI_CONSOLE_TMP_DIR` | `tmp_dir` | empty | Base of the console's temp folder `drishti-console-<pid>` (empty: `DRISHTI_TMP_DIR`, then `<data dir>/tmp/console` when started by `run_drishti_web.py`), one per worker process, removed on exit; left-over ones of dead processes are listed on Health, never deleted automatically. |
 | `DRISHTI_EXTERNAL_LIB` | `external_lib` | empty | Base of the external library folder (empty: `external_lib` in the repository root); `<base>/python` is importable. The server reads the same variable for `<base>/java`. |
 | `DRISHTI_PRODUCT` | `ui.product` | `Drishti` | The product name shown in pages. |
@@ -2785,6 +2786,7 @@ You should see uvicorn report `Uvicorn running on http://127.0.0.1:17481`.
 | `backend.timeout_seconds` | `15` | Per call to the server. Longer than the server's own read limit (`drishti.sources.fetch-timeout`, 10 s), so the server's answer, including a timed-out read's `DRS-1004`, comes through. |
 | `backend.name` | the product name (`ui.product`) | The name of the single server when `servers` is not set; the picker and the top bar show it. |
 | `backend.check_seconds` | `5` (`DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS`) | How often the console's background watch asks each server (the default and every one of `servers`) whether it is reachable, with a 2 s timeout. It keeps reachable / since / last error / version, logs each change once, and answers `GET /healthz/backend`, which every page's banner polls. Shown on Admin > Health (Console watch). `0` turns the watch off. |
+| `backend.require_compatible_api` | `true` (`DRISHTI_CONSOLE_REQUIRE_API`) | Whether the console checks the server's API version before it opens its port (`GET /api/v1/version`, then `/public/about`). A server whose API is outside the console's supported range (or that reports none) stops the start with one line; a server that is away is not a refusal. The watch records `api` and `apiProblem` for each server (Admin > Health) and `GET /readyz` answers `503` while the problem stands. [API_REFERENCE.md](../guides/API_REFERENCE.md#1-conventions) |
 | `backend.urls` | empty (`DRISHTI_BACKEND_URLS`) | Several servers of one Drishti*net cluster ([The console and several servers](#the-console-and-several-servers-drishtinet)). |
 | `backend.discover` | `true` (`DRISHTI_BACKEND_DISCOVER`) | Pull the cluster's member list from the server in use and keep it. |
 | `backend.discover_every` | `60s` | How often the member list is pulled again. |
@@ -2997,7 +2999,7 @@ Every setting has a **tier** (the last column; Admin → Configuration shows the
 | [The server: `application.yaml`](#the-server-applicationyaml) | 588 |
 | [Compute engines: `config/engines/*.yaml`](#compute-engines-configenginesyaml) | 364 |
 | [Modules: `config/modules/*.yaml`](#modules-configmodulesyaml) | 5 |
-| [The console: `application.yaml`](#the-console-applicationyaml) | 157 |
+| [The console: `application.yaml`](#the-console-applicationyaml) | 158 |
 | [The console's other files](#the-consoles-other-files) | 107 |
 | [Connectors: every plugin's settings](#connectors-every-plugins-settings) | 533 |
 | [Packs: `pack.yaml`](#packs-packyaml) | 137 |
@@ -4674,6 +4676,7 @@ One file per module (banking, capitalmarkets, economy), `config/modules/<module>
 |---|---|---|---|---|---|---|---|---|
 | `backend.url` | string | `http://127.0.0.1:18480` | `DRISHTI_BACKEND_URL` | console | where the server is (one server; backend.urls for several) | restart |  | admin |
 | `backend.timeout_seconds` | integer | `15` |  | console | per call to the server; longer than the server's own read limit (drishti.sources.fetch-timeout, 10 s), so its answer comes through | restart |  | expert |
+| `backend.require_compatible_api` | boolean | `true` | `DRISHTI_CONSOLE_REQUIRE_API` | console | at start the console asks the server's API version (/api/v1/version) and refuses to start against one outside its supported range (core/api\_compat.py); false: skip | restart |  | admin |
 | `backend.pool_size` | integer | `64` |  | console | pooled HTTP connections to the server (per server, when there are several) | restart |  | expert |
 | `backend.check_seconds` | integer | `5` | `DRISHTI_CONSOLE_BACKEND_CHECK_SECONDS` | console | how often the console asks each server if it is there (0 = never); pages show a banner and recover when it returns | restart |  | admin |
 | `backend.urls` | string | empty | `DRISHTI_BACKEND_URLS` | console | Several servers of one Drishti\*net cluster (docs/guides/OPERATIONS\_GUIDE.md, "The console and several servers"): one is enough, the console learns the rest. Empty: backend.url, as before. Each session keeps to one server while it answers and falls over to the next when it does not. e.g. https://drishti-a:8480,https://drishti-b:8480 | restart |  | admin |
@@ -6576,6 +6579,7 @@ Every environment variable a source names (`${NAME:default}`) or the code reads,
 | `DRISHTI_CONSOLE_RELAY_KEY` | the live-channel relay key | none | console | Signs the relay messages between the console's workers and, with live.relay.across\_hosts, between consoles: the same secret on every console (the launcher makes one for its own workers when it is not set; CLUSTER\_GUIDE.md section 9.4) |
 | `DRISHTI_CONSOLE_RELAY_KEY_MADE` | (set by the launcher) | none | console | Set by run\_drishti\_web.py when it made the relay key itself: the relay then stays on this host |
 | `DRISHTI_CONSOLE_RELAY_PORT` | `live.relay.port` | `17490` | console | across hosts, worker n listens on port + n (port .. port + server.workers - 1): open these between the consoles; 0 = any free port |
+| `DRISHTI_CONSOLE_REQUIRE_API` | `backend.require_compatible_api` | `true` | console | at start the console asks the server's API version (/api/v1/version) and refuses to start against one outside its supported range (core/api\_compat.py); false: skip |
 | `DRISHTI_CONSOLE_SHUTDOWN_SECONDS` | `server.shutdown_seconds` | `5` | console | on a stop, how long open streams (live pages) may stay before they are closed; the browser then reconnects |
 | `DRISHTI_CONSOLE_TMP_DIR` | `tmp_dir` | empty | console | base of the console's temp folder drishti-console-&lt;pid&gt; (blank: DRISHTI\_TMP\_DIR, then &lt;data dir&gt;/tmp/console when started by run\_drishti\_web.py); removed on exit; left-over ones are listed on Health, never deleted automatically |
 | `DRISHTI_CONSOLE_URL` | `drishti.embed.audiences`, `drishti.collab.console-url` | `[""]` | server | the consoles that may accept embed tokens (their public URLs); the first is the default |

@@ -120,6 +120,14 @@ opens the same way, on any browser). The buttons are the roles you really have, 
 `/home/role/<name>` still opens a role's own Home page. With a single role there is nothing to switch and the buttons are not shown. They
 work from the keyboard (**Tab** to the row, **Enter** or **Space** to press one) and wrap onto a second line on a phone.
 
+**Which Home opens first.** Each role is tied to a Home (the risk manager's, the trader's, the genomicist's); you are offered the Homes of
+your roles, and only while the module that owns a Home is on. With one Home there is nothing to choose. With several, the page head has a
+**Home** picker and the one you choose becomes your start Home (your own setting, kept on the server, so it opens the same on any browser);
+`/home/role` opens it. An administrator is offered every Home of every module that is on, which is the quickest way to see what each role sees:
+pick the Home, or press its **View as** button, and read it as that role does. What a Home shows is still decided by *your* row rules and
+masks, so an administrator who may not read a desk's rows sees that Home with those rows left out. Who may see which Home, and the module
+cards behind them, are the administrator's ([ADMIN_GUIDE.md, Configuring role Homes](ADMIN_GUIDE.md#151-configuring-role-homes)).
+
 **The logo** at the top left always brings you back to Your Home.
 
 **Two layouts.** Most roles get the calm layout: two cards across, room to read. Risk-manager roles get the cockpit: the same cards, denser,

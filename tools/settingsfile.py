@@ -38,6 +38,17 @@ profile_path, pop_profile, with_profiles, home_value = _INI.profile_path, _INI.p
 server_url = _INI.server_url
 names_home = _INI.names_home   # the one test of "this settings file is this checkout's" (the tools and the console)
 
+#: what a command that talks to a server says when nothing names one: there is no implicit server (owner rule: no implicit targets)
+NO_SERVER = ("no server named: give --server, set DRISHTI_SERVER, or name it in the settings file (console.backend.url, or a profile's "
+             "server.port); there is no default server")
+
+
+def named_server(given: str | None, keys: dict, host: str = "localhost") -> str | None:
+    """The server a tool talks to: ``--server`` (``given``), else ``DRISHTI_SERVER``, else the settings files' (``console.backend.url``, or
+    ``http://<host>:<server.port>``); None when nothing names one. The one rule for every tool; never an implicit localhost:18480."""
+    import os
+    return (given or "").strip() or (os.environ.get("DRISHTI_SERVER") or "").strip() or server_url(keys, host) or None
+
 
 def resolve(named, explicit: dict[str, str] | None = None) -> dict[str, str]:
     """The files' entries minus those the caller set explicitly (``explicit`` wins), as the Java side does with -D."""

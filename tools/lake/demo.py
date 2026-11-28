@@ -87,7 +87,6 @@ import resolved as R  # noqa: E402  (configuration: the Java resolver's answer, 
 from resolved import pack_dir, pack_dirs  # noqa: E402  (where a pack is: the Java resolver's answer, tools/resolved.py)
 
 DEFAULT_ROOT = lakeconfig.DEMO_ROOT_REF   # config/lakes/demo.yaml: the demo lake's own folder
-DEFAULT_SERVER = "http://localhost:18480"
 SIGNAL_TIMEOUT = 30.0                        # seconds a data-load signal waits for its answer
 REBUILT_STAMP = "lake-rebuilt.json"          # read by the server at start (Layers.REBUILT_STAMP)
 REPLACE = "overwrite-dates"                  # the load rules' mode replace (lake build --mode): each date the demo writes replaced
@@ -515,14 +514,6 @@ class DemoLake:
     def bi_store(self) -> pathlib.Path:
         return pathlib.Path(os.environ.get("DRISHTI_BI_STORE") or (self.data / "bi-store"))
 
-    def own_server_data(self) -> bool:
-        """True when the data folder is the default server's own (the repository's data/, or DRISHTI_DATA_DIR) and was not set by --data-dir:
-        only then is the default server (DEFAULT_SERVER) the one to tell. A scratch run (--data-dir, or a lake elsewhere) tells nobody
-        unless --server or DRISHTI_SERVER names one."""
-        if getattr(self.a, "data_dir", None):
-            return False
-        return pathlib.Path(self.data).resolve() == data_dir().resolve()
-
     def write_stamp(self, stamp: pathlib.Path) -> None:
         stamp.parent.mkdir(parents=True, exist_ok=True)
         stamp.write_text(json.dumps({"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "by": "drishti.py lake demo", "lake": str(self.lake),
@@ -532,13 +523,15 @@ class DemoLake:
         """The data-load signal for every table and date written; else the stamp the server reads at its next start."""
         if self.a.no_signal or not self.written:
             return "not told (--no-signal)" if self.a.no_signal else ""
-        named = self.a.server or os.environ.get("DRISHTI_SERVER")
-        if not named and not self.own_server_data():
+        import javacmd
+        import settingsfile
+        named = settingsfile.named_server(self.a.server, javacmd.settings()[1])
+        if not named:                                         # no implicit server: a token is never sent to whatever listens on localhost
             stamp = self.bi_store() / REBUILT_STAMP
             self.write_stamp(stamp)
-            return (f"no server told: {self.data} is a scratch data folder (no --server or DRISHTI_SERVER named); left {stamp} for a server "
-                    "started on it")
-        base = (named or DEFAULT_SERVER).rstrip("/")
+            return (f"no server told: none named (--server, DRISHTI_SERVER or the settings file); left {stamp} for the server that starts on "
+                    f"{self.data}")
+        base = named.rstrip("/")
         token = None
         if self.a.token_file:
             token = pathlib.Path(os.path.expanduser(self.a.token_file)).read_text(encoding="utf-8").strip()
@@ -962,7 +955,7 @@ def add_arguments(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
     p.add_argument("--with-real", metavar="FILE[,FILE]", help="LOCAL ONLY: real trade extracts (JSON) whose counterparties, agreements and "
                    "netting sets are added to the local lake, never to data/testdata")
     p.add_argument("--only", metavar="PREFIX[,PREFIX]", help="only these datasets: a folder prefix (trades/, core/counterparty) or a pack name")
-    p.add_argument("--server", help=f"the server told of the new data (default: DRISHTI_SERVER; the default data folder tells {DEFAULT_SERVER}; a scratch --data-dir tells nobody)")
+    p.add_argument("--server", help="the server told of the new data (default: DRISHTI_SERVER, then the settings file's; none named: nobody is told, the stamp is left for the next start)")
     p.add_argument("--token-file", help="the API token for the data-load signal (default: DRISHTI_TOKEN); never printed")
     p.add_argument("--no-signal", action="store_true", help="tell no server, and leave no stamp for one")
     p.add_argument("--signal-once", action="store_true", help="tell each table once, for its newest date, not each table and date "

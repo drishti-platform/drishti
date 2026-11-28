@@ -21,13 +21,11 @@ from __future__ import annotations
 import argparse
 import pathlib
 
-DEFAULT_SERVER = "http://localhost:18480"
-
-
 def server_parent(with_json: bool = True) -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(add_help=False)
     g = p.add_argument_group("server connection")
-    g.add_argument("--server", help=f"the server's base URL (default: DRISHTI_SERVER, then {DEFAULT_SERVER})")
+    g.add_argument("--server", help="the server's base URL (default: DRISHTI_SERVER, then the settings file's console.backend.url or server.port; "
+                   "nothing named: the command refuses, there is no default server)")
     g.add_argument("--token-file", help="a file holding the API token (default: the DRISHTI_TOKEN environment variable); never printed")
     g.add_argument("--user", help="the user name to send when the server has sign-in off (default: DRISHTI_USER)")
     g.add_argument("--timeout", type=float, default=60, help="seconds to wait for the server (default 60)")

@@ -91,9 +91,39 @@ class GenomicsDataTest {
         assertThat(GenomicsFunctions.afClass(0.004)).isEqualTo("rare");
     }
 
+    /**
+     * Pre-gate S1: every route asks the kernel as the person. The demo genomics user reads the rows; the demo market-data user (role
+     * market-data-reader, none of the genomics kinds) is refused with the kernel's 403 on every route, and no row leaves.
+     */
+    @Test
+    void theRoutesAskAsThePersonAndTheMarketUserIsRefused() {
+        Doors doors = new Doors();
+        GenomicsController api = new GenomicsController(data(), doors.access());
+        assertThat(api.variants(null, null)).containsEntry("count", 120);
+        assertThat(doors.asked).contains("drishti-dev-genomics:variant", "drishti-dev-genomics:sample");
+        doors.user = "drishti-dev-market";
+        doors.roles = List.of("market-data-reader");
+        List<Runnable> routes = List.of(() -> api.variants(null, null), () -> api.variant("HX-A001"), api::genes, () -> api.gene("TP53"), api::cohorts,
+                () -> api.cohort("COH-B"));
+        for (Runnable r : routes) {
+            com.ash.drishti.kernel.api.services.Kernel.Refused e = org.junit.jupiter.api.Assertions.assertThrows(
+                    com.ash.drishti.kernel.api.services.Kernel.Refused.class, r::run);
+            assertThat(api.refused(e).getStatusCode().value()).isEqualTo(403);
+        }
+        Doors other = new Doors();
+        other.user = "drishti-dev-market";
+        other.roles = List.of("market-data-reader");
+        ShowcaseData sd = new ShowcaseData();
+        GenomicsBoard board = new GenomicsBoard(sd);
+        ShowcaseController showcase = new ShowcaseController(sd, board, new ProteinBench(sd, board), other.access());
+        org.junit.jupiter.api.Assertions.assertThrows(com.ash.drishti.kernel.api.services.Kernel.Refused.class, () -> showcase.status(false));
+        org.junit.jupiter.api.Assertions.assertThrows(com.ash.drishti.kernel.api.services.Kernel.Refused.class, showcase::proteins);
+        org.junit.jupiter.api.Assertions.assertThrows(com.ash.drishti.kernel.api.services.Kernel.Refused.class, () -> showcase.associations(null));
+    }
+
     @Test
     void theApiAnswersFromTheLakeRows() {
-        GenomicsController api = new GenomicsController(data());
+        GenomicsController api = new GenomicsController(data(), new Doors().access());
         Map<String, Object> all = api.variants(null, null);
         assertThat(all).containsEntry("count", 120);
         @SuppressWarnings("unchecked")

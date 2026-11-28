@@ -69,7 +69,7 @@ class ShowcaseTest {
         });
         board = new GenomicsBoard(data);
         bench = new ProteinBench(data, board);
-        api = new ShowcaseController(data, board, bench);
+        api = new ShowcaseController(data, board, bench, new Doors().access());
     }
 
     static Selection all() {

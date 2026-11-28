@@ -17,6 +17,7 @@
 package org.helixlab.genomics;
 
 import com.ash.drishti.kernel.api.module.ModuleApi;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
@@ -30,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * The showcase's REST API under {@code /api/v1/genomics/} (modules/genomics/docs/guide.md section 9): what the genomics board and
  * the protein workbench draw, every figure made here, every answer with its Explain block. A selection of samples travels as
- * {@code cluster=}, {@code box=x0,x1,y0,y1} or {@code samples=} on any call it applies to ({@link Selection}). All calls are GET.
+ * {@code cluster=}, {@code box=x0,x1,y0,y1} or {@code samples=} on any call it applies to ({@link Selection}). All calls are GET. Every
+ * route asks the kernel as the person first ({@link GenomicsAccess}): the board's routes need every kind of the genomics showcase, the
+ * workbench's every kind of protein engineering; a person who may not open them is refused with the kernel's status and words.
  */
 @RestController
 @ModuleApi("genomics")
@@ -39,16 +42,30 @@ public class ShowcaseController {
     private final ShowcaseData data;
     private final GenomicsBoard board;
     private final ProteinBench bench;
+    private final GenomicsAccess access;
 
-    public ShowcaseController(ShowcaseData data, GenomicsBoard board, ProteinBench bench) {
+    public ShowcaseController(ShowcaseData data, GenomicsBoard board, ProteinBench bench, GenomicsAccess access) {
         this.data = data;
         this.board = board;
         this.bench = bench;
+        this.access = access;
+    }
+
+    /** The genomics board's door: every kind of the genomics showcase, as the person. */
+    private void board() {
+        access.require(ShowcaseData.GENOMICS_KINDS);
+    }
+
+    /** The protein workbench's door: every kind of protein engineering, as the person. */
+    private void bench() {
+        access.require(ShowcaseData.PROTEIN_KINDS);
     }
 
     /** What is loaded: rows per kind, the kinds with none; {@code refresh=true} reads the kinds again. */
     @GetMapping("/showcase/status")
     public Map<String, Object> status(@RequestParam(name = "refresh", required = false) Boolean refresh) {
+        board();
+        bench();
         if (Boolean.TRUE.equals(refresh)) {
             data.now(true);
         }
@@ -59,11 +76,13 @@ public class ShowcaseController {
     public Map<String, Object> summary(@PathVariable("id") String id, @RequestParam(name = "gene", required = false) String gene,
             @RequestParam(name = "cluster", required = false) String cluster, @RequestParam(name = "box", required = false) String box,
             @RequestParam(name = "samples", required = false) String samples) {
+        board();
         return board.summary(Selection.of(id, cluster, box, samples), gene);
     }
 
     @GetMapping("/associations")
     public Map<String, Object> associations(@RequestParam(name = "trait", required = false) String trait) {
+        board();
         return board.associations(trait);
     }
 
@@ -71,12 +90,14 @@ public class ShowcaseController {
     public Map<String, Object> oncoprint(@PathVariable("id") String id, @RequestParam(name = "genes", defaultValue = "24") int genes,
             @RequestParam(name = "gene", required = false) String gene, @RequestParam(name = "cluster", required = false) String cluster,
             @RequestParam(name = "box", required = false) String box, @RequestParam(name = "samples", required = false) String samples) {
+        board();
         return board.oncoprint(Selection.of(id, cluster, box, samples), genes, gene);
     }
 
     @GetMapping("/cohorts/{id}/samples/map")
     public Map<String, Object> sampleMap(@PathVariable("id") String id, @RequestParam(name = "cluster", required = false) String cluster,
             @RequestParam(name = "box", required = false) String box, @RequestParam(name = "samples", required = false) String samples) {
+        board();
         return board.sampleMap(Selection.of(id, cluster, box, samples));
     }
 
@@ -84,48 +105,57 @@ public class ShowcaseController {
     public Map<String, Object> lollipop(@PathVariable("id") String id, @RequestParam(name = "cohort", required = false) String cohort,
             @RequestParam(name = "cluster", required = false) String cluster, @RequestParam(name = "box", required = false) String box,
             @RequestParam(name = "samples", required = false) String samples, @RequestParam(name = "assay", required = false) String assay) {
+        board();
         return board.lollipop(id, Selection.of(cohort, cluster, box, samples), assay);
     }
 
     @GetMapping("/proteins")
     public Map<String, Object> proteins() {
+        bench();
         return bench.proteins();
     }
 
     @GetMapping("/proteins/{id}/dms")
     public Map<String, Object> dms(@PathVariable("id") String id, @RequestParam(name = "assay", required = false) String assay) {
+        bench();
         return bench.dms(id, assay);
     }
 
     @GetMapping("/proteins/{id}/structure")
     public Map<String, Object> structure(@PathVariable("id") String id) {
+        bench();
         return bench.structure(id);
     }
 
     @GetMapping("/proteins/{id}/residues/{pos}")
     public Map<String, Object> residue(@PathVariable("id") String id, @PathVariable("pos") int pos) {
+        bench();
         return bench.residue(id, pos);
     }
 
     @GetMapping("/proteins/{id}/designs")
     public Map<String, Object> designs(@PathVariable("id") String id, @RequestParam(name = "residue", required = false) Integer residue,
             @RequestParam(name = "aa", required = false) String aa) {
+        bench();
         return bench.campaign(id, residue, aa);
     }
 
     @GetMapping("/proteins/{id}/designs/{design}")
     public Map<String, Object> design(@PathVariable("id") String id, @PathVariable("design") String design) {
+        bench();
         return bench.design(id, design);
     }
 
     @GetMapping("/proteins/{id}/rounds")
     public Map<String, Object> rounds(@PathVariable("id") String id) {
+        bench();
         return bench.rounds(id);
     }
 
     @GetMapping("/proteins/{id}/leaderboard")
     public Map<String, Object> leaderboard(@PathVariable("id") String id, @RequestParam(name = "round", required = false) Integer round,
             @RequestParam(name = "n", defaultValue = "20") int n) {
+        bench();
         return bench.leaderboard(id, round, n);
     }
 
@@ -140,6 +170,11 @@ public class ShowcaseController {
             @RequestParam(name = "cohort", required = false) String cohort, @RequestParam(name = "cluster", required = false) String cluster,
             @RequestParam(name = "box", required = false) String box, @RequestParam(name = "samples", required = false) String samples,
             @RequestParam(name = "assay", required = false) String assay, @RequestParam(name = "protein", required = false) String protein) {
+        if (List.of("cell", "design", "residue").contains(what)) {
+            bench();
+        } else {
+            board();
+        }
         switch (what) {
             case "variant":
                 return board.explainVariant(id, Selection.of(cohort, cluster, box, samples), assay);
@@ -168,6 +203,12 @@ public class ShowcaseController {
             throw new IllegalArgumentException("say which protein (protein=HLXK7)");
         }
         return protein;
+    }
+
+    /** A refusal of the kernel's door: its status, code and words. */
+    @ExceptionHandler(com.ash.drishti.kernel.api.services.Kernel.Refused.class)
+    public ResponseEntity<Map<String, Object>> refusedByKernel(com.ash.drishti.kernel.api.services.Kernel.Refused e) {
+        return GenomicsAccess.refusal(e);
     }
 
     @ExceptionHandler(NoSuchElementException.class)

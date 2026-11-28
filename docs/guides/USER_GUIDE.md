@@ -69,7 +69,8 @@ centre → Domain packs*) has a *Finding things* section with the same commands 
 
 | Page | Address | What it is for |
 |---|---|---|
-| Landing (Home) | `/` | The start page, with a button to open the terminal; signed in, the fact of the day and quick cards ([Home: the fact of the day](#home-the-fact-of-the-day)) |
+| Landing | `/` | The start page, with a button to open the terminal; signed in, the fact of the day and quick cards ([Home: the fact of the day](#home-the-fact-of-the-day)); when you work in a lens, `/` opens that lens's Home (`/home`) |
+| Your Home | `/home` | The Home made for your role: figures, Needs you, Pinned, exceptions and what changed ([Your Home](#your-home)) |
 | Terminal | `/t` | The command line, your pinned entities and example commands |
 | View | `/v/<kind>/<id>` | One entity, laid out in full (for example `/v/trade/MX-20000001`) |
 | Pick list and search results | `/s?q=…` | Entities a command names (`TRD MX-200000`) or a `where` search finds |
@@ -103,6 +104,10 @@ panel looks and behaves like the same part anywhere else in Drishti.
 - **Figures first:** the key figures of your role with their change since the reference cut-off and a small history, each one opening its function.
 - **Needs a look (exceptions) and Since:** what needs you now (for example a failed load or a high exception), and what moved since the cut-off.
   **Snooze for 4 hours** on a panel that needs attention puts it to sleep (it comes back when the time is up).
+- **Needs you:** what waits for you and nobody else, worst first (at most eight): the alerts raised for you that are not resolved or snoozed, and
+  the approvals in your inbox that you may decide (four eyes: never your own request). Each row names what it is and opens the page that owns it
+  (**ALERTS**, **APPROVALS**). Another person's alerts and approvals never appear here. **Snooze for 4 hours** puts the panel to sleep.
+- **Pinned:** the entities you pinned with **Pin** on a view (up to 20), as kind and id, in the order you pinned them. Empty until you pin one.
 - **Your role's working panels,** best first for the role. A risk manager sees firm VaR, expected shortfall, the backtest light, limit utilisation by
   desk and exposure against limits; a trader their positions and P&L; a credit officer exposure against limits; an economist the indicators, the
   release calendar and headlines (the external-data module supplies them). Every Home also has **Quick mnemonics**, **Data loads** and
@@ -138,6 +143,10 @@ Homes of your roles, and only while the module that owns a Home is on. With one 
 **My Home** and one button for each Home, which shows that Home in place. This is the quickest way to see what each role sees, with one limit that never
 moves: every figure is still read as *you*, under your row rules and masks, so an administrator who may not read a desk's rows sees that Home with those
 rows left out. The server refuses **View as** to anyone who is not an administrator; everyone else chooses a start Home with the picker.
+
+**A lens opens its Home.** When you work in a lens (Risk, Trading, Market, World) the lens names the Home it opens (the risk manager's, the trader's,
+the market-data Home, the economist's) and that is the one you land on, unless you chose a start Home of your own. It is the same Home page and the
+same buttons; there is no separate landing page per lens.
 
 **The logo** at the top left always brings you back to Your Home.
 
@@ -1210,14 +1219,9 @@ the distribution of scenario P&L; the worst scenarios, the path, the history, co
 wait under *More on this page* (a tap opens that tab); a tap on a tile opens its Explain as a sheet from the bottom; *What-if* and
 *Construct your basket* are for the desktop. On the exposure page the tiles come first, then the profile; the tabs and the scope tree wait
 under *More*. An
-edition's Home keeps its command line, its tiles and its first card; other tables show five rows with *Show all*; charts, maps and the
-quick links wait under *More*.
+Home stacks its panels in your order, one column wide; tables show a few rows with *Show all*.
 
 ![The VaR page on a phone: More on this page lists each tab and panel; What-if and the basket are on the desktop](img/phone/05-var-page-dark.png)
-
-![Drishti Risk's Home on a phone, dark theme: the headline tiles in full, then VaR by desk](img/phone/06-landing-dark.png)
-
-![The end of the same Home in the light theme: a table at a glance with Show all, the quick links under More on this page](img/phone/07-landing-more-light.png)
 
 **The Domains menu on a phone** opens as a list with a heading per column (Blotter, Risk, Markets ...); each entry runs its command as on a desktop (44 px rows, the command on the right), and an entry ending in `…` puts its words in the command line for you to finish.
 
@@ -2452,7 +2456,7 @@ any browser.
 
 Click **Save settings**.
 
-**Pinning.** **Pin** in a view's title line adds the entity to *Pinned* on the terminal home (`/t`), up
+**Pinning.** **Pin** in a view's title line adds the entity to *Pinned* on the terminal home (`/t`) and on your Home, up
 to 20. The button then reads **Pinned**; press it again to unpin.
 
 **Changing your password.** Type the current password and the new one twice (at least 10 characters,

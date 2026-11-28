@@ -32,6 +32,13 @@ that carries them, so a release that leaves a branch out can drop the lines (the
   refuses anyone else and ignores a stored choice of a non-administrator); every row is read as the viewer.
 - **A market-data Home:** the role `market-data-reader` (the demo user `drishti-dev-market`) lands on the Calm Home `market-data`: desk tiles, the USD
   curve, the biggest moves and the data checks (the module's `market_*` tables).
+- **Needs you and Pinned are back, as the person's own tables:** `home_needs` (the alerts raised for them and the approvals they may decide, four eyes
+  respected, worst first) and `home_pinned` (their pinned entities) are bound as the person in every Home Sutra (`core/exceptions-list`, `core/data-table`);
+  no bespoke UI. Two people see only their own rows (tests).
+- **A lens opens a Home, not a landing page:** the lens file's `home.home` names a role Home (Risk `risk-manager`, Trading `trader`, Market `market-data`, World
+  `economist`); `/` opens `/home` and the console passes the Home to the server as the person's default start (`GET /api/v1/homes/view?home=`). The three
+  lens landing templates, the World landing, their scripts and styles, `/api/home/{trading,market,search}`, `/home/landing/*`, the landing rules and the `homeLanding`
+  setting are deleted.
 - **The economist Home names the module that replaced economy** (`external-data`, `config/homes/external-data/`), and a test fails on a Home that
   names a module no manifest declares.
 

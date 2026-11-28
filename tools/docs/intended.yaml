@@ -33,8 +33,7 @@ intended:
   - decision: D5
     why: "the gallery reads its sections of the examples README; Help > Developer reads a section of API_REFERENCE.md; Help redirects a merged page (help.yaml moved:)"
     paths: ["drishti-console/core/examples.py", "drishti-console/core/guides.py", "drishti-console/routes/help_routes.py",
-            "drishti-console/web/templates/help/_developer.html", "drishti-console/config/help.yaml", "tools/settings_schemas.yaml",
-            "drishti-console/plugins/banking/templates/home/market_landing.html"]
+            "drishti-console/web/templates/help/_developer.html", "drishti-console/config/help.yaml", "tools/settings_schemas.yaml"]
   - decision: HELP
     why: "plan section 3.4: a module's Help, its docs.guides and the content its package copies name the feature guides that absorbed its pack and module guides"
     paths: ["modules/*/docs/help.yaml", "modules/*/module.yaml", "modules/*/content.yaml"]

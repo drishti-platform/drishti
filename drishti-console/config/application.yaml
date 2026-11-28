@@ -70,7 +70,7 @@ ui:
     kinds: {}                 # a panel kind's tier over the built-in one, such as { table: more, map: desk }
     rules: []                 # the site's tiers and caps: [{ kind: provenance, tier: desk }, { panel: "*contrib*", max: more }]; keys panel, kind, title, sutra, entity (globs), tier or max
     packs: {}                 # a pack's rules, for the entity kinds it owns: { market-risk: [{ panel: "*contrib*", tier: more }] }
-    pages: {}                 # the VaR and exposure pages and the landings: { var: { contrib: glance, tiles: { max: glance } } }
+    pages: {}                 # the VaR and exposure pages: { var: { contrib: glance, tiles: { max: glance } } }
   # What an error page advises, by the DRS code the server answered with ({kind} and {id} fill in); "default" for any other
   error_advice:
     DRS-1001: Check the identifier, or type part of it in the command line to see what exists.

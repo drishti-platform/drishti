@@ -61,6 +61,7 @@ results of the engines and the change detection (4). Contract names are `home/<n
 | `home_desk_limits`, `home_exposure` | name, value, LIMIT, CHANGE, USE, TONE | the VaR and exposure engines against the limits store; USE (value / limit) and TONE (`bad` from 95 %, `warn` from 80 %, else `ok`; none without a limit) are the server's, the console only draws them |
 | `home_stress` | SCENARIO, PNL, LIMIT | the stress results (computed, never stored: computed-risk-measures rule) |
 | `home_positions`, `home_pnl_days`, `home_market_tiles` | as the fragments' columns | the position and P&L results; market data |
+| `home_needs`, `home_pinned` | SEVERITY, MESSAGE, SUBJECT, COMMAND, KIND / KIND, ID | the person's own: the alerts raised for them and the approvals they may decide (worst first, at most eight); the entities they pinned (setting `pinned`). Read as the person, so no one sees another's |
 | `home_mnemonics`, `home_calendar`, `home_news` | MNEMONIC, ABOUT / DATE, TIME, TITLE, KIND, COMMAND / AT, HEADLINE, SOURCE, LINK | the person's most used mnemonics (settings), the calendar, the headline feeds |
 
 Table names and columns are the proposal to confirm when the contracts are written; the measure codes in the measures files (`PNL_DAY`,

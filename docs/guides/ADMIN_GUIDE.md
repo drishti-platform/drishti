@@ -172,6 +172,11 @@ packs; a user never given a list sees the default packs), an initial password of
 **Save**. The demo profile does the same on the first start and gives each user the password in the table of [section 2.1](#21-sign-in-as-the-development-admin);
 until a password is changed, Admin shows the red default-password warning, so never run the demo profile in production.
 
+**Homes of the demo users.** `drishti-dev-risk` has the role `risk-trading`, which opens the risk manager's Home first and the trader's
+second (a **Home** picker on the page switches). `drishti-dev-genomics` and `drishti-dev-market` hold roles that are tied to no Home, so
+they land on the landing page; to give the genomics user the genomicist Home, set the role's Home to `genomicist` in **Admin → Roles**
+([section 15.1](#151-configuring-role-homes)). The development administrator is offered every Home.
+
 **Check each one.** Sign out and sign in as each user (a private window is quickest):
 
 | As | Try | Expect |
@@ -899,6 +904,11 @@ home:
       rank: { risk-manager: 80, risk-officer: 85, trader: 50 }   # weight per role Home; "*" is any Home
 ```
 
+**Who is offered a Home.** A person is offered the Homes their roles name (`drishti.homes.roles`, or the role's `home` field edited in Admin → Roles) while
+every module the Home needs is on; an **administrator** is offered every such Home, so the Home picker and **View as** let an administrator read
+each role's Home. The figures are still the signed-in person's own (row rules and masks), and a Home of a module that is switched off is offered to
+nobody. The person's own start Home is the setting `home` (`PUT /api/home/me`, which refuses a Home they are not offered).
+
 **Ranking.** A card is offered when one of the person's Homes has a weight for it (or it has a `*` weight); the highest weight over all their
 Homes puts it first, so a person with several roles sees the cards of every one ranked together. A card of a module that is switched off is
 not offered. A metric card whose figure the server does not have (its engine is off) is left out; a table card says its own empty words
@@ -1559,6 +1569,18 @@ offers none of its lenses, functions, packs or engines (its engines show *not in
 `404 DRS-1025`; a function that is off answers `404 DRS-1026`. The switch is `config/modules/<module>.yaml` (`POST /api/v1/admin/modules` writes it, with a reason, audited) or
 `DRISHTI_MODULES_<MODULE>_ENABLED`, and a change takes effect at the next start. The how-to, the licence file and what each module brings
 to the console are in [OPERATIONS_GUIDE.md, Modules on or off](OPERATIONS_GUIDE.md#65-engines-modules-and-editions).
+
+<!-- i8/modules -->
+<!-- Replace the first paragraph of this section by this one if the branch i8/modules is in the release; drop the block otherwise. -->
+**The modules, as shipped.** **banking** (titled Risk: VaR and ES, exposure, FRTB-SA, SIMM, sensitivities, the MR cube, the official results and the
+trading, market-risk and counterparty-risk packs), **market-data**, **reference-data** (the counterparties, books, desks and traders every domain
+reads, and the GLEIF legal entities), **external-data** (the world-economy, world-development, national-statistics, oecd, central-banks, funds and us-equities
+packs, and the World and Markets lenses), **news-and-events** (the news-and-markets, official-news and gdelt-events packs), the source-system modules
+(`source-murex`, `source-calypso`, `source-endur`, `source-ici`, `source-swapone`, `source-wss`) and **genomics**. A pack is the switch, a module the unit
+you license and install ([KERNEL_AND_MODULES.md section 21.9](../architecture/KERNEL_AND_MODULES.md#219-the-content-modules-reference-data-external-data-and-news-and-events)).
+A switch file or a setting that names a retired module id (`economy`, `capitalmarkets`, `capital-markets`) **stops the server from starting**, with one
+line naming the file or key and the modules that replace it (`external-data`, `news-and-events`); rename it and the start succeeds. Nothing is translated for you.
+<!-- /i8/modules -->
 
 ### 22.1 Module packages and the shared lib folder
 
@@ -2613,7 +2635,8 @@ between them without the menu.
 | Tokens | `/admin/tokens` | Every personal API token (never its secret): its owner, its scopes (*read only* or what it may write), when it was last used (in the console's time zone, named), and revoking any of them ([API_REFERENCE.md (clients)](INTEGRATION_GUIDE.md#33-clients-scripts-notebooks-and-excel)) |
 | Access | `/admin/access` | Who read which entity, filtered by user, action, kind, id and dates ([ADMIN_GUIDE.md](ADMIN_GUIDE.md)) |
 | AI | `/admin/ai` | The AI layer: off by default; providers, models, MCP servers and a test call ([ADMIN_GUIDE.md › 27.1 Model providers](#271-model-providers)) |
-| Data loads | `/admin/loads` | What your ETL announced, what is due and what is late ([DATA_GUIDE.md](DATA_GUIDE.md#1-telling-drishti-new-data-has-landed)); its **Inbox** tab (`/admin/loads/inbox`, while the data inbox runs) is the inbox's status board: files waiting, the run loading table by table, the last cycles, failures with **Retry**, and **Load now** ([DATA_LAKE_GUIDE.md section 3.1](DATA_LAKE_GUIDE.md#31-the-data-inbox)) |
+| Data loads | `/admin/loads` | What your ETL announced, what is due and what is late ([DATA_GUIDE.md](DATA_GUIDE.md#1-telling-drishti-new-data-has-landed)); its **Inbox** tab (`/admin/loads/inbox`, while the data inbox runs) is the inbox's status board, and **Upload** (`/admin/loads/upload`) the one way to put a file there from the browser ([29.6](#296-admin--data-loads-the-inbox-the-upload-and-the-lakes)); the Inbox board is: files waiting, the run loading table by table, the last cycles, failures with **Retry**, and **Load now** ([DATA_LAKE_GUIDE.md section 3.1](DATA_LAKE_GUIDE.md#31-the-data-inbox)) |
+| Lakes | `/admin/lakes` | Every lake file and each table by its symbolic name: where it resolves, its format and contract, **configured** or **fallback**, its figures and business dates; Maintain ([29.6](#296-admin--data-loads-the-inbox-the-upload-and-the-lakes)) |
 | Collaboration | `/admin/collab` | Moderation of shares and threads, legal holds, export, the mail outbox and chat bridges ([ARCHITECTURE.md §31](../architecture/ARCHITECTURE.md#31-collaboration-write-back-and-approvals)) |
 | Embedding | `/admin/embedding` | Host applications that show Drishti views in their own pages ([INTEGRATION_GUIDE.md](../architecture/ARCHITECTURE.md#30-the-client-renderer-and-drishti-elements)) |
 | BI | `/admin/bi` | Powers per role and who creates workspaces (needs `bi-admin`; [README.md](bi/README.md)) |
@@ -2693,6 +2716,22 @@ Switching a pack **off** takes effect for every user at their next click: its ki
 mnemonics and suggestions disappear, and it leaves every pack menu. Switching it **on** brings it all back.
 The choice is kept in the database, so it survives restarts, and each switch is in the audit log
 (`pack-disabled`, `pack-enabled`).
+
+**What follows the switch.** Switching a pack off does more than hide its screens; everything that belongs to the pack goes quiet with it, and
+comes back when it is switched on (nothing is unloaded, so switching on is instant):
+
+| Of the pack | While it is off |
+|---|---|
+| Kinds, mnemonics, suggestions, forms, menus | not offered (as above) |
+| **Connectors** it names | stopped and not read through, except one that another switched-on pack also names |
+| **Sutras** | no longer offered for their kind; a source system's pack owns no kind of its own, so its Sutras follow the pack |
+| **Inbox rules** (`dataload.yaml` in the pack's folder; a rule there that names no `pack:` belongs to the pack) | not matched: a file they would route waits in the inbox, with the reason in words on the Inbox board, and is loaded after the pack is switched on |
+| **Maps** (`mappings/` in the pack's folder) | not applied, with the connector that uses them |
+| **Help pages** (a `help.yaml` page that names `pack:`) | leave Help and the Help search |
+
+So a source system's pack (Murex, Endur, ...) is switched off in one place: its screens, its Sutras, its connectors and its inbox rules go
+together, and the trades already loaded stay in their lake. The pack's own files are described in
+[BUILD_GUIDE.md](BUILD_GUIDE.md#48-connectors-the-pack-names-them-the-site-owns-them) (`dataload`, `mappings`).
 
 Two safeguards keep packs consistent:
 
@@ -2799,5 +2838,39 @@ A connector whose plugin is installed but has no settings (a Kafka connector wit
 `feed`) stays **idle**: it is not started and is not counted as failed. Anything else that is not **UP** is
 explained in [runbooks/source-down.md](OPERATIONS_GUIDE.md#201-source-down-or-slow). A connector a pack names but that has no file shows as *not configured* (its kinds answer `DRS-1011`);
 an administrator creates it in *Admin → Connectors*, and a connector file with a mistake is listed on Health as a bad file while the last good configuration keeps running.
+
+### 29.6 Admin → Data loads: the inbox, the upload and the lakes
+
+The **Data loads** page has four tabs: **Loads** (what each pack expects and what landed), **Inbox** and **Upload** (while the data inbox runs
+somewhere in the cluster), **Feeds** (the public-data feeds and their runs) and **Load a file into a lake**, which opens the Lakes page.
+
+**Upload is the one way a file reaches a table from the browser.** It takes the file, builds its `.ready` from a form, checks both against the
+kind's contract and pushes the pair to the data inbox; the server loads it, exactly as it loads a file dropped in the inbox folder or sent with
+`drishti.py dataload ready`. The console writes into no lake itself and opens no lake folder: it asks the server (the page works the same on a console
+on another machine). The steps, the checks, the replace question and the command line are in
+[DATA_LAKE_GUIDE.md section 3.5](DATA_LAKE_GUIDE.md#35-upload-a-file-and-build-its-ready-admin--data-loads--upload); a token needs `loads:write`, and the
+push is audited with the file's SHA-256 and the `.ready` text.
+
+**Lakes** (`/admin/lakes`) lists every lake file under `config/lakes/` (in production, the site folder's, [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md#production-deployment-linux))
+and, per lake, a count such as *183 configured* or *5 configured, 3 fallback*. Open a lake to see each of its tables **by its symbolic name**
+(`trading.trade`, `risk.scenario-pv`) with:
+
+| Column | Says |
+|---|---|
+| Location | where the name resolves: an absolute path or URI |
+| Format, Contract | `delta` or `iceberg`; the kind's contract the table is read by |
+| **How** | **configured**: the lake file gives the table its own `uri:` (or `${lake.root}/...`). **Fallback**: no entry; the layout puts it at `<root>/<domain>/<table>` |
+| Rows, files, bytes, dates | read from the table's own log; no data file is opened |
+
+A fallback works, but it is a guess about a folder layout. The production profile refuses to start while any table the server reads is a fallback
+([PRODUCTION_STANDARD.md](../admin/PRODUCTION_STANDARD.md), rule T1); to fix it, run `drishti.py lake entries` (it lists the entries a lake still lacks,
+`--write` writes them from where the layout puts the tables today) and review the file. A bank's own lake is bound the same way, entry by entry:
+[TABLE_CATALOGUE.md, Binding a bank's external lake](../admin/TABLE_CATALOGUE.md#binding-a-banks-external-lake). A table's page lists its business
+dates, columns and runs; **Maintain** (compaction, vacuum, Iceberg orphan files) runs the lake tools beside the lakes, so it is offered on a console that
+has them ([DATA_LAKE_GUIDE.md section 2.2.1](DATA_LAKE_GUIDE.md#221-tables-by-symbolic-name-where-a-name-is)).
+
+**Admin changes go to the site folder.** Everything an administrator saves in these pages (a lake entry, a connector, a switch, a routing rule) is written
+to the site folder (`drishti.site.dir`), never into the release; the release folder is read only. Which folder it is, how to give it to the service
+user and how the layers combine are in [OPERATIONS_GUIDE.md, Lay out the machine](OPERATIONS_GUIDE.md#production-deployment-linux).
 
 Managing users and roles is explained in [ADMIN_GUIDE.md](ADMIN_GUIDE.md).

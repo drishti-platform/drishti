@@ -28,7 +28,9 @@ with no generated code to trust. The same parts work outside Drishti: Rachana an
 Lake as a Delta and Iceberg library in Java or Python, Tools as shared Java utilities.
 
 Everything specific to a field comes as a **module**: its data shapes, measures, screens and rules. Banking risk, capital markets,
-economic data and genomics are modules today; a new field is a new module, not a new product.
+economic data and genomics are modules today; a new field is a new module, not a new product. Each person lands on **Home** after
+signing in: the cards, the figures and the items that need them, for their role, which they can pin, hide, reorder, snooze or view as
+another role. <!-- i8/modules: reference-data, external-data and news-and-events modules and the drishti.public-sector distribution replace the economy and capital-markets modules; update this paragraph and the counts if that branch is in the release. -->
 
 ## Sample uses
 
@@ -95,7 +97,7 @@ drishti-elements (the JavaScript libraries). The versions that go together are s
 - 20 GB of free disk.
 - Windows: `py -3.13 tools\drishti.py ...`. Linux and macOS: `python3.13 tools/drishti.py ...`. The examples below use Linux.
 
-## Quick path
+## Quick path (development and demo)
 
 1. **Get the code.** Unzip the platform source zip and the wheel pack (into `~/drishti-wheels`), or run the platform's `clone_all.py`.
    A new user follows the platform's `START_HERE_<OS>.pdf`.
@@ -116,6 +118,15 @@ drishti-elements (the JavaScript libraries). The versions that go together are s
 Open <http://127.0.0.1:17480> while it runs. Every step with the output you should see:
 [DEPLOYMENT_AND_QA_GUIDE.md](docs/DEPLOYMENT_AND_QA_GUIDE.md).
 
+## Production
+
+Production is Linux and installs from a **binary package** (the server, the modules, the console, the tools and the pinned Python
+libraries; nothing is built on the host). One layout serves every site: each release unpacked beside the others in
+`/opt/drishti/releases/<version>` (read only) with its own Python, the running one named by `current` and the last by `previous`, the
+site's settings and Admin changes in the site folder `/etc/drishti` (`drishti.site.dir`), and everything Drishti writes in its own data
+folder. `drishti.profile=production` refuses an unsafe start and says why; an upgrade switches one link and a rollback switches it back.
+The console runs as its own deployable and speaks to the server only through its versioned API.
+
 ## IDE launchers
 
 Each IDE opens its own project and sees its own launchers, generated from one table (`tools/launch/launchers.yaml`):
@@ -135,7 +146,8 @@ Details: [IDE_GUIDE.md](docs/guides/IDE_GUIDE.md).
 |---|---|
 | install and verify, Windows, Linux, macOS | [DEPLOYMENT_AND_QA_GUIDE.md](docs/DEPLOYMENT_AND_QA_GUIDE.md); the platform's `START_HERE_<OS>.pdf` |
 | change the code | [QUICKSTART_DEVELOPERS.md](docs/QUICKSTART_DEVELOPERS.md), [IDE_GUIDE.md](docs/guides/IDE_GUIDE.md), [DEVELOPER_GUIDE.md](docs/guides/DEVELOPER_GUIDE.md) |
-| run on Linux in production | [OPERATIONS_GUIDE.md](docs/guides/OPERATIONS_GUIDE.md#production-deployment-linux) |
+| run on Linux in production (install from the binary package, upgrade, roll back) | [OPERATIONS_GUIDE.md](docs/guides/OPERATIONS_GUIDE.md#production-deployment-linux), the rules it keeps: [PRODUCTION_STANDARD.md](docs/admin/PRODUCTION_STANDARD.md) |
+| load your own data (a page per load type, the upload page, the table catalogue) | [DATA_LAKE_GUIDE.md](docs/guides/DATA_LAKE_GUIDE.md), [TABLE_CATALOGUE.md](docs/admin/TABLE_CATALOGUE.md) |
 | find every command and option | [CLI_REFERENCE.md](docs/guides/CLI_REFERENCE.md) |
 | use the console | [USER_GUIDE.md](docs/guides/USER_GUIDE.md), [tutorials](docs/tutorials/README.md) |
 | build a pack, a screen or a module | [BUILD_GUIDE.md](docs/guides/BUILD_GUIDE.md) |
@@ -147,39 +159,39 @@ The main documents also come as PDFs: [Deploy and verify](docs/DEPLOYMENT_AND_QA
 
 <!-- code-volume:begin -->
 
-*Measured 2026-11-22 from the files the repository tracks (`python3 tools/docs/code_volume.py`; sample data and vendored libraries not counted).*
+*Measured 2026-11-28 from the files the repository tracks (`python3 tools/docs/code_volume.py`; sample data and vendored libraries not counted).*
 
 | Language | Lines | Files |
 |---|---|---|
-| Java, product | 397k | 2,016 |
-| Java, tests | 165k | 1,018 |
-| Python, product (console, tools, loaders, feeds) | 155k | 778 |
-| Python, tests | 112k | 678 |
-| JavaScript, product (console and its own Elements libraries) | 57k | 267 |
+| Java, product | 415k | 2,108 |
+| Java, tests | 173k | 1,062 |
+| Python, product (console, tools, loaders, feeds) | 162k | 814 |
+| Python, tests | 119k | 720 |
+| JavaScript, product (console and its own Elements libraries) | 57k | 269 |
 | JavaScript, tests | 1.0k | 7 |
-| CSS | 10k | 100 |
-| HTML (templates and pages) | 42k | 377 |
-| YAML: configuration, Sutras, data contracts | 120k | 1,698 |
-| Markdown: guides, tutorials, design | 221k | 376 |
+| CSS | 10k | 101 |
+| HTML (templates and pages) | 42k | 379 |
+| YAML: configuration, Sutras, data contracts | 130k | 1,764 |
+| Markdown: guides, tutorials, design | 223k | 274 |
 
-About **662k lines of product code** and **278k lines of tests** (42% of the product code), with **221k lines of documentation**.
+About **687k lines of product code** and **293k lines of tests** (43% of the product code), with **223k lines of documentation**.
 
 | What | Count |
 |---|---|
-| Maven modules | 46 in 10 subject folders: `compute/`, `drishti-sdk/`, `examples/`, `kernel/`, `lake/`, `modules/`, `net/`, `packaging/`, `plugins/`, `testing/` |
+| Maven modules | 47 in 10 subject folders: `compute/`, `drishti-sdk/`, `examples/`, `kernel/`, `lake/`, `modules/`, `net/`, `packaging/`, `plugins/`, `testing/` |
 | Modules (`.dmod`) | 12: banking, capitalmarkets, economy, genomics, market-data, source-calypso, source-endur, source-ici, source-murex, source-swapone, source-wss, trading |
 | Lenses | 12: world, markets, publicsector, research, cio, oversight, risk, trading, market, cro, mr-cube, ccr-cube |
 | Functions a module declares | 124 (48 banking, 12 capitalmarkets, 35 economy, 6 genomics, 23 market-data); every other command word is the kernel's |
-| Console routes | 646 |
-| Server REST handlers | 828 |
+| Console routes | 654 |
+| Server REST handlers | 854 |
 | Drishti's own Elements libraries (Drishti Elements itself: vendored) | 2 libraries, 18 ES modules |
 | Domain packs | 19: banking 3, capital-markets 2, core 3, economy 8, genomics 2, market-data 1 |
 | Sutras in the shipped packs | 265 |
 | Connectors | 13 plugins (a driver or native library each) and 9 built-in types |
-| Feeds | 13 |
-| Lake files | 9 |
-| Test files | 1,548: Java 932, console 278, browser 181, tools 150, JavaScript 7 |
-| Documents under docs/ | 200 (25 guides, 11 tutorials) |
+| Feeds | 15 |
+| Lake files | 10 |
+| Test files | 1,630: Java 974, console 286, browser 183, tools 180, JavaScript 7 |
+| Documents under docs/ | 180 (22 guides, 19 tutorials) |
 
 <!-- code-volume:end -->
 

@@ -91,7 +91,7 @@ first administrator (an empty user store), also creates three demo users with th
 |---|---|---|---|---|
 | `drishti-dev-admin` | `drishti-dev-admin123` | `admin` | all | every Home |
 | `drishti-dev-risk` | `drishti-dev-risk123` | `risk-trading` (trading, market-data, market-risk, counterparty-risk, core) | `core`, `trading`, `market-data`, `market-risk`, `counterparty-risk` | the risk manager's, then the trader's |
-| `drishti-dev-genomics` | `drishti-dev-genomics123` | `genomics-reader` (genomics, genomics-showcase, protein-engineering) | `genomics`, `genomics-showcase`, `protein-engineering` | none yet (no genomics Home is shipped) |
+| `drishti-dev-genomics` | `drishti-dev-genomics123` | `genomics-reader` (genomics, genomics-showcase, protein-engineering) | `genomics`, `genomics-showcase`, `protein-engineering` | none: the role is not tied to a Home (the genomicist Home opens for the `genomicist` and `geneticist` roles; [ADMIN_GUIDE.md, Configuring role Homes](../guides/ADMIN_GUIDE.md#151-configuring-role-homes)) |
 | `drishti-dev-market` | `drishti-dev-market123` | `market-data-reader` (market-data) | `market-data` | none |
 
 Admin shows the same red *default password* warning, naming every account that still signs in with a published password, until each is

@@ -13,6 +13,60 @@
 
   See the LICENSE file in the root of this repository for the full terms.
 -->
+# Drishti 2.9.11.i8: release notes
+
+*The production release.* A layout every site shares, a profile that refuses an unsafe start, a Home for every role, one table catalogue,
+loaders with a page per load type, and the first engine paths of Drishti Risk behind switches. Lines in comments name the branch that
+carries them so the lead can trim them.
+
+## What changes for users
+
+- **Home:** signing in lands on your role's Home (cards, Needs you, what changed since your last visit); pin, hide, move and snooze cards,
+  switch Calm and Cockpit, **View as** another role.
+- **Data loads:** Admin, Data loads, **Upload** takes a data file, builds its `.ready` from a form and checks both against the kind's contract;
+  Help has a page for every load type.
+- **Genomics** screens read the genomics lake tables. <!-- i8/merge3 -->
+
+## Upgrade notes
+
+Read these before you stop the running release. The upgrade is a side-by-side switch (`OPERATIONS_GUIDE`, Production deployment, section 11).
+
+1. **The site folder.** Production needs `drishti.site.dir` (`DRISHTI_SITE_DIR`, `/etc/drishti`): a folder outside every release that holds the
+   site's files and every Admin change. The server and the console refuse to start without it. A write that would land in the release is
+   refused (`DRS-1038`). Move the site's overrides (connectors, engines, modules, access, lakes, console) there before the switch.
+2. **The production profile.** `drishti.profile=production` refuses to start and names the fix when: sign-in is off, the token secret is
+   under 32 bytes, the built-in administrator or demo users are seeded, the demo source or a development switch is on, engines are not pinned
+   or not licensed, a clustered node uses SQLite, TLS is not stated (`drishti.production.tls=proxy`), a clustered node advertises plain HTTP
+   without `drishti.production.net-tls=mesh`, or the console's cookies are not secure. The rules and their checks:
+   `docs/admin/PRODUCTION_STANDARD.md`. The `demo` profile keeps the open start.
+3. **The layout.** Unpack each release into `/opt/drishti/releases/<version>` with its own Python in `/opt/drishti/python/<version>`
+   (linked as `<release>/python`); `current` names the running release and `previous` the one a rollback returns to; `prod.ini`,
+   `release.env` and the units name `/opt/drishti/current` and never change again. An install made in the old layout is made switchable once
+   (guide, 11.1). The data folder stays where it was and is never inside a release.
+4. **The upgrade check.** Run `tools/drishti.py --settings /etc/drishti/prod.ini upgrade check <new release folder>` with the running
+   release's Python: it is read only and says whether the Python pins changed (then make a new Python in its own prefix and run the two pip
+   commands it prints), that the site folder is set and outside both releases, and which settings keys the new release does not know.
+5. **Retired names stop the start.** Retired settings keys (`drishti.edition`, `drishti.branding.*`) refuse the start and name the key to
+   use instead; the VaR route switch is `drishti.module.banking.var.route` (a key ending in `.path` is a folder). Retired module ids
+   (`economy`, `capital-markets`) refuse the start and name the module that replaces them. <!-- i8/modules -->
+6. **Demo users** on the demo profile are `drishti-dev-admin`, `drishti-dev-risk`, `drishti-dev-genomics` and `drishti-dev-market`
+   (password = user id + `123`); production never creates them, and Admin warns while any still signs in with a published password.
+7. **Install from the binary package** (`make_binary.py`): no Maven, no compiler, no network on the host; verify it with
+   `verify_package.py` ("package verified"), then the two pip commands from its `wheels/` folder. Carry over your own jars in `lib/ext`.
+8. **The console is its own deployable.** It needs a server whose `GET /api/v1/version` it accepts, and opens no lake folder: lake tables,
+   details and run logs come from the server. <!-- i8/console-lake -->
+9. **Reporting currency.** A request in a currency other than the reporting one is answered by converting the book first; a few figures in
+   another currency move by a unit or two against i7n. `drishti.module.banking.var.reporting-currency` (USD as shipped) is the installation's
+   one currency setting.
+10. **Drishti Risk engines are behind switches** (`drishti.module.banking.var.route`, `...var.consumers.route`, `...exposure.route`);
+    <!-- TODO(R2 flip): say whether the shipped default is in-tree or engine, and what a site does to move. --> with the shipped defaults nothing changes for a site.
+
+## Known limits
+
+Production is Linux; Windows is for demonstration and QA. Routes not yet on an engine stay in-tree. <!-- R2: list them from the final R2 state. -->
+
+---
+
 # Drishti 2.9.11.i7n: release notes
 
 *A documentation release on i7m: the guide merges.* No product behaviour changes.

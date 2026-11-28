@@ -132,6 +132,7 @@ public final class ProductionProfile {
         if (!ssl && !tls.equals("proxy")) {
             out.add("TLS is not stated: the server speaks plain HTTP. Fix: enable server.ssl (key store), or declare that a proxy ends TLS in front with drishti.production.tls=proxy (DRISHTI_PRODUCTION_TLS=proxy)");
         }
+        out.addAll(TablesRule.refusals(com.ash.lake.config.Lakes.current(com.ash.drishti.lakehost.DrishtiLake.runtime())));     // T1: every table binds its own uri
         return out;
     }
 

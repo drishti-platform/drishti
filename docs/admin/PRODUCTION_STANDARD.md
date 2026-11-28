@@ -22,7 +22,7 @@ check that enforces it. The install, upgrade and backup commands are in
 [CONFIGURATION.md](CONFIGURATION.md). This page repeats neither.
 
 Production is Linux. The sections so far: 1 the production profile, 2 site configuration, 3 upgrades (releases side by side, installed from the
-binary package), 4 the console, 5 data and access. The other sections of the standard (data, targets, secrets, modules and engines, lifecycle, acceptance)
+binary package), 4 the console, 5 data and access, 6 tables. The other sections of the standard (data, targets, secrets, modules and engines, lifecycle, acceptance)
 are added as their rules are built. **One layout** serves all of them: releases in `/opt/drishti/releases/<version>` (read only) with the
 `current` and `previous` links, the site's files only in `/etc/drishti` (`drishti.site.dir`), the data in its own folder (`/srv/drishti/data`:
 identity database, content store, lakes, logs), each release with its own Python (`<release>/python`).
@@ -169,3 +169,9 @@ The console (`drishti-console`) is a deployable of its own.
 |---|---|---|
 | Every loader stages under `<data>/tmp/loaders`, never the system temp folder | the loaders take their staging folder from the data folder's layout | `tools/lake/test_loader_staging.py` |
 | Every controller is classified for row-rule coverage | each controller route is listed in `row-rule-route-inventory.tsv` (test resources of the server) with how its rows are filtered; a new controller without a row fails the build | `RowRuleRouteInventoryGuardTest` |
+
+## 6. Tables
+
+| # | Rule | How it is met | Enforced by |
+|---|---|---|---|
+| T1 | Every table has an explicit registry entry: its own `uri:`, `format` and contract in its lake file. A table resolved only by the lake's layout (`<root>/<domain>/<table>`) is a development and demo fallback and is refused | `python tools/drishti.py lake entries --write` generates the entries; Admin -> Lakes shows each table as configured or fallback; a bank's external lake is bound as in [TABLE_CATALOGUE.md, Binding a bank's external lake](TABLE_CATALOGUE.md) | the production start check (`TablesRule`, called by `ProductionProfile.refusals`); `TablesRuleTest` |

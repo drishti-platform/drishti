@@ -39,6 +39,7 @@ class ProductionProfileStartTest {
         java.nio.file.Path root = TestRun.root();
         java.nio.file.Files.writeString(root.resolve("prodprofile-licence.yaml"), "licence:\n  products: [var]\n");
         java.nio.file.Files.createDirectories(root.resolve("prodprofile-access"));
+        java.nio.file.Files.createDirectories(root.resolve("prodprofile-home"));
         java.nio.file.Files.writeString(root.resolve("prodprofile-access/licence.yaml"), "licence: {}\n");
     }
 

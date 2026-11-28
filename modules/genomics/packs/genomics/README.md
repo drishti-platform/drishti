@@ -26,6 +26,8 @@ kinds:
 - sample
 - gene
 - cohort
+- clinvar-variant
+- ensembl-gene
 commands:
   GENOMICS: pack overview
 depends-on:
@@ -98,6 +100,26 @@ About: Cohort.
 
 No samples ship: documents are read live from its connector `genomics-store` (plugin `delta`).
 
+### `clinvar-variant`
+
+read through connector `genomics-store`.
+
+About: ClinVar variant.
+
+**Id:** set by its connector (no samples ship).
+
+No samples ship: documents are read live from its connector `genomics-store` (plugin `delta`).
+
+### `ensembl-gene`
+
+read through connector `genomics-store`.
+
+About: Ensembl gene.
+
+**Id:** set by its connector (no samples ship).
+
+No samples ship: documents are read live from its connector `genomics-store` (plugin `delta`).
+
 ## Screens and commands
 
 | Command | Kind | Opens |
@@ -120,7 +142,7 @@ The connectors it brings (written once to `config/connectors/<name>.yaml`, then 
 
 | Connector | Plugin | Kinds | Enabled |
 |---|---|---|---|
-| `genomics-store` | `delta` | `variant`, `sample`, `gene`, `cohort` | `${DRISHTI_LAKE_ENABLED:true}` |
+| `genomics-store` | `delta` | `variant`, `sample`, `gene`, `cohort`, `clinvar-variant`, `ensembl-gene` | `${DRISHTI_LAKE_ENABLED:true}` |
 
 Settings (environment variables) its connectors read: `DRISHTI_LAKE_ENABLED`.
 

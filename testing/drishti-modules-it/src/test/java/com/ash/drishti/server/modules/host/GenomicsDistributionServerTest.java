@@ -47,7 +47,7 @@ import org.springframework.test.web.servlet.MvcResult;
 /**
  * Drishti Genomics (docs/architecture/KERNEL_AND_MODULES.md section 20.4) boots from its file alone: the thin kernel (drishti-server, no banking)
  * with the genomics module, built here from its sources (modules/genomics, the SDK's layout) and dropped into the modules folder as an administrator would. Its
- * brand, the Research lens, none of the kernel's packs (no counterparty, book or desk) and no risk word; the module loaded, its VCF reader
+ * brand, the Research lens, none of the kernel's packs (no counterparty, book or desk) and no risk word; the module loaded, its kinds read from the genomics lake
  * routed by the kernel like any connector, its kinds, functions, API and pages answering. The .dmod passes the fourteen checks.
  */
 @SpringBootTest(properties = {"drishti.distribution=genomics", "drishti.distributions-dir=../../config/distributions",
@@ -78,10 +78,28 @@ class GenomicsDistributionServerTest {
             Files.createDirectories(work.resolve("modules"));
             Files.copy(dmod, work.resolve("modules").resolve(dmod.getFileName()));     // dropped in, as an administrator would
             ModuleFixtures.write(work.resolve("placement.yaml"), "modules:\n  genomics:\n    parts:\n      api: { nodes: [local] }\n");
+            loadDemoLake(work.resolve("data").resolve("delta").resolve("genomicslake"));
         }
         System.setProperty("drishti.modules.home", work.resolve("modules").toString());
         System.clearProperty("drishti.modules.sources");
         System.clearProperty("drishti.modules.dev");
+    }
+
+    /** The module reads the genomics lake: its demo rows (data/testdata/genomics) loaded into Delta tables the way the data inbox loads them. */
+    static void loadDemoLake(Path lake) throws IOException {
+        java.util.Map<String, String> keys = java.util.Map.of("variant", "VARIANT_ID", "sample", "SAMPLE_ID", "gene", "GENE");
+        for (var e : keys.entrySet()) {
+            Path file;
+            try (var files = Files.list(Path.of(TestRoots.repo(), "data", "testdata", "genomics", e.getKey()))) {
+                file = files.filter(f -> f.getFileName().toString().endsWith(".jsonl.gz")).findFirst().orElseThrow();
+            }
+            Path cfg = work.resolve("load-" + e.getKey() + ".yaml");
+            Files.writeString(cfg, "source:\n  files: '" + file.toAbsolutePath().normalize() + "'\n  as-of: 2026-11-16\n  id: " + e.getValue() + "\ntarget:\n  format: delta\n  path: '"
+                    + lake.resolve("genomics").resolve(e.getKey()) + "'\n  domain: genomics\n  kind: " + e.getKey() + "\n  table: " + e.getKey() + "\n");
+            java.io.ByteArrayOutputStream said = new java.io.ByteArrayOutputStream();
+            assertThat(com.ash.lake.load.LakeLoad.run(com.ash.drishti.lakehost.DrishtiLake.runtime(), new String[] {"--config", cfg.toString(), "-q"},
+                    new java.io.PrintStream(said, true, java.nio.charset.StandardCharsets.UTF_8))).as(e.getKey() + ": " + said.toString(java.nio.charset.StandardCharsets.UTF_8)).isZero();
+        }
     }
 
     @org.junit.jupiter.api.AfterAll
@@ -123,8 +141,8 @@ class GenomicsDistributionServerTest {
         assertThat(getJson("/public/about").path("lenses").toString()).contains("research");
         List<String> packs = new ArrayList<>();
         getJson("/api/v1/packs").forEach(p -> packs.add(p.path("name").asText()));
-        assertThat(packs).as("none of the kernel's packs, no module's finance: the genomics module's own showcase packs")
-                .containsExactlyInAnyOrder("genomics-showcase", "protein-engineering");
+        assertThat(packs).as("none of the kernel's packs, no module's finance: the genomics module's own packs: genomics and its two showcase packs")
+                .containsExactlyInAnyOrder("genomics", "genomics-showcase", "protein-engineering");
         List<String> suggested = new ArrayList<>();
         getJson("/api/v1/command/suggest?q=C").forEach(s -> suggested.add(s.path("mnemonic").asText()));
         assertThat(suggested).doesNotContain("CPTY", "CCP", "CRV", "CDS");
@@ -144,7 +162,7 @@ class GenomicsDistributionServerTest {
     }
 
     @Test
-    void theModuleLoadsItsVcfReaderServesTheKindsAndItsFunctionsAndPagesAnswer() throws Exception {
+    void theModuleLoadsReadsTheLakeServesTheKindsAndItsFunctionsAndPagesAnswer() throws Exception {
         assertThat(node.runtime().health()).extracting(ModuleHealth::id, ModuleHealth::state)
                 .contains(org.assertj.core.groups.Tuple.tuple("genomics", ModuleHealth.State.LOADED));
         List<EntityDocument> variants = new ArrayList<>();

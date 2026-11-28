@@ -65,6 +65,9 @@ public class ApiExceptionHandler {
         if (e instanceof com.ash.drishti.server.bi.runs.RunProblem x) {
             return run(x).getBody();
         }
+        if (e instanceof com.ash.drishti.api.error.EnginePreparing x) {
+            return preparing(x).getBody();
+        }
         if (e instanceof com.ash.drishti.server.caches.RefusedForNow x) {
             return refusedForNow(x).getBody();
         }
@@ -150,6 +153,23 @@ public class ApiExceptionHandler {
             b.header(org.springframework.http.HttpHeaders.RETRY_AFTER, Long.toString(e.retryAfterSeconds()));
         }
         return b.body(p);
+    }
+
+    /**
+     * An engine preparing the snapshot asked (ENGINE_SPEC 7.2 rule 5): {@code 503}, {@code DRS-1024}, {@code Retry-After}, and the words
+     * the console's one busy message shows ({@code busy}, {@code title}: Preparing 2026-09-30, {@code because}: the stage, {@code work}).
+     */
+    @ExceptionHandler(com.ash.drishti.api.error.EnginePreparing.class)
+    org.springframework.http.ResponseEntity<ProblemDetail> preparing(com.ash.drishti.api.error.EnginePreparing e) {
+        ProblemDetail p = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        p.setTitle(e.title());
+        p.setProperty("code", e.errorCode().code());
+        p.setProperty("busy", true);
+        p.setProperty("work", "preparing");
+        p.setProperty("because", e.because());
+        p.setProperty("retryAfterSeconds", e.retryAfterSeconds());
+        return org.springframework.http.ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).contentType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON)
+                .header(org.springframework.http.HttpHeaders.RETRY_AFTER, Long.toString(e.retryAfterSeconds())).body(p);
     }
 
     /** A date refused for room and remembered (VAR_GUIDE.md section 26.8): its code, and {@code Retry-After} the seconds left. */

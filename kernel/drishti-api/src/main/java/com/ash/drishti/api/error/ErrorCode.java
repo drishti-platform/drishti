@@ -66,6 +66,11 @@ public enum ErrorCode {
     /** The engine's file changed on disk since the page read it, or its folder cannot be written (DRISHTI_ENGINES_DIR). */
     ENGINE_FILE_CONFLICT("DRS-1023", 409),
     /**
+     * An engine is preparing the snapshot asked (ENGINE_SPEC 7.2 rule 5, ENG-5025): its session is opening; the answer says since when and
+     * the stage, and {@code Retry-After}; the page shows the one busy message, counting down, and asks again by itself.
+     */
+    ENGINE_PREPARING("DRS-1024", 503),
+    /**
      * A module is off here (docs/architecture/KERNEL_AND_MODULES.md): not installed, not licensed or switched off by an administrator. Its API
      * answers 404 in words, never 403 (nothing is forbidden; the module is not here).
      */

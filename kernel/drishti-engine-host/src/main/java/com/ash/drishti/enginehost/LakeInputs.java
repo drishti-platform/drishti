@@ -53,9 +53,6 @@ import java.util.function.Function;
  */
 final class LakeInputs implements Inputs {
 
-    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(LakeInputs.class);
-    /** The views not served, said once each. */
-    private static final java.util.Set<String> TOLD = ConcurrentHashMap.newKeySet();
 
     /** A cancellation point. */
     @FunctionalInterface
@@ -129,6 +126,25 @@ final class LakeInputs implements Inputs {
         tables.forEach((k, t) -> {
             if (k.contains(":")) {
                 out.put(k, t.stamp());
+            }
+        });
+        return out;
+    }
+
+    /**
+     * The stamps the bound inputs would have if read now (the sources' data versions, composed without reading a row): what the host's
+     * data-version look compares with {@link #stamps()}, which stay fixed for the session (ENGINE_SPEC 5.2 rule 8).
+     */
+    SortedMap<String, String> currentStamps() {
+        SortedMap<String, String> out = new TreeMap<>();
+        for (String name : descriptor.inputs().keySet()) {
+            if (!descriptor.inputs().get(name).open()) {
+                out.put(name, ((Table) table(name)).composedStamp());
+            }
+        }
+        tables.forEach((k, t) -> {
+            if (k.contains(":")) {
+                out.put(k, t.composedStamp());
             }
         });
         return out;
@@ -375,6 +391,11 @@ final class LakeInputs implements Inputs {
          * is there at all only by a read, so that one case reads (as before).
          */
         private String composedStamp() {
+            if (input.open()) {
+                StringBuilder o = new StringBuilder();
+                kinds.forEach(k -> o.append(o.length() == 0 ? "" : ";").append(k).append('=').append(data.stamp(k, date).orElse("?")));
+                return o.length() == 0 ? "absent" : o.toString();
+            }
             if (kinds.isEmpty()) {
                 return "absent";
             }
@@ -471,39 +492,6 @@ final class LakeInputs implements Inputs {
                 }
             }
             return Arrays.copyOf(keep, k);
-        }
-
-        /**
-         * A view the host already holds (R2_CUT_PLAN 3a, zero copy): a name that is not this input's vector column is asked of the host's
-         * modules ({@link KindData#vectorView}) for each bound kind on the session's date, and only when the caller reads the kind whole
-         * (no row rule, no where): a view is never filtered. Null when none is held; the vector column itself as the engine API's default.
-         */
-        @Override
-        public Object vectorView(String name) throws EngineException {
-            if (input.vector() != null && input.vector().equals(name)) {
-                return InputTable.super.vectorView(name);
-            }
-            if (where() != RowRule.ALL) {
-                return notServed(name, "the input has a where: a view is never filtered");
-            }
-            for (String kind : kinds) {
-                if (rule(kind) != RowRule.ALL) {
-                    return notServed(name, "the caller has a row rule on " + kind + ": a view is never filtered");
-                }
-                Object v = data.vectorView(kind, name, date);
-                if (v != null) {
-                    return v;
-                }
-            }
-            return notServed(name, "no service holds the view of " + kinds + " on " + date);
-        }
-
-        /** Null, with the reason said once per input, view and reason (the engine then builds its rows itself). */
-        private Object notServed(String view, String why) {
-            if (TOLD.add(this.name + "|" + view + "|" + why)) {
-                LOG.info("engine input {}: view {} not served ({})", this.name, view, why);
-            }
-            return null;
         }
 
         @Override

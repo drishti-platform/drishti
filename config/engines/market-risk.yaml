@@ -47,10 +47,21 @@ drishti:
           - { name: otc }
         # the rows as the VaR tier keeps them (drishti.var.tier.mode): mapped = float32 position rows as the hot file, so the two paths agree to the bit
         vector-tier: ${drishti.var.tier.mode:${DRISHTI_VAR_TIER:mapped}}
-        # the host's own float32 rows of an open date, read in place (R2_CUT_PLAN 3a); off as shipped
-        zero-copy: ${drishti.module.banking.var.zero-copy:${DRISHTI_VAR_ZERO_COPY:off}}
+      # prepared dates (ENGINE_SPEC 9.3 rules 4 and 5): the newest date opened and its headline answers cached at start and whenever a load
+      # commits a new date or a new version of one (the lake's data version), so no user waits for an open; an ask during the open waits at
+      # most limits.open-wait-seconds, then is told "preparing" (ENG-5025); a stale date answers, noted, until its successor is ready
+      triggers:
+        - { on: request }
+        - { on: start, ask: prepare }
+        - { on: data-version, inputs: [ pnl-vector, scenario-pv, scenario-set, fx-scenario, var-limit ], ask: prepare, quiet: 5s, max-wait: 60s }
+      asks:
+        prepare: { prepare: true, as: system, snapshot: { date: latest },
+                   outputs: [ scope-index, scope-positions, scope-position-values, scope-nodes, scope-words, scope-limits, node-var, node-pvar ],
+                   params: { window: ${drishti.module.banking.var.window:250}, currency: USD } }
       snapshot: { hot: 1 }               # one business date's session kept open (its books released when another date is asked)
       limits:
         memory-mb: ${DRISHTI_MARKET_RISK_MEMORY_MB:768}   # the books of one date: every window and currency asked of it (the speed check sets more)
+        open-wait-seconds: 2               # an interactive ask waits at most this for an opening date, then "preparing" (ENG-5025)
+        disk-gb: ${DRISHTI_MARKET_RISK_KEPT_GB:0}   # the kept images of its books (<data>/engines/market-risk/kept): 0 keeps no limit
       access:
         visibility: row-rules

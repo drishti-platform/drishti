@@ -146,6 +146,63 @@ class EngineHostTest {
         }
     }
 
+    /**
+     * Single flight: two callers asking the same question at once (the same outputs, parameters, snapshot and visibility: one stamp) have
+     * it computed once; the second waits for the first's answer and is counted a hit, with the same cache entry.
+     */
+    @Test
+    void twoCallersAskingTheSameQuestionAtOnceComputeItOnce(@TempDir Path root) throws Exception {
+        EngineHostSettings s = Fixtures.home(root, Fixtures.sampleJar(), Map.of("group-totals", Fixtures.GROUP_TOTALS), null);
+        java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        Fixtures.Kinds data = new Fixtures.Kinds() {
+            @Override
+            public java.util.Optional<com.ash.drishti.api.ColumnSet> columns(String kind, java.util.Collection<String> paths,
+                    java.time.LocalDate date) {
+                entered.countDown();                                    // the first caller's engine is reading its rows: held here
+                try {
+                    release.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return super.columns(kind, paths, date);
+            }
+        };
+        data.sets.putAll(Fixtures.items().sets);
+        data.stamps.putAll(Fixtures.items().stamps);
+        try (EngineHost host = Fixtures.host(s, data)) {
+            host.start();
+            HostedEngine gt = host.require("group-totals");
+            java.util.concurrent.ExecutorService two = java.util.concurrent.Executors.newFixedThreadPool(2);
+            try {
+                java.util.concurrent.Future<HostedEngine.Answered> first = two.submit(() -> gt.answer(TOTALS, ANN));
+                assertThat(entered.await(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                Thread[] waiter = new Thread[1];
+                java.util.concurrent.Future<HostedEngine.Answered> second = two.submit(() -> {
+                    waiter[0] = Thread.currentThread();
+                    return gt.answer(TOTALS, ANN);
+                });
+                long until = System.nanoTime() + 30_000_000_000L;      // the second caller waits on the first's flight
+                while (System.nanoTime() < until && (waiter[0] == null || waiter[0].getState() != Thread.State.TIMED_WAITING
+                        && waiter[0].getState() != Thread.State.WAITING)) {
+                    Thread.onSpinWait();
+                }
+                release.countDown();
+                HostedEngine.Answered a = first.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                HostedEngine.Answered b = second.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                assertThat(rows(b.answer())).containsExactlyElementsOf(rows(a.answer()));
+                assertThat(b.kept()).as("the same cache entry").isSameAs(a.kept());
+                host.poll();
+                assertThat(gt.stats().sinceStart().asked()).as("the engine asked once").isEqualTo(1);
+                assertThat(gt.answerCache()[3]).as("misses").isEqualTo(1L);
+                assertThat(gt.answerCache()[2]).as("hits").isEqualTo(1L);
+            } finally {
+                release.countDown();
+                two.shutdownNow();
+            }
+        }
+    }
+
     @Test
     void anAuditLineNamesALongListByItsCountNeverItsValues() {
         java.util.SortedMap<String, Object> params = new java.util.TreeMap<>();

@@ -608,15 +608,32 @@ public final class HostedEngine implements AutoCloseable {
                 // the stamp after the lease: the session is open, so the stamp names the input versions it holds
                 String stamp = cache == null ? null : context.stamp(snapshot, request).text();
                 entry = stamp == null ? null : cache.get(stamp);
+                Flight shared = entry != null || stamp == null ? null : joinFlight(stamp, control);
                 if (entry != null) {
                     answerHits.incrementAndGet();
                     answer = entry.answer();
+                } else if (shared != null) {                            // another caller computed this very stamp meanwhile
+                    answerHits.incrementAndGet();
+                    entry = shared.kept();
+                    answer = shared.answer();
                 } else {
-                    answer = i.request(() -> lease.session().ask(request, control));
-                    forwardLog();
-                    if (cache != null) {
-                        answerMisses.incrementAndGet();
-                        entry = cache.put(answer, id, snapshot.text());   // under its own stamp; an interim answer is never kept
+                    // single flight: one caller of a stamp computes it, the others asking it meanwhile wait for its answer (joinFlight)
+                    java.util.concurrent.CompletableFuture<Flight> mine = stamp == null ? null : new java.util.concurrent.CompletableFuture<>();
+                    boolean owner = mine != null && inFlight.putIfAbsent(stamp, mine) == null;
+                    Flight done = null;
+                    try {
+                        answer = i.request(() -> lease.session().ask(request, control));
+                        forwardLog();
+                        if (cache != null) {
+                            answerMisses.incrementAndGet();
+                            entry = cache.put(answer, id, snapshot.text());   // under its own stamp; an interim answer is never kept
+                            done = answer.status() == com.ash.engine.Status.INTERIM ? null : new Flight(answer, entry);
+                        }
+                    } finally {
+                        if (owner) {
+                            inFlight.remove(stamp, mine);
+                            mine.complete(done);                        // null (failed, interim): a waiter asks itself
+                        }
                     }
                 }
             } finally {
@@ -638,6 +655,36 @@ public final class HostedEngine implements AutoCloseable {
                     + gated.status() + (gated.stamp() == null ? "" : " stamp " + gated.stamp().request()));
         }
         return new Answered(gated, entry, answers, OutputGate.key(gated));
+    }
+
+    /** An answer one caller computed for a stamp, handed to the callers that asked the same stamp meanwhile (with its cache entry, if kept). */
+    private record Flight(Answer answer, AnswerCache.Kept kept) {}
+
+    /** The stamps being computed now (single flight: the 100,000-position index is computed once, not once per caller asking at once). */
+    private final java.util.concurrent.ConcurrentMap<String, java.util.concurrent.CompletableFuture<Flight>> inFlight =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The answer of a stamp another caller is computing now, waited for within this ask's own deadline; null when none is in flight, it
+     * failed or was interim, or the deadline passed (this caller then asks itself).
+     */
+    private Flight joinFlight(String stamp, HostControl control) {
+        java.util.concurrent.CompletableFuture<Flight> f = inFlight.get(stamp);
+        if (f == null) {
+            return null;
+        }
+        try {
+            if (control.deadline().equals(Instant.MAX)) {
+                return f.get();
+            }
+            long left = Math.max(1, Duration.between(Instant.now(), control.deadline()).toMillis());
+            return f.get(left, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+            return null;
+        }
     }
 
     /** The longest list an audit line writes out item by item (specification 3.2); a longer one is named by its count. */

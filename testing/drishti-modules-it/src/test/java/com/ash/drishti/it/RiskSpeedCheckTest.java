@@ -122,6 +122,9 @@ class RiskSpeedCheckTest {
         }
         Map<String, Object> settings = new LinkedHashMap<>();
         settings.put("var", Map.of("official", Map.of("on-start", false)));
+        if (PAGES) {    // the Homes' cut-off snapshot (MeasureSnapshotJob) would ask the engine in the measured phases: the host's counters
+            settings.put("homes", Map.of("cutoff", "23:59"));   // are every caller's; the Home pages still answer on demand
+        }
         if (SECOND_VIEWER) {                                            // sign-in on: an administrator and a desk-limited second viewer
             settings.put("security", Map.of("enabled", true, "secret", SECRET, "registered-users-only", false, "roles", Map.of(
                     "speed-admin", Map.of("kinds", List.of("*"), "raw", true, "admin", true),
@@ -182,12 +185,14 @@ class RiskSpeedCheckTest {
         }
         long[] w1 = answers();
         double warmMisses = (w1[1] - w0[1]) / 2.0;
+        double warmAsks = (w1[0] + w1[1] - w0[0] - w0[1]) / 2.0;
         out.put("warm_repeat_misses_per", warmMisses);
+        out.put("warm_repeat_asks_per", warmAsks);                      // more than a headline's 4: another caller asked meanwhile
         cacheState(out, "after_open");
-        if (warmMisses > 0.5) {
+        if (warmMisses > 0) {
             Files.writeString(folder.resolve("speed-" + out.get("tier") + "-zc-" + ZERO_COPY + ".partial.json"), PackagedServer.JSON.writeValueAsString(out) + "\n");
-            throw new AssertionError("the host's answer cache misses on a warm repeat of the bank headline (" + warmMisses + " misses per ask, "
-                    + "cache " + out.get("cache_after_open") + "): stopped before the phases; " + out);
+            throw new AssertionError("the host's answer cache misses on a warm repeat of the bank headline (" + warmMisses + " misses and " + warmAsks
+                    + " asks per headline (more than 4: another caller asked meanwhile), cache " + out.get("cache_after_open") + "): stopped before the phases; " + out);
         }
         List<String> nodes = new ArrayList<>();
         List<String> leaves = new ArrayList<>();

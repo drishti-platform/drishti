@@ -2304,8 +2304,8 @@ the official capture. With 509 values a vector the gzip, the lake and the hot fi
 ### 16.2 Production trades from the source systems
 
 **What this loads.** The trades of Endur, Calypso, Murex, WSS, SwapOne and ICI, as JSON Lines in each system's own field names (`UPPER_SNAKE`, as
-Endur names them), into the one canonical `trade` kind (`TRD`). A source system is a **module** (`modules/source-<system>/`) that brings a
-connector template, a field map (`mappings/<system>-trade.yaml`), a routing rule for the inbox (`dataload.yaml`) and its own on/off switch. The trade's
+Endur names them), into the one canonical `trade` kind (`TRD`). A source system is a **pack** of the module `trading-systems` (`modules/trading-systems/packs/<system>/`) that brings a
+connector template, a field map (`mappings/<system>-trade.yaml`), a routing rule for the inbox (`dataload.yaml`) and its own on/off switch (the pack). The trade's
 contract is [`trade.contract.yaml`](../../modules/trading-systems/packs/trading/contracts/trade.contract.yaml), published as
 [TRD](../contracts/packs/trading.md#trd-trade-trade). **Trades reach VaR only at trade grain, which is not used now**: VaR is fed by position-level scenario PVs
 (16.1) and is unchanged by anything in this section, including switching a source off.
@@ -2334,7 +2334,7 @@ fields to get right are the key (`TRADE_ID` or the system's native key), `SOURCE
 | Server heap and loader heap | as 16.1 (`DRISHTI_DATALOAD_LOADER_HEAP`); trades are far lighter than vectors |
 | Disk | 1 million trades a day: the files 0.7 to 1.2 GB gzip (measured 0.65 to 1.2 KB a trade), the lake 1.1 to 2.5 KB a trade, an estimate from the measured 13,400; the inbox keeps a copy 30 days |
 | Inbox | on, one owner node (as 16.1) |
-| The source modules | on: `config/modules/source-<system>.yaml` has `enabled: true` (Admin → Modules) |
+| The source packs | on: the pack `<system>` is switched on (Admin → Artifacts) |
 | A token | `loads:write` |
 
 #### Where the trades go: one table a trading system, always
@@ -2405,7 +2405,7 @@ Grand total       12,753
 3. **The map worked**: WSS `DEAL_STATE: Verified` shows as status `NEW`, SwapOne `SWAP_FAMILY: CDS` as product `CDS_SINGLE`, ICI `INSTRUMENT.SIDE` as `BUY_SELL_CODE`.
 4. **A filter**: `--filter SOURCE_SYSTEM=WSS` (tested: 14 on 2026-07-09).
 
-**Switching a source system on and off.** Admin → Modules, or `enabled: false` in `config/modules/source-<system>.yaml`: **no restart** (tested: ICI left the pivot within 15 seconds and
+**Switching a source system on and off.** Admin → Artifacts (the pack `<system>`; `drishti.packs.enabled` at start): **no restart** (tested: ICI left the pivot within 15 seconds and
 came back when switched on). Its trades leave the pages, the blotter, search and BI, its inbox rule goes with it (a site rule stays), and VaR is unchanged.
 
 **A new or changed attribute.** The stored row keeps what the system sent, so a new field costs nothing at load: add it to the system's map (`modules/source-<system>/mappings/<system>-trade.yaml` or a

@@ -19,7 +19,7 @@
 # lenses are not drawn, and its static assets are not served (nor to a person whose lens does not use the module). Its code, templates
 # (templates/, found by the console beside web/templates) and static files (static/, served at /static/... beside web/static) live here.
 module: banking
-title: Banking and risk
+title: Risk
 
 # the routers the console includes for the module, in this order (where the core's routers were: before the terminal's)
 routers: [plugins.banking.routes.trading_routes, plugins.banking.routes.var_regulatory_routes, plugins.banking.routes.var_routes,

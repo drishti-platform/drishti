@@ -22,4 +22,4 @@ enabled: true
 
 # The module named here too, so a server without its jar knows it and leaves it off as "not installed": the packs, lakes, tables, models
 # and reports in its banking folders are not read (a server with the jar takes the manifest in the jar and ignores this block).
-module: { id: banking, domain: banking, title: Banking and risk }
+module: { id: banking, domain: banking, title: Risk }

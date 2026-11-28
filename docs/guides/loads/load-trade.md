@@ -124,7 +124,7 @@ The task's *Last Run Result* is the script's exit code. By hand: Task Scheduler 
 - **Run it again** (a failed or interrupted load): the same command. Each load replaces its business date **whole** in the table and leaves the other dates alone, so a repeat never doubles rows.
 - **Take a date out:** `python3.13 tools/drishti.py lake delete --lake demo --table trading/trade_endur --date 2026-11-24 --dry-run`, then without `--dry-run` (asks to confirm; `--yes` for a script). **Undo one load** by its id (the `run=` in its closing line): `python3.13 tools/drishti.py lake undo --lake demo --dry-run RUN_ID`, then `--yes`.
 - **A file that was refused** in the inbox goes to `failed/` with the reason in words: fix it, then `python3.13 tools/drishti.py dataload retry endur-2026-11-27.jsonl.gz`.
-- **A system's module is off:** its trades leave the pages and its inbox rule goes with it. Switch it on in Admin → Modules (`config/modules/source-<system>.yaml`, `enabled: true`).
+- **A system's pack is off:** its trades leave the pages and its inbox rule goes with it (the file stays in the inbox, the reason in words). Switch the pack `<system>` on in Admin → Artifacts.
 - A scheduler reads the exit code: **0** done, **1** refused or failed (one line says why), **2** loaded with rejected rows, **3** another load holds the lake's lock (wait and repeat).
 
 ## Check it loaded

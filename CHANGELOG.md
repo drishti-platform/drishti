@@ -15,6 +15,18 @@
 -->
 # Changelog
 
+## Unreleased (i8, branch i8/trading-systems)
+
+- **The module `trading-systems` (module rationalisation S3).** The `trading` module and the six `source-*` modules (Endur, Calypso, Murex, WSS,
+  SwapOne, ICI) become one module of two kinds of pack: `trading` (moved out of banking: the one trade kind, its four derived kinds, the blotter)
+  and one pack per source system, each carrying its connectors, field map, inbox rule, deal screens and an example role by `SOURCE_SYSTEM`
+  (`rows:` and `edit-systems:` are now read from a pack's `roles:`). The trade words (TRD, CTRD, PTRD, LTRD, ITRD) and the Blotter menu left the
+  banking manifest. A source system follows its pack's switch (Admin → Artifacts, no restart); the six packs are off by default and the demo
+  profile has `endur`, `calypso` and `murex` on. The retired module ids refuse the start with the pack to switch instead (no alias).
+- **Module `banking` is titled Risk** (the id, settings keys, paths and packages are unchanged); it requires `trading-systems`. Distribution
+  `drishti.risk` lists `trading-systems` in place of `trading` and the six source modules. Upgrade note: KERNEL_AND_MODULES.md section 3.4.
+- **Before = after tests** (`tools/test_module_rationalisation.py`): no kind, word, connector or lake table changed; the only new packs are the six.
+
 ## 2.9.11.i7n (2026-11-25)
 
 Documentation only; no product behaviour changes. The guide merges, the numbering repair and the connector README dedup.

@@ -16,7 +16,7 @@
 # (drishti-console/plugins/banking) draws them until the console part moves into the module (a later release).
 format: 2
 module: banking
-title: Banking and risk
+title: Risk
 routes:
 - id: var
   path: /var

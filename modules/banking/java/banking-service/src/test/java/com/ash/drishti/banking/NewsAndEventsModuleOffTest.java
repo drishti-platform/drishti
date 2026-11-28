@@ -71,7 +71,7 @@ class NewsAndEventsModuleOffTest {
             assertThat(pack.path("domain").asText()).as(p).isEqualTo("news-and-events");
             pack.path("connectors").fieldNames().forEachRemaining(theirs::add);
         }
-        assertThat(theirs).hasSize(3);
+        assertThat(theirs).hasSize(5);
         assertThat(sources.connectorStatuses().keySet()).doesNotContainAnyElementsOf(theirs);
     }
 

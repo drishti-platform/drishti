@@ -1655,7 +1655,7 @@ feed) is the [External data guide](WORLD_DATA_GUIDE.md); every column of every k
 
 | Part | What it is |
 |---|---|
-| Module | `economy`: content only (packs, functions, lenses; no Java of its own), declared by its own manifest (`modules/economy/module.yaml`, the one source the access registry reads), and switched by `config/modules/economy.yaml` ([ACCESS_MODEL.md](../architecture/KERNEL_AND_MODULES.md)). One module (the owner, 2026-11-07): the public sector is not licensed or switched apart from the economy |
+| Module | `economy`: content only (packs, functions, lenses; no Java of its own), declared by its own manifest (`modules/external-data/module.yaml`, the one source the access registry reads), and switched by `config/modules/external-data.yaml` ([ACCESS_MODEL.md](../architecture/KERNEL_AND_MODULES.md)). One module (the owner, 2026-11-07): the public sector is not licensed or switched apart from the economy |
 | Lens | **Public sector** (`publicsector`, in `META-INF/drishti/lenses.yaml`): the ten functions below; offered while the economy module is on |
 | World lens | carries the free news too: `PRESS`, `PREL` and `GDELT` |
 | Packs | `world-development`, `central-banks`, `national-statistics`, `oecd`, `official-news`, `gdelt-events`, each with `domain: economy` |
@@ -1691,7 +1691,7 @@ DRISHTI_PACKS=core,world-economy,world-development,central-banks,national-statis
 
 and a person opens the Public sector lens from Views (`drishti.lenses: risk,world,publicsector`).
 
-**Off** is the economy module off (`config/modules/economy.yaml` `enabled: false`, `POST /api/v1/admin/modules`, or
+**Off** is the economy module off (`config/modules/external-data.yaml` `enabled: false`, `POST /api/v1/admin/modules`, or
 `DRISHTI_MODULES_ECONOMY_ENABLED=false`, then a restart): all eight of its packs and their connectors do not load, its functions (these
 ten and the economy's own) are gone everywhere (command line, type-ahead, search, menus, the APIs behind them, `404 DRS-1026`), and the
 World and Public sector lenses are not offered. Banking, capital markets and GLEIF are unaffected. A single function is switched off on
@@ -1851,7 +1851,7 @@ date 2026-11-06 with a narrower selection, `selection.yaml`):
 | `CBANK CBANK-FED` has no policy rate | the FRED key is not set where the feed runs | set `DRISHTI_FRED_API_KEY`, run `feed run central-banks --since <date>` |
 | a publisher shows *failed: kept releases shown* | its feed was unreachable or changed its address | open its `feed:` address; correct it in `config/feeds/official-news.yaml` |
 | the GDELT map is empty for a country | fewer than `min-events` events that day | lower `min-events`; a country's events depend on the news |
-| `WDI` is unknown on the command line | the module is off, or the packs are not in the server's pack list | `GET /api/v1/modules` (`off` and its reason); `config/modules/economy.yaml`; `DRISHTI_PACKS` |
+| `WDI` is unknown on the command line | the module is off, or the packs are not in the server's pack list | `GET /api/v1/modules` (`off` and its reason); `config/modules/external-data.yaml`; `DRISHTI_PACKS` |
 | `feed run` exits 2 | the feed file is wrong (an unknown key is named) | fix the key it names |
 
 ### 20.10 Later sources

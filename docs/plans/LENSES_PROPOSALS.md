@@ -1121,10 +1121,10 @@ The mock-ups follow [the mock-up rules](#mock-ups); the lens menus mock-up (LX1)
 ![The World landing mock-ups: A World desk, B Explorer, C World map](../lenses/mockups/world/world-landing.png)
 
 [Open the mock-up](../lenses/mockups/world/world-landing.html). **Chosen:** all three, A the default. **Code:**
-[`world_landing.html`](../../modules/economy/console/templates/world_landing.html),
-[`drishti_world-landing.js`](../../modules/economy/console/static/js/drishti_world-landing.js),
-[`drishti_world-landing.css`](../../modules/economy/console/static/css/drishti_world-landing.css),
-[`world.yaml`](../../config/lenses/economy/world.yaml). Figures illustrative. The mock-up's warning (*IMF figures and Yahoo prices are for
+[`world_landing.html`](../../modules/external-data/console/templates/world_landing.html),
+[`drishti_world-landing.js`](../../modules/external-data/console/static/js/drishti_world-landing.js),
+[`drishti_world-landing.css`](../../modules/external-data/console/static/css/drishti_world-landing.css),
+[`world.yaml`](../../config/lenses/external-data/world.yaml). Figures illustrative. The mock-up's warning (*IMF figures and Yahoo prices are for
 internal demonstrations only*) is a decision, not a panel: shown inside the bank; an external showing needs a decision and WL12.
 
 **Interactions.** Every tile opens its command (`ECG ECG-WLD`, `QUOTE` by change, `EDGAR 8-K`, `FUND` by net assets); every economy,
@@ -1160,7 +1160,7 @@ WL3). (3) G7, G20 and emerging markets as groups, and the `ECG G7` chip (W11, W1
 #### 4.4.2 The lens menus in World (LX1)
 
 The mock-up, its choice and the phone form: [section 1.4.4](#144-the-lens-menus-lx1). World's rows, drawn from `menus.top` in
-[`world.yaml`](../../config/lenses/economy/world.yaml) by [`core/menus.py`](../../drishti-console/core/menus.py), each item shown only
+[`world.yaml`](../../config/lenses/external-data/world.yaml) by [`core/menus.py`](../../drishti-console/core/menus.py), each item shown only
 when the lens keeps its command:
 
 | # | Panel | Contents | Status |

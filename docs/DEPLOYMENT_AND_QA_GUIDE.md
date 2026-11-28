@@ -1238,7 +1238,7 @@ commands; then **Switch to Drishti World**: the world Home (economies, markets, 
 
 ![Home through the World lens](img/deploy/03-home-world.jpg)
 
-**In YAML** the Home of a lens is its file's `home:` block (`config/lenses/banking/risk.yaml`, `config/lenses/economy/world.yaml`).
+**In YAML** the Home of a lens is its file's `home:` block (`config/lenses/banking/risk.yaml`, `config/lenses/external-data/world.yaml`).
 
 ### 9.5 The demo lake is loaded
 

@@ -225,7 +225,7 @@ On the committed demo every check is clean; the checks are proved on crafted bad
 ## 4. World lens
 
 **Built.** "The public-data packs in one product: economies and regions, news and quotes, US companies and filings, legal entities
-(GLEIF), funds and ETFs" ([`config/lenses/economy/world.yaml`](../../config/lenses/economy/world.yaml)). It is **context**, not the bank's
+(GLEIF), funds and ETFs" ([`config/lenses/external-data/world.yaml`](../../config/lenses/external-data/world.yaml)). It is **context**, not the bank's
 book: none of its packs links into the bank's own data. Three landings (World desk, Explorer, World map) on a teal accent; set-up:
 [ADMIN_GUIDE.md section 16.4](../guides/ADMIN_GUIDE.md#164-drishti-world). **Licensing first:** the IMF figures, Yahoo prices and Google News headlines
 are **internal only**, shown inside the bank; any showing outside needs a decision first

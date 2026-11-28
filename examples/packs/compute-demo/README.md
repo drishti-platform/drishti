@@ -183,20 +183,20 @@ The pack's files are written by `tools/packgen/readme.py compute-demo`; its `--c
 
 ## Data contracts
 
-Every kind of the pack has a data contract: a YAML file beside the pack (`examples/packs/compute-demo/contracts/<kind>.contract.yaml`, checked against `tools/contracts.schema.json`) that says what one record is, its key, how it is stored and dated, and every field with its type, presence, unit and meaning. The contracts are published on [docs/contracts/packs/compute-demo.md](../../../../docs/contracts/packs/compute-demo.md) and each kind's example (a real record of the test data, every field explained) on [docs/contracts/packs](../../../../docs/contracts/packs/README.md); this README links them and copies neither. Check them against the pack and its data with `python3 tools/contracts.py check` (or `drishti.py contract check`); show one with `python3 tools/contracts.py show <MNEMONIC>`.
+Every kind of the pack has a data contract: a YAML file beside the pack (`examples/packs/compute-demo/contracts/<kind>.contract.yaml`, checked against `tools/contracts.schema.json`) that says what one record is, its key, how it is stored and dated, and every field with its type, presence, unit and meaning. The contracts are published on docs/contracts/packs/compute-demo.md and each kind's example (a real record of the test data, every field explained) on [docs/contracts/packs](../../../docs/contracts/packs/README.md); this README links them and copies neither. Check them against the pack and its data with `python3 tools/contracts.py check` (or `drishti.py contract check`); show one with `python3 tools/contracts.py show <MNEMONIC>`.
 
 | Command | Kind | Class | Key | Grain | Contract | Example |
 |---|---|---|---|---|---|---|
-| `PBOOK` | `path-book` | input | `BOOK_ID` | One row per path book, keyed by BOOK_ID. | [PBOOK: Path book](../../../../docs/contracts/packs/compute-demo.md#pbook-path-book-path-book) (`contracts/path-book.contract.yaml`) | [example](../../../../docs/contracts/packs/compute-demo.md#example-compute-demo-path-book) |
-| `PSTRIP` | `path-strip` | input | `STRIP_ID` | One row per p&l strip, keyed by STRIP_ID. | [PSTRIP: P&L strip](../../../../docs/contracts/packs/compute-demo.md#pstrip-pl-strip-path-strip) (`contracts/path-strip.contract.yaml`) | [example](../../../../docs/contracts/packs/compute-demo.md#example-compute-demo-path-strip) |
-| `PSUM` | `path-sum` | computed | — | One answer per question (the id asked for and its parameters), computed when asked. | [PSUM: Book path (Python)](../../../../docs/contracts/packs/compute-demo.md#psum-book-path-python-path-sum) (`contracts/path-sum.contract.yaml`) | — (computed when asked) |
-| `PSUMJ` | `path-sum-java` | computed | — | One answer per question (the id asked for and its parameters), computed when asked. | [PSUMJ: Book path (Java)](../../../../docs/contracts/packs/compute-demo.md#psumj-book-path-java-path-sum-java) (`contracts/path-sum-java.contract.yaml`) | — (computed when asked) |
+| `PBOOK` | `path-book` | input | `BOOK_ID` | One row per path book, keyed by BOOK_ID. | PBOOK: Path book (`contracts/path-book.contract.yaml`) | — (no test data) |
+| `PSTRIP` | `path-strip` | input | `STRIP_ID` | One row per p&l strip, keyed by STRIP_ID. | PSTRIP: P&L strip (`contracts/path-strip.contract.yaml`) | — (no test data) |
+| `PSUM` | `path-sum` | computed | — | One answer per question (the id asked for and its parameters), computed when asked. | PSUM: Book path (Python) (`contracts/path-sum.contract.yaml`) | — (computed when asked) |
+| `PSUMJ` | `path-sum-java` | computed | — | One answer per question (the id asked for and its parameters), computed when asked. | PSUMJ: Book path (Java) (`contracts/path-sum-java.contract.yaml`) | — (computed when asked) |
 
 *Class*: **fundamental** data is delivered by a source system and stored; **input** is stored data an engine reads; **computed** is worked out by Drishti when asked and never stored by a source; **drishti-owned** is kept by Drishti itself.
 
 ## Data retrieval
 
-Where each kind's data comes from, how it reaches the lake and how to check it. Three origins: **external** data, fetched from a public source by its data feed (each source, its licence and worked examples on the [External data](../../../../docs/guides/WORLD_DATA_GUIDE.md) help page); **synthetic** test data (or hand-written reference data), written by a generator with fictitious names; **computed** by a Drishti engine when it is asked, never stored by a source.
+Where each kind's data comes from, how it reaches the lake and how to check it. Three origins: **external** data, fetched from a public source by its data feed (each source, its licence and worked examples on the [External data](../../../docs/guides/WORLD_DATA_GUIDE.md) help page); **synthetic** test data (or hand-written reference data), written by a generator with fictitious names; **computed** by a Drishti engine when it is asked, never stored by a source.
 
 | Command | Kind | Origin | How it reaches Drishti |
 |---|---|---|---|
@@ -213,11 +213,10 @@ Where each kind's data comes from, how it reaches the lake and how to check it. 
 
 ### Into the lake, checking, offline
 
-- **The lake.** `python3 tools/drishti.py lake demo` reads `data/testdata/testdata.yaml` and writes every dataset (test data, the committed public-data snapshots) into `<data>/delta/<domain>/<kind>/`, where the pack's Delta connector serves it; a computed kind needs nothing loaded. `lake build` loads your own large JSON exports the same way ([Command line](../../../../docs/guides/CLI_REFERENCE.md)).
+- **The lake.** `python3 tools/drishti.py lake demo` reads `data/testdata/testdata.yaml` and writes every dataset (test data, the committed public-data snapshots) into `<data>/delta/<domain>/<kind>/`, where the pack's Delta connector serves it; a computed kind needs nothing loaded. `lake build` loads your own large JSON exports the same way ([Command line](../../../docs/guides/CLI_REFERENCE.md)).
 - **Checking.** `python3 tools/contracts.py check` compares every contract with the pack and its data; each generator's `--check` (above) fails when the committed files differ from what it would write; in the console, `<MNEMONIC> <GO>` lists a kind and the pack's code opens its overview with the count of each kind.
 - **Offline.** Everything committed works without a network: the test data and the public-data snapshots are in the repository and `lake demo` reads only them. A data feed runs offline from its download cache (`--offline`); a connector that reaches the internet (news, yfinance, the public-data feeds) is off as shipped and never starts on a machine configured offline (`drishti.offline.plugins`).
 
 ## See also
 
-- [How to use the compute-demo pack](../../../docs/guides/bi/NOTEBOOK_AND_PYTHON.md#compute-demo-pack): what it holds, its screens and a walk-through, in NOTEBOOK_AND_PYTHON.md.
-- [Packs](../../../../docs/guides/BUILD_GUIDE.md#31-the-packs-that-ship-turning-them-on-who-sees-which) and the [pack developer's guide](../../../../docs/guides/BUILD_GUIDE.md) (the README standard).
+- [Packs](../../../docs/guides/BUILD_GUIDE.md#31-the-packs-that-ship-turning-them-on-who-sees-which) and the [pack developer's guide](../../../docs/guides/BUILD_GUIDE.md) (the README standard).

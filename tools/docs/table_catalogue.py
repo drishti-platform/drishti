@@ -33,7 +33,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 DOC = ROOT / "docs" / "admin" / "TABLE_CATALOGUE.md"
-SKIP = {"target", "node_modules", ".git", ".venv", "__pycache__"}
+SKIP = {"target", "node_modules", ".git", ".venv", "__pycache__"}   # the walk skips these folders: an IGNORE pattern
 
 
 def _yaml(p: Path):

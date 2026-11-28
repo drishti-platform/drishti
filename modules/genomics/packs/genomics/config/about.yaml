@@ -47,6 +47,20 @@ kinds:
       COHORT_ID:
         term: Cohort id
         means: The cohort the samples name (##SAMPLE Cohort, or the sample table's COHORT).
+  clinvar-variant:
+    title: ClinVar variant
+    about: '${$.VARIANT_ID} in ${$.GENE}: ${$.SIGNIFICANCE}.'
+    glossary:
+      SIGNIFICANCE:
+        term: Clinical significance
+        means: ClinVar's classification of the variant (pathogenic, likely pathogenic, ...).
+  ensembl-gene:
+    title: Ensembl gene
+    about: '${$.GENE} on chromosome ${$.CHROM}, from Ensembl.'
+    glossary:
+      GENE:
+        term: Gene
+        means: The gene symbol.
 intro:
   generator: tools/packgen/genomics_module/make.py
   refresh: python3 tools/loaders/genomics/genomics_run.py

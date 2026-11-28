@@ -74,3 +74,17 @@ def test_no_tool_joins_lake_domain_table_outside_lakeconfig():
             if _JOIN.search(code) and not code.lstrip().startswith(("#", '"', "'")):
                 found.append(f"{rel}:{n}: {line.strip()[:110]}")
     assert not found, "a lake/domain/table path joined by hand (use lakeconfig.locate / locate_path):\n" + "\n".join(found)
+
+
+def test_the_homes_feed_kinds_are_kinds_of_the_genomics_pack_routed_to_the_lake_tables_of_the_feeds():
+    """GenomicsHome reads the feeds through the kind router, which knows kinds, not table names: each feed kind is declared, contracted,
+    routed to the pack's connector and listed in its lake-tables, and the table it reads is the one the feed writes."""
+    import yaml
+    pack_dir = ROOT / "modules" / "genomics" / "packs" / "genomics"
+    pack = yaml.safe_load((pack_dir / "pack.yaml").read_text(encoding="utf-8"))
+    lake = yaml.safe_load((ROOT / "config" / "lakes" / "genomicslake.yaml").read_text(encoding="utf-8"))
+    tables = lake.get("tables") or lake
+    for kind in ("clinvar-variant", "ensembl-gene"):
+        assert kind in pack["kinds"] and pack["routes"][kind] == "genomics-store" and (pack_dir / "contracts" / f"{kind}.yaml").is_file()
+        assert f"genomics.{kind}" in pack["connectors"]["genomics-store"]["settings"]["lake-tables"].split(",")
+        assert f"genomics.{kind}" in tables

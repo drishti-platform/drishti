@@ -36,7 +36,7 @@ import java.util.function.Function;
  * {@code genomics}: samples, variants and genome-wide hits, and the variants of each cohort the Home follows), and its own home tables
  * {@code genomics_gwas_top}, {@code genomics_manhattan}, {@code genomics_clinvar}, {@code genomics_loads} and {@code genomics_needs}. Nothing is
  * computed beyond counting and ordering rows the lake holds; the lake tables are read by their symbolic kinds ({@code association} of the
- * showcase pack, {@code genomics.clinvar-variant} and {@code genomics.ensembl-gene} of the public feeds), never by a path, and a kind that is not loaded is a table
+ * showcase pack, the kinds {@code clinvar-variant} and {@code ensembl-gene} (tables genomics.clinvar-variant and genomics.ensembl-gene) of the public feeds), never by a path, and a kind that is not loaded is a table
  * with no rows that says so. The feed rows are read at most once a minute.
  */
 public final class GenomicsHome {
@@ -46,8 +46,8 @@ public final class GenomicsHome {
     /** The p-value line of a genome-wide hit: 5e-8, as -log10. */
     public static final double GENOME_WIDE = 7.301;
     /** The public feeds' tables by their symbolic names (config/lakes/genomicslake.yaml; their rows carry GENE, VARIANT_ID, SIGNIFICANCE, UPDATED and BUSINESS_DATE). */
-    public static final String CLINVAR = "genomics.clinvar-variant";
-    public static final String ENSEMBL = "genomics.ensembl-gene";
+    public static final String CLINVAR = "clinvar-variant";
+    public static final String ENSEMBL = "ensembl-gene";
     public static final Map<String, String> FEEDS = Map.of(CLINVAR, "ClinVar", ENSEMBL, "Ensembl");
     private static final long FEED_TTL_MS = 60_000;
 

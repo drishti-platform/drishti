@@ -24,19 +24,21 @@ description: >-
   Variants (one row per position and alternate allele), the samples that carry them, the genes they fall in and the cohorts the samples belong
   to. The rows come from the genomics lake (genomicslake): the loader reads your VCF files and gene, sample and cohort tables into it, and its
   synthetic demo data (data/testdata/genomics) is built into it by lake demo.
-kinds: [variant, sample, gene, cohort]
+kinds: [variant, sample, gene, cohort, clinvar-variant, ensembl-gene]
 connectors:
   genomics-store:
     plugin: delta
     enabled: ${DRISHTI_LAKE_ENABLED:true}
-    kinds: [variant, sample, gene, cohort]
+    kinds: [variant, sample, gene, cohort, clinvar-variant, ensembl-gene]
     settings:
       lake: genomicslake
-      lake-tables: genomics.variant,genomics.sample,genomics.gene,genomics.cohort
+      lake-tables: genomics.variant,genomics.sample,genomics.gene,genomics.cohort,genomics.clinvar-variant,genomics.ensembl-gene
       mode.variant: effective
       mode.sample: effective
       mode.gene: effective
       mode.cohort: effective
+      mode.clinvar-variant: effective
+      mode.ensembl-gene: effective
 lake:                  # the recommended entries of its lake tables (the shipped lake file holds the same)
   tables:
     genomics.variant:
@@ -54,8 +56,42 @@ lake:                  # the recommended entries of its lake tables (the shipped
     genomics.cohort:
       id: COHORT_ID
       retention: 260
+    genomics.clinvar-variant:      # the clinvar feed's variants: the Home's ClinVar card reads this kind
+      id: VARIANT_ID
+      promote: [CHROM, POS, REF, ALT, GENE, IMPACT, CONSEQUENCE]
+      retention: 260
+    genomics.ensembl-gene:         # the ensembl feed's genes
+      id: GENE
+      promote: [CHROM, START]
+      retention: 260
+form:                  # what a person can search each kind by (the console's pick lists and filters)
+  variant:
+  - {path: VARIANT_ID, type: id, group: Identity}
+  - {path: GENE, type: text, group: Filters}
+  - {path: CHROM, type: text, group: Filters}
+  - {path: IMPACT, type: text, group: Filters}
+  - {path: CONSEQUENCE, type: text, group: Filters}
+  sample:
+  - {path: SAMPLE_ID, type: id, group: Identity}
+  - {path: COHORT, type: text, group: Filters}
+  - {path: SEX, type: text, group: Filters}
+  - {path: POPULATION, type: text, group: Filters}
+  gene:
+  - {path: GENE, type: id, group: Identity}
+  - {path: CHROM, type: text, group: Filters}
+  cohort:
+  - {path: COHORT_ID, type: id, group: Identity}
+  clinvar-variant:
+  - {path: VARIANT_ID, type: id, group: Identity}
+  - {path: GENE, type: text, group: Filters}
+  - {path: SIGNIFICANCE, type: text, group: Filters}
+  ensembl-gene:
+  - {path: GENE, type: id, group: Identity}
+  - {path: CHROM, type: text, group: Filters}
 routes:                # the connector that answers each kind
   variant: genomics-store
   sample: genomics-store
   gene: genomics-store
   cohort: genomics-store
+  clinvar-variant: genomics-store
+  ensembl-gene: genomics-store

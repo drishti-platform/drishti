@@ -253,6 +253,34 @@ public final class PackAccess {
         }
     }
 
+    /**
+     * Applies the stored switch of each of {@code packs} to this node's lifecycle (pre-gate S17): at start, every installed pack (one switched
+     * off before the restart would otherwise start RUNNING, its connectors pulling), and whenever a switch reaches this node from another
+     * (the switches ledger's gossip), the packs it names, so every node of a cluster suspends and resumes, not only the one that took the
+     * Admin call. A pack already in its switch's state is left as it is; a pack not named is never touched (a lifecycle suspend stays).
+     *
+     * @return the packs whose state changed here
+     */
+    public List<String> reconcile(java.util.Collection<String> packs, String actor) {
+        com.ash.drishti.packs.PackLifecycles l = lifecycles;
+        List<String> changed = new ArrayList<>();
+        Set<String> here = new java.util.HashSet<>(installed());
+        if (l != null) {
+            for (String p : packs) {
+                if (!here.contains(p)) {
+                    continue;
+                }
+                try {
+                    changed.addAll(l.follow(p, states.enabled(p), actor));
+                } catch (RuntimeException e) {
+                    org.slf4j.LoggerFactory.getLogger(PackAccess.class).warn("pack {}: its switch ({}) was not applied on this node: {}", p,
+                            states.enabled(p) ? "on" : "off", e.toString());
+                }
+            }
+        }
+        return changed;
+    }
+
     /** The switch also stops (or restarts) the pack's own connectors and gate: one switch, one state (the lifecycle's suspend and resume). */
     private void follow(String pack, boolean on, String actor) {
         com.ash.drishti.packs.PackLifecycles l = lifecycles;

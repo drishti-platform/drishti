@@ -86,15 +86,21 @@ public class ModuleConfig {
         return home.tables().get(4);
     }
 
+    /** The kernel's door every route asks as the person (the kernel's own Kernel bean, from the kernel's context). */
+    @Bean
+    public GenomicsAccess genomicsAccess(com.ash.drishti.kernel.api.services.Kernel kernel) {
+        return new GenomicsAccess(kernel);
+    }
+
     /** The showcase's REST API, under /api/v1/genomics/. */
     @Bean
-    public ShowcaseController showcaseController(ShowcaseData data, GenomicsBoard board, ProteinBench bench) {
-        return new ShowcaseController(data, board, bench);
+    public ShowcaseController showcaseController(ShowcaseData data, GenomicsBoard board, ProteinBench bench, GenomicsAccess access) {
+        return new ShowcaseController(data, board, bench, access);
     }
 
     /** Its REST API, under /api/v1/genomics/. */
     @Bean
-    public GenomicsController genomicsController(GenomicsData data) {
-        return new GenomicsController(data);
+    public GenomicsController genomicsController(GenomicsData data, GenomicsAccess access) {
+        return new GenomicsController(data, access);
     }
 }

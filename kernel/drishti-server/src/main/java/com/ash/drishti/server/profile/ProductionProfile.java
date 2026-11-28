@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.core.env.PropertyResolver;
 
 /**
@@ -42,18 +43,61 @@ public final class ProductionProfile {
     private ProductionProfile() {
     }
 
-    /** The profile this start runs: {@code production}, {@code demo}, or {@code development} (nothing named: today's open defaults). */
+    /** The one list of profile names, shared with the console and the upgrade check: {@code config/profiles/profile-names.json}, built into the jar. */
+    static final String NAMES = "drishti/profile-names.json";
+    private static volatile Map<String, String> spellings;
+
+    /**
+     * The profile this start runs: {@code production}, {@code demo}, or {@code development} (nothing named: today's open defaults). A name
+     * that is not in the one list ({@link #NAMES}) refuses the start: a mistyped {@code prodution} must never start an open server.
+     */
     public static String name(PropertyResolver env) {
         String v = env.getProperty(KEY);
         String n = v == null ? "" : v.strip().toLowerCase(Locale.ROOT);
-        if (n.equals("prod")) {
-            return PRODUCTION;
-        }
         if (n.isEmpty() && env instanceof org.springframework.core.env.Environment e
                 && e.acceptsProfiles(org.springframework.core.env.Profiles.of("prod", "production"))) {
             return PRODUCTION;
         }
-        return n.isEmpty() ? "development" : n;
+        String canonical = spellings().get(n);
+        if (canonical == null) {
+            throw new IllegalStateException("Drishti will not start: drishti.profile (DRISHTI_PROFILE) is '" + v.strip() + "', which is not a profile name. Known: "
+                    + known() + ". Fix: set one of these (production for a production server), or remove it for development");
+        }
+        return canonical;
+    }
+
+    /** The known names in words, each with its other spellings ({@code development (or blank), demo, production (or prod)}). */
+    public static String known() {
+        Map<String, List<String>> by = new java.util.LinkedHashMap<>();
+        spellings().forEach((spelt, name) -> by.computeIfAbsent(name, k -> new ArrayList<>()).add(spelt));
+        List<String> out = new ArrayList<>();
+        by.forEach((name, spelt) -> {
+            List<String> other = spelt.stream().filter(x -> !x.equals(name)).map(x -> x.isEmpty() ? "blank" : x).toList();
+            out.add(other.isEmpty() ? name : name + " (or " + String.join(", ", other) + ")");
+        });
+        return String.join(", ", out);
+    }
+
+    /** Every accepted spelling, lower case, to its profile name. */
+    static Map<String, String> spellings() {
+        Map<String, String> m = spellings;
+        if (m == null) {
+            try (java.io.InputStream in = ProductionProfile.class.getClassLoader().getResourceAsStream(NAMES)) {
+                if (in == null) {
+                    throw new IllegalStateException("the profile names (" + NAMES + ") are not in the server's jar: the build is incomplete");
+                }
+                Map<String, String> out = new java.util.LinkedHashMap<>();
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree(in).path("names").fields().forEachRemaining(e -> {
+                    String name = e.getKey().toLowerCase(Locale.ROOT);
+                    out.put(name, name);
+                    e.getValue().forEach(x -> out.put(x.asText().strip().toLowerCase(Locale.ROOT), name));
+                });
+                spellings = m = Map.copyOf(out);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }
+        return m;
     }
 
     public static boolean production(PropertyResolver env) {
@@ -118,6 +162,15 @@ public final class ProductionProfile {
         } else if (!home.isEmpty() && Path.of(site).toAbsolutePath().normalize().startsWith(Path.of(home).toAbsolutePath().normalize())) {
             out.add("drishti.site.dir (" + site + ") is inside the release folder (" + home + "), which is never written. Fix: name a site folder outside the release (/etc/drishti)");
         }
+        String data = env.getProperty(com.ash.drishti.api.DataDir.PROPERTY, "").strip();
+        if (data.isEmpty()) {
+            out.add("drishti.data.dir is not set: the data folder would be <home>/data, inside the release, which an upgrade replaces. Fix: name the data folder "
+                    + "outside the release (DRISHTI_DATA_DIR, /srv/drishti/data)");
+        } else if (!Path.of(data).isAbsolute()) {
+            out.add("drishti.data.dir (" + data + ") is a relative path. Fix: name the data folder by its absolute path outside the release (/srv/drishti/data)");
+        } else if (!home.isEmpty() && Path.of(data).normalize().startsWith(Path.of(home).toAbsolutePath().normalize())) {
+            out.add("drishti.data.dir (" + data + ") is inside the release folder (" + home + "), which is never written. Fix: name a data folder outside the release (/srv/drishti/data)");
+        }
         String db = env.getProperty("drishti.identity.database-url", "");
         if (db.startsWith("jdbc:sqlite") && clustered(env)) {
             out.add("drishti.identity.database-url is SQLite but this server is a node of a cluster. Fix: point every node at one PostgreSQL identity database (db.identity.url)");
@@ -158,9 +211,10 @@ public final class ProductionProfile {
                 }
             }
         } catch (java.io.IOException | RuntimeException e) {
-            return null;
+            return "an address node.yaml does not say (it could not be read: " + e.getMessage() + ")";
         }
-        return null;
+        // no advertise-url: the node advertises this machine's address with the server's own scheme (NetConfiguration), http without server.ssl
+        return bool(env, "server.ssl.enabled", false) ? null : "http://<this machine>:" + env.getProperty("server.port", "18480") + " (node.yaml names no advertise-url)";
     }
 
     private static boolean clustered(PropertyResolver env) {

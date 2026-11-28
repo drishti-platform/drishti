@@ -140,4 +140,35 @@ class PackLifecycleServerTest {
         assertThat(controller.one("packs", "alpha", ADMIN)).containsEntry("state", "RUNNING").containsKeys("health", "stats", "since", "by");
         assertThat(controller.graph(ADMIN)).containsKeys("nodes", "edges", "startOrder", "cycle", "missing");
     }
+
+    @Autowired com.ash.drishti.server.security.PackAccess access;
+    @Autowired com.ash.drishti.identity.SwitchLedger ledger;
+
+    /**
+     * Pre-gate S17: a pack switch reaches every node and survives a restart. A switch made on another node (merged from the ledger's gossip)
+     * suspends and resumes the pack here; a stored off switch applied at start (the reconcile the server runs when ready) suspends a pack
+     * that booted RUNNING.
+     */
+    @Test
+    void aPackSwitchFromAnotherNodeAndAcrossARestartIsAppliedHere() {
+        assertThat(packs.state("alpha")).isEqualTo(LifecycleState.RUNNING);
+        long stamp = (System.currentTimeMillis() + 60_000) << 16;
+        ledger.merge(java.util.List.of(new com.ash.drishti.identity.SwitchLedger.Entry(com.ash.drishti.identity.SwitchLedger.PACK, "alpha", "*", false,
+                "test", "peer-admin", stamp, "node-b", java.time.Instant.now())));
+        assertThat(access.isEnabled("alpha")).isFalse();
+        assertThat(packs.state("alpha")).as("the peer's off switch suspends it here").isEqualTo(LifecycleState.SUSPENDED);
+        ledger.merge(java.util.List.of(new com.ash.drishti.identity.SwitchLedger.Entry(com.ash.drishti.identity.SwitchLedger.PACK, "alpha", "*", true,
+                "test", "peer-admin", stamp + 1, "node-b", java.time.Instant.now())));
+        assertThat(packs.state("alpha")).as("and its on switch resumes it").isEqualTo(LifecycleState.RUNNING);
+
+        // a restart: the switch is stored off but the pack booted RUNNING; the start's reconcile suspends it
+        ledger.merge(java.util.List.of(new com.ash.drishti.identity.SwitchLedger.Entry(com.ash.drishti.identity.SwitchLedger.PACK, "alpha", "*", false,
+                "test", "peer-admin", stamp + 2, "node-b", java.time.Instant.now())));
+        packs.follow("alpha", true, "test");                               // as a fresh start leaves it
+        assertThat(packs.state("alpha")).isEqualTo(LifecycleState.RUNNING);
+        assertThat(access.reconcile(access.installed(), "test")).containsExactly("alpha");
+        assertThat(packs.state("alpha")).isEqualTo(LifecycleState.SUSPENDED);
+        access.setEnabled("alpha", true, "test");
+        assertThat(packs.state("alpha")).isEqualTo(LifecycleState.RUNNING);
+    }
 }

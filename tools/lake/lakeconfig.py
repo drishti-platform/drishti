@@ -129,8 +129,13 @@ OFFICIAL_ROOT_REF = "${" + DEMO_ROOT_ENV + ":${lake.data.dir:${drishti.data.dir}
 
 def data_dir() -> pathlib.Path:
     """The data folder, the ONE answer of every lake tool (the Java order of javacmd.launch_roots): --data-dir (use_data_dir), else
-    ``drishti.data.dir`` of the settings file, else DRISHTI_DATA_DIR, else this checkout's data/."""
+    ``drishti.data.dir`` of the settings file, else DRISHTI_DATA_DIR, else this checkout's data/. Under the production profile the last is
+    refused (pre-gate S14): staging and lake writes never land in a release."""
     import javacmd
+    import settingsfile
+    if not data_named() and settingsfile.profile_of(javacmd.settings()[1]) == "production":
+        raise SystemExit("no data folder named under the production profile: the tools would write into the release's data/. Name it with "
+                         "--data-dir, drishti.data.dir in the settings file, or DRISHTI_DATA_DIR (/srv/drishti/data)")
     return javacmd.launch_roots(data_dir=_OVERRIDE or None)["data"][0]
 
 

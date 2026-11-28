@@ -304,8 +304,9 @@ Needs Python 3.11+ (3.13 is what the wheel packs target) and PyYAML; deltalake a
 recipes and real output is docs/guides/CLI_REFERENCE.md.
 
 Exit codes: 0 ok, 1 problems found (a failing check, a server that said no, an unreachable server), 2 usage (a bad option,
-a missing file or jar). Commands that talk to a server read it from --server or DRISHTI_SERVER (default
-http://localhost:18480) and the token from DRISHTI_TOKEN or --token-file; the token is never printed.
+a missing file or jar). Commands that talk to a server read it from --server, DRISHTI_SERVER or the settings file
+(console.backend.url, or a profile's server.port); with none named they refuse (there is no default server). The token comes
+from DRISHTI_TOKEN or --token-file and is never printed.
 ```
 
 ## 2. Install and prerequisites
@@ -340,7 +341,8 @@ then the newest `lib/drishti-server-*-exec.jar` of the install (`<home>/lib`; ma
 **Environment variables** the program reads:
 
 - `JAVA_HOME`: the JDK that runs it (default `/usr/lib/jvm/java-21-openjdk-amd64`, then `java` on the `PATH`).
-- `DRISHTI_SERVER`: the server's base URL (default `http://localhost:18480`).
+- `DRISHTI_SERVER`: the server's base URL (else the settings file's `console.backend.url` or a profile's `server.port`; none: a command
+  that needs a server refuses, there is no default server).
 - `DRISHTI_TOKEN`: the bearer token (never printed; default none).
 - `DRISHTI_USER`: the user name sent when the server has sign-in off (default none).
 
@@ -2085,8 +2087,8 @@ adds them again moved back, as 2026-09-23 to 2026-09-25, the scenario window mov
 local lake only. The sample feed the `file` connector serves (`feeds/`) and the staging go to the server's data folder: `--data-dir DIR`, else
 `DRISHTI_DATA_DIR`, else the folder holding the lakes' `delta/` folder (`--lake /srv/data/delta/demo`: `/srv/data`), else `data/`, so a
 server on another data folder finds its feeds (`make_data.py --data-dir DIR` does the same). It then tells the server the lakes changed: the data-load signal for every table and date to `--server` (default
-`DRISHTI_SERVER`, then `http://localhost:18480`; a token with `loads:write` from `--token-file` or `DRISHTI_TOKEN`), or, with no server
-there, the stamp of section 7.8; `--no-signal` does neither, and `--signal-once` tells each table once, for its newest date, instead of
+`DRISHTI_SERVER`, then the settings file's; a token with `loads:write` from `--token-file` or `DRISHTI_TOKEN`), or, with no server
+named, the stamp of section 7.8 (no server is ever told by default); `--no-signal` does neither, and `--signal-once` tells each table once, for its newest date, instead of
 each table and date (what `tools/build_demo_lakes.py --server URL` uses; a running server reads the older dates again by itself). The
 summary says how many signals the server took, how many it **refused** (an HTTP error; the token hint only for 401 and 403) and how
 many it **did not answer** within 30 s (busy, not a refusal), and how long the signals took beside the build (`built in 193 s, the

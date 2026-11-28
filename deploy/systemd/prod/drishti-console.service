@@ -14,7 +14,8 @@
 
 
 # The production console unit of docs/guides/OPERATIONS_GUIDE.md, section 6.2: copy to /etc/systemd/system/drishti-console.service.
-# /opt/python3.13/bin/python3.13 is the dedicated Python of the install (the one setup wrote as drishti.python).
+# /opt/drishti/current/python/bin/python3.13 is the running release's own Python (drishti.python; OPERATIONS_GUIDE production section 3):
+# the link follows the release on an upgrade and a rollback, so the console always starts with the libraries pinned for its release.
 [Unit]
 Description=Drishti console
 After=network-online.target drishti-server.service
@@ -27,7 +28,7 @@ WorkingDirectory=/srv/drishti
 EnvironmentFile=/etc/drishti/drishti.env
 EnvironmentFile=/etc/drishti/release.env
 EnvironmentFile=/etc/drishti/secrets.env
-ExecStart=/bin/sh -c 'exec /opt/python3.13/bin/python3.13 "$DRISHTI_HOME"/drishti-console/run_drishti_web.py --settings /etc/drishti/prod.ini'
+ExecStart=/bin/sh -c 'exec /opt/drishti/current/python/bin/python3.13 "$DRISHTI_HOME"/drishti-console/run_drishti_web.py --settings /etc/drishti/prod.ini'
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

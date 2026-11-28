@@ -16,7 +16,6 @@
 package com.ash.drishti.kernel.api.home;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 /** The rows the Home services keep and pass between them; the columns are those of the {@code home/*} contracts (docs/contracts/HOME.md). */
 public interface HomeData {
@@ -37,9 +36,6 @@ public interface HomeData {
 
     /** A figure against its limit, as an engine states it now. */
     public record LimitRow(String name, double value, Double limit) {}
-
-    /** One KPI of the strip, a day's value. */
-    public record KpiPoint(String label, LocalDate date, double value) {}
 
     /** One row of {@code home_changes} as the changes engine answers it. */
     public record Change(String subjectKind, String subject, String measure, String kind, Double then, Double now, double change, String why,

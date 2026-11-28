@@ -30,6 +30,7 @@ from pathlib import Path
 
 import procs
 import pylibs
+import settingsfile  # noqa: E402  (tools/, on the path through procs)
 from procs import LaunchError, say
 
 OK, TODO, FAIL = "ok", "todo", "fail"
@@ -102,11 +103,24 @@ def same_prefix(a: str, b: str) -> bool:
     return prefix(a) == prefix(b)
 
 
+def profile(add, keys: dict, new: Path) -> str:
+    """The profile name of the site's settings (``drishti.profile``, ``DRISHTI_PROFILE``) by the new release's one list of names (this tool's
+    own when the new release has none): ``production``, ``demo`` or ``development``; a name outside the list is a FAIL (the new release refuses
+    to start with it) and counts as production here, so its production checks still run."""
+    raw = (keys.get("drishti.profile") or os.environ.get("DRISHTI_PROFILE") or "").strip().lower()
+    spelt = settingsfile.profile_spellings(new)
+    if raw not in spelt:
+        add(FAIL, f"drishti.profile is {raw!r}, which is not a profile name: the new release refuses to start with it. Known: "
+                  f"{', '.join(sorted(set(spelt.values())))} (and {', '.join(repr(k) for k in sorted(spelt) if k not in spelt.values())}). Fix it in the site settings")
+        return "production"
+    return spelt[raw]
+
+
 def site_check(add, keys: dict, new: Path, old: Path | None) -> list[str]:
     """The site folder (``drishti.site.dir``, ``/etc/drishti``): named, an existing folder, and inside neither release (an upgrade swaps a
     release and must leave the site's files where they are). Returns its settings files (``*.ini`` straight in it) for the key comparison."""
     raw = (keys.get("drishti.site.dir") or os.environ.get("DRISHTI_SITE_DIR") or "").strip()
-    production = (keys.get("drishti.profile") or os.environ.get("DRISHTI_PROFILE") or "").strip().lower() == "production"
+    production = profile(add, keys, new) == "production"
     if not raw:
         add(FAIL if production else TODO, "drishti.site.dir is not set: the site's settings, connector overrides and Admin changes would live in a release folder, which an "
                                           "upgrade replaces. Set it to a folder outside every release (/etc/drishti), as PRODUCTION_STANDARD.md section 2 says")

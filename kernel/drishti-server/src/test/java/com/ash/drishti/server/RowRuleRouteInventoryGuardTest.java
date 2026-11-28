@@ -39,7 +39,7 @@ class RowRuleRouteInventoryGuardTest {
 
     private static final Pattern CONTROLLER = Pattern.compile("(?m)^@(RestController|Controller)\\b");
     private static final Pattern GATE = Pattern.compile(
-            "Entitlements|PrincipalAccess|ViewerAccess|RowRule|TableRules|OutputGate|DatasetService|Authoris|rowRules");
+            "Entitlements|PrincipalAccess|ViewerAccess|GenomicsAccess|RowRule|TableRules|OutputGate|DatasetService|Authoris|rowRules");
 
     @Test
     void everyControllerIsClassifiedAndTheClassHolds() throws IOException {

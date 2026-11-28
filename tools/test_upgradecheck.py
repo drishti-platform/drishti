@@ -179,6 +179,25 @@ def test_a_site_folder_missing_unset_in_production_or_inside_a_release_fails(tmp
     assert "one tree" in text(U.check(str(new), str(old), p, keys={"drishti.site.dir": str(old / "config")}, run=fake_run(HAVE)))
 
 
+@pytest.mark.parametrize("name", ["prod", "PRODUCTION"])
+def test_every_spelling_of_production_runs_the_production_checks(tmp_path, name):
+    old, new = release(tmp_path, "a"), release(tmp_path, "b")
+    assert "drishti.site.dir is not set" in text([r for r in U.check(str(new), str(old), py(tmp_path, "p"), keys={"drishti.profile": name}, run=fake_run(HAVE))
+                                                  if r[0] == U.FAIL])
+
+
+@pytest.mark.parametrize("name", ["prodution", "live"])
+def test_an_unknown_profile_name_fails_the_check(tmp_path, name):
+    """Pre-gate B2: the one list (config/profiles/profile-names.json) the server and the console read too; the new release's own copy wins."""
+    old, new = release(tmp_path, "a"), release(tmp_path, "b")
+    p = py(tmp_path, "p")
+    rep = U.check(str(new), str(old), p, keys={"drishti.profile": name}, run=fake_run(HAVE))
+    assert U.FAIL in levels(rep) and "not a profile name" in text(rep) and "production" in text(rep)
+    (new / "config" / "profiles").mkdir(parents=True)
+    (new / "config" / "profiles" / "profile-names.json").write_text(json.dumps({"names": {"production": [], name: []}}), encoding="utf-8")
+    assert "not a profile name" not in text(U.check(str(new), str(old), p, keys={"drishti.profile": name}, run=fake_run(HAVE)))
+
+
 def test_a_binary_package_names_its_release_from_the_manifest(tmp_path):
     inner = release(tmp_path / "pkg", "drishti")
     (inner / ".mvn" / "maven.config").unlink()

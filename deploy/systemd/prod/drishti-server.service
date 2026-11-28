@@ -15,7 +15,7 @@
 
 # The production server unit of docs/guides/OPERATIONS_GUIDE.md, "Production deployment (Linux)", section 6.1: copy to
 # /etc/systemd/system/drishti-server.service. Layout: /etc/drishti/{prod.ini,secrets.ini,secrets.env,drishti.env,release.env,server.args},
-# the release under /opt/drishti/<release>, the data under /srv/drishti/data.
+# the running release at /opt/drishti/current (a link to releases/<release>), the data under /srv/drishti/data.
 [Unit]
 Description=Drishti server
 After=network-online.target

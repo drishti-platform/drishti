@@ -131,16 +131,20 @@ public final class UserService {
     /** The accounts that can still sign in with a published password (the development admin, the demo accounts), by name. */
     public List<String> defaultPasswordUsers() {
         List<String> out = new java.util.ArrayList<>();
-        if (props.seedPasswordIsDefault()
-                && store.find(props.seedUsername()).map(u -> u.enabled() && hasher.verify(props.seedPassword(), u.passwordHash())).orElse(false)) {
+        if (props.seedPasswordIsDefault() && signsInWith(props.seedUsername(), props.seedPassword())) {
             out.add(props.seedUsername());
         }
         new java.util.TreeMap<>(demoDefaults).forEach((name, password) -> {
-            if (store.find(name).map(u -> u.enabled() && hasher.verify(password, u.passwordHash())).orElse(false)) {
+            if (signsInWith(name, password)) {
                 out.add(name);
             }
         });
         return out;
+    }
+
+    /** Whether the account exists, is enabled and signs in with {@code password} (a published one: the production start check asks). */
+    public boolean signsInWith(String username, String password) {
+        return store.find(norm(username)).map(u -> u.enabled() && hasher.verify(password, u.passwordHash())).orElse(false);
     }
 
     // ---- sign-in and self service --------------------------------------------------------------

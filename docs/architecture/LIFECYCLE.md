@@ -82,6 +82,9 @@ and the drain, counts the stats (`StatsRecorder`), and raises one `LifecycleEven
   That method asks the pack lifecycle (`PackLifecycles.requireServing`). There is no second gate.
 - **Boot.** The packs the server loads at start get a `RUNNING` machine. So does a pack that the folder watcher, a deploy or Admin → Packs
   Load brings in. A pack unloaded by those paths is shut down.
+- **The pack switch.** Admin's switch (Admin → Packs, on or off for everyone) and the suspend are one state: off suspends the pack, on
+  resumes it. The switch is stored in the switches ledger, so it holds on every node and across a restart: each node applies a switch it
+  learns from another (the ledger's gossip) to its own pack, and at start each node suspends every pack whose stored switch is off.
 - **Shutdown of a pack the site lists.** A pack named in `drishti.packs.enabled` is left out of every reload on this node until it is
   started again. The site's list wins at the next server start.
 - **Resume serves the same answers.** Nothing is reloaded and the connectors' instances are the same objects. The packaged test proves this

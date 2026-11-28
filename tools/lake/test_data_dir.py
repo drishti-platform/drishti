@@ -59,6 +59,21 @@ class DataDir(unittest.TestCase):
         lakeconfig._OVERRIDE = self.override
         lakeconfig._table.cache_clear()
 
+    def test_production_never_falls_back_to_the_checkouts_data_folder(self):
+        """Pre-gate S14: under the production profile no named data folder refuses; a named one is used."""
+        old = os.environ.get("DRISHTI_PROFILE")
+        os.environ["DRISHTI_PROFILE"] = "prod"
+        try:
+            if not lakeconfig.data_named():
+                with self.assertRaises(SystemExit) as e:
+                    lakeconfig.data_dir()
+                self.assertIn("production", str(e.exception))
+            with tempfile.TemporaryDirectory() as tmp:
+                os.environ["DRISHTI_DATA_DIR"] = tmp
+                self.assertEqual(lakeconfig.data_dir(), Path(tmp).resolve())
+        finally:
+            os.environ.pop("DRISHTI_PROFILE", None) if old is None else os.environ.__setitem__("DRISHTI_PROFILE", old)
+
     def test_use_data_dir_is_the_data_folder_of_this_process_and_its_children(self):
         with tempfile.TemporaryDirectory() as tmp:
             got = lakeconfig.use_data_dir(Path(tmp) / "scratch")

@@ -59,6 +59,15 @@ class ProductionProfileTest {
                 "drishti.production.tls", "proxy"));
         safe.put("drishti.home", dir.resolve("release").toString());
         safe.put("drishti.site.dir", dir.resolve("etc-drishti").toString());
+        safe.put("drishti.data.dir", dir.resolve("srv-data").toString());
+    }
+
+    /** Pre-gate S3: the data folder is named, absolute and outside the release. */
+    @Test
+    void theDataFolderMustBeNamedAndOutsideTheRelease() {
+        assertOne(refusals(m -> m.put("drishti.data.dir", "")), "drishti.data.dir is not set");      // blank: surefire sets the property for the run
+        assertOne(refusals(m -> m.put("drishti.data.dir", "data")), "relative path");
+        assertOne(refusals(m -> m.put("drishti.data.dir", dir.resolve("release/data").toString())), "inside the release folder");
     }
 
     private StandardEnvironment env(Map<String, Object> m) {
@@ -120,6 +129,23 @@ class ProductionProfileTest {
         e.setActiveProfiles("prod");
         assertTrue(ProductionProfile.production(e));
         assertTrue(ProductionProfile.refusals(e).size() >= 5);
+    }
+
+    /** Pre-gate B2: a name outside the one list (config/profiles/profile-names.json) refuses the start, never an open server. */
+    @Test
+    void anUnknownProfileNameRefusesTheStart() {
+        for (String typo : new String[] {"prodution", "live", "Production2"}) {
+            Map<String, Object> m = new java.util.LinkedHashMap<>(Map.of("drishti.profile", typo, "drishti.security.enabled", "false"));
+            IllegalStateException e = assertThrows(IllegalStateException.class,
+                    () -> new ProductionProfileProcessor().postProcessEnvironment(env(m), new SpringApplication()), typo);
+            assertTrue(e.getMessage().contains("not a profile name") && e.getMessage().contains("production (or prod)")
+                    && e.getMessage().contains("development (or blank)") && e.getMessage().contains("demo"), e.getMessage());
+        }
+        for (String known : new String[] {"production", "PROD", " Production ", "demo", "development", ""}) {
+            ProductionProfile.name(env(Map.of("drishti.profile", known)));          // known spellings never refuse
+        }
+        assertEquals("production", ProductionProfile.name(env(Map.of("drishti.profile", "prod"))));
+        assertEquals("development", ProductionProfile.name(env(Map.of("drishti.profile", ""))));
     }
 
     @Test
@@ -184,12 +210,14 @@ class ProductionProfileTest {
         }));
         Files.writeString(net.resolve("node.yaml"), "enabled: true\nadvertise-url: https://node1.bank.internal:18480\n");
         assertEquals(List.of(), refusals(m -> m.put("drishti.net.dir", net.toString())));
+        Files.writeString(net.resolve("node.yaml"), "enabled: true\n");            // pre-gate S6: no advertise-url advertises http without server.ssl
+        assertOne(refusals(m -> m.put("drishti.net.dir", net.toString())), "no advertise-url");
     }
 
     @Test
     void sqliteWithAClusterIsRefused() throws IOException {
         Path net = Files.createDirectories(dir.resolve("net"));
-        Files.writeString(net.resolve("node.yaml"), "enabled: true\n");
+        Files.writeString(net.resolve("node.yaml"), "enabled: true\nadvertise-url: https://node1.bank.internal:18480\n");
         assertOne(refusals(m -> {
             m.put("drishti.identity.database-url", "jdbc:sqlite:/x/drishti.db");
             m.put("drishti.net.dir", net.toString());

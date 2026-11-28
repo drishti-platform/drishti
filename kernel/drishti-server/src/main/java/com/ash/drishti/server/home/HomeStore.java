@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 
 /**
  * What the change detection keeps, as one JSONL file per kind and business date under {@code <dataDir>/homes}: {@code snapshot} (the
- * followed measures at the cut-off), {@code kpi} (the KPI figures, the sparklines' history), {@code event} and {@code driver}. JSONL is the
+ * followed measures at the cut-off, for the firm: the drivers run's reference only, never served to a person), {@code event} and {@code driver}. JSONL is the
  * data standard; the tables {@code measure_snapshot}, {@code change_event} and {@code change_driver} of ROLE_HOME_SUTRAS.md 4.2 are these
  * files read as tables. A day's snapshot and drivers are replaced whole (atomic move); events are appended.
  */
@@ -115,17 +115,6 @@ public final class HomeStore {
 
     public boolean hasSnapshot(LocalDate d) {
         return Files.isRegularFile(file("snapshot", d));
-    }
-
-    // ----------------------------------------------------------------------------------------------------------- KPI history
-
-    public void putKpis(LocalDate d, List<HomeData.KpiPoint> points) {
-        replace("kpi", d, points.stream().map(p -> json.createObjectNode().put("LABEL", p.label()).put("DATE", d.toString()).put("VALUE", p.value()))
-                .toList());
-    }
-
-    public List<HomeData.KpiPoint> kpis(LocalDate d) {
-        return read("kpi", d, ObjectNode.class).stream().map(n -> new HomeData.KpiPoint(n.path("LABEL").asText(), d, n.path("VALUE").asDouble())).toList();
     }
 
     // ----------------------------------------------------------------------------------------------------------- events

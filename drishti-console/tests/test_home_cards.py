@@ -40,8 +40,8 @@ KPIS = [{"LABEL": "Firm VaR", "VALUE": 12_400_000.0, "DELTA": 800_000.0, "CAPTIO
         {"LABEL": "Limit use", "VALUE": 0.82, "DELTA": 0.03, "CAPTION": ""},
         {"LABEL": "Breaches", "VALUE": 5, "DELTA": 0, "CAPTION": ""}]
 TABLES = {"home_meta": [{"BUSINESS_DATE": "2026-11-27", "SINCE": "yesterday 17:00"}], "home_kpis": KPIS,
-          "home_desk_limits": [{"DESK": "Rates", "VAR": 8_200_000.0, "LIMIT": 10_000_000.0, "CHANGE": 1.0}],
-          "home_exposure": [{"CPTY": "ACME", "EXPOSURE": 9_000_000.0, "LIMIT": 9_500_000.0, "CHANGE": None}],
+          "home_desk_limits": [{"DESK": "Rates", "VAR": 8_200_000.0, "LIMIT": 10_000_000.0, "CHANGE": 1.0, "USE": 0.82, "TONE": "warn"}],
+          "home_exposure": [{"CPTY": "ACME", "EXPOSURE": 9_000_000.0, "LIMIT": 9_500_000.0, "CHANGE": None, "USE": 9 / 9.5, "TONE": "warn"}],
           "home_changes": [{"SUBJECT": "Rates", "MEASURE": "VAR", "KIND": "move", "THEN": 7_000_000.0, "NOW": 8_200_000.0, "CHANGE": 1_200_000.0}],
           "home_loads": [], "home_exceptions": [], "home_mnemonics": [{"MNEMONIC": "VAR", "ABOUT": "Value at risk"}]}
 BANKING = [{"module": "banking", "role_cards": [
@@ -183,7 +183,7 @@ def test_a_card_is_a_panel_the_painter_draws_with_the_figure_in_words_and_its_ow
     back = next(p for p in view["panels"] if p["id"] == "backtest")
     assert back["data"]["value"]["tone"] == "warn"                                # five breaches: the amber light
     bars = next(p for p in view["panels"] if p["id"] == "limits")["data"]["bars"][0]
-    assert bars["label"] == "Rates" and bars["tone"] == "warn" and "82%" in bars["text"]
+    assert bars["label"] == "Rates" and bars["tone"] == "warn" and "82%" in bars["text"]      # the server's USE and TONE, drawn as given
     assert view["strip"][1] == {"label": "Data", "text": "every daily load is in", "tone": "ok"}
     assert view["contract"] == "1.2" and view["layout"]["phone"][0] == var["id"] or "needs" in view["layout"]["phone"]
 

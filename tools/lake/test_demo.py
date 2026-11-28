@@ -389,12 +389,12 @@ class TellServer(unittest.TestCase):
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         return srv, got
 
-    def test_a_scratch_data_folder_tells_no_server_unless_one_is_named(self):
-        """No signal reaches the default server (here a stand-in on a free port) from a --data-dir or other scratch run."""
+    def test_no_server_is_told_unless_one_is_named(self):
+        """No implicit server (pre-gate S13): with no --server, DRISHTI_SERVER or settings file nobody is told, whatever listens on
+        localhost; the stamp is left for the next start. A named server is told."""
         import demo
         srv, got = self.server(lambda h, n: (h.send_response(201), h.end_headers()))
-        old, old_env = demo.DEFAULT_SERVER, os.environ.pop("DRISHTI_SERVER", None)
-        demo.DEFAULT_SERVER = f"http://127.0.0.1:{srv.server_port}"
+        old_env = os.environ.pop("DRISHTI_SERVER", None)
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 d = self.lake(None, tmp)
@@ -402,15 +402,17 @@ class TellServer(unittest.TestCase):
                 note = d.tell_server()
                 self.assertTrue((Path(tmp) / "bi-store" / demo.REBUILT_STAMP).is_file())
                 d.a.data_dir = None
-                self.assertIn("scratch", d.tell_server())
+                self.assertIn("none named", d.tell_server())
+                self.assertEqual(got, [])
+                d.a.server = f"http://127.0.0.1:{srv.server_port}"
+                d.tell_server()
+                self.assertTrue(got, "a named server is told")
         finally:
-            demo.DEFAULT_SERVER = old
             if old_env is not None:
                 os.environ["DRISHTI_SERVER"] = old_env
             srv.shutdown()
             srv.server_close()
-        self.assertEqual(got, [])
-        self.assertIn("scratch", note)
+        self.assertIn("none named", note)
 
     def test_signal_once_tells_each_table_on_its_newest_date(self):
         def ok(h, n):

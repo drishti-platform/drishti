@@ -26,8 +26,9 @@ Needs Python 3.11+ (3.13 is what the wheel packs target) and PyYAML; deltalake a
 recipes and real output is docs/guides/CLI_REFERENCE.md.
 
 Exit codes: 0 ok, 1 problems found (a failing check, a server that said no, an unreachable server), 2 usage (a bad option,
-a missing file or jar). Commands that talk to a server read it from --server or DRISHTI_SERVER (default
-http://localhost:18480) and the token from DRISHTI_TOKEN or --token-file; the token is never printed.
+a missing file or jar). Commands that talk to a server read it from --server, DRISHTI_SERVER or the settings file
+(console.backend.url, or a profile's server.port); none named: they refuse, there is no default server. The token comes from
+DRISHTI_TOKEN or --token-file and is never printed.
 """
 from __future__ import annotations
 
@@ -46,7 +47,6 @@ import urllib.parse
 import urllib.request
 
 import drishti_parser
-from drishti_parser import DEFAULT_SERVER
 import javacmd
 import settingsfile
 from javacmd import cli_tmp, java_cmd
@@ -272,9 +272,11 @@ class Api:
                 raise CliError(f"cannot read --token-file {a.token_file}: {e.strerror}") from None
         token = token or os.environ.get("DRISHTI_TOKEN") or None
         wait = getattr(a, "wait_busy", False) or os.environ.get("DRISHTI_WAIT_BUSY", "").lower() in ("1", "true", "yes")
-        # the address: --server, DRISHTI_SERVER, else the settings files' (console.backend.url, or a profile's server.port), else the default
-        return cls(getattr(a, "server", None) or os.environ.get("DRISHTI_SERVER") or settingsfile.server_url(javacmd.settings()[1], "localhost") or DEFAULT_SERVER, token,
-                   getattr(a, "user", None) or os.environ.get("DRISHTI_USER"), getattr(a, "timeout", 60), wait)
+        # the address: --server, DRISHTI_SERVER, else the settings files' (console.backend.url, or a profile's server.port); no implicit server
+        server = settingsfile.named_server(getattr(a, "server", None), javacmd.settings()[1])
+        if not server:
+            raise CliError(settingsfile.NO_SERVER)
+        return cls(server, token, getattr(a, "user", None) or os.environ.get("DRISHTI_USER"), getattr(a, "timeout", 60), wait)
 
     def request(self, method: str, path: str, body: object = None, data: bytes | None = None, ctype: str | None = None,
                 extra: dict | None = None) -> tuple[int, bytes]:
@@ -1116,7 +1118,7 @@ def cmd_doctor(a, extra) -> int:
                                     a.expect_es or doctor.ACCEPT_ES, a.wait, server=(a.server or os.environ.get("DRISHTI_SERVER") or "").split(",")[0].strip() or None)
         say_json({"ok": doctor.exit_code(results) == 0, "checks": results}) if a.json else doctor.render(results)
         return doctor.exit_code(results)
-    api = Api.from_args(a) if a.server or os.environ.get("DRISHTI_SERVER") or settingsfile.server_url(javacmd.settings()[1]) else None
+    api = Api.from_args(a) if settingsfile.named_server(a.server, javacmd.settings()[1]) else None
     own = ROOT / "data"                          # a data folder named elsewhere (settings file or DRISHTI_DATA_DIR) is a scratch run
     named = (os.environ.get("DRISHTI_DATA_DIR") or javacmd.settings()[1].get("drishti.data.dir") or "").strip()
     scratch = bool(named) and pathlib.Path(named).expanduser().resolve() != own.resolve() and api is None

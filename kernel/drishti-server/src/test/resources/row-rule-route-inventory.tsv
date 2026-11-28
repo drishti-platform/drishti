@@ -1,5 +1,5 @@
 # Row-rule route inventory (R11): every controller, how it reaches row rules and masks. Read by RowRuleRouteInventoryGuardTest.
-# class: gated = the source names a gate (Entitlements, PrincipalAccess, ViewerAccess, RowRule, TableRules, OutputGate, DatasetService, an authoriser);
+# class: gated = the source names a gate (Entitlements, PrincipalAccess, ViewerAccess, GenomicsAccess (the kernel's Access door as the person), RowRule, TableRules, OutputGate, DatasetService, an authoriser);
 #        delegated = takes the principal but names no gate itself: the gate sits in a service it calls (to be proven by the i10 matrix test);
 #        none = no row data; the note says why. A new controller must be added here, with a reason when it is none.
 # format: class<TAB>path<TAB>note
@@ -151,7 +151,7 @@ gated	modules/banking/java/banking-service/src/main/java/com/ash/drishti/banking
 gated	modules/banking/java/banking-service/src/main/java/com/ash/drishti/banking/var/VarShardController.java	
 delegated	modules/banking/java/banking-service/src/main/java/com/ash/drishti/banking/var/VarStressWindowController.java	gate in a called service: prove in the i10 matrix test
 gated	modules/banking/java/banking-service/src/main/java/com/ash/drishti/banking/var/VarSystemBasketController.java	
-none	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/GenomicsController.java	showcase module without row-ruled kinds
-none	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/ShowcaseController.java	showcase landing
+gated	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/GenomicsController.java	
+gated	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/ShowcaseController.java	
 none	modules/market-data/java/market-data-service/src/main/java/com/ash/drishti/marketdata/MarketLandingController.java	landing page
 none	modules/trading/java/trading-service/src/main/java/com/ash/drishti/trading/TradingLandingController.java	landing page

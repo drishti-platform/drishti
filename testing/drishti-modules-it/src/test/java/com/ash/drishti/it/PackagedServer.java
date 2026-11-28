@@ -48,6 +48,8 @@ final class PackagedServer implements AutoCloseable {
     private final Process process;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     final String base;
+    /** The {@code Authorization} header of every request (a server with sign-in on: the speed check's tokens); null: none. */
+    private volatile String authorization;
 
     private PackagedServer(Path work, Process process, int port) {
         this.work = work;
@@ -174,6 +176,12 @@ final class PackagedServer implements AutoCloseable {
 
     /** As {@link #start(Path, Path, String)}, with the environment changed by {@code overrides} (an empty value removes the variable). */
     static PackagedServer start(Path work, Path lake, String today, Map<String, String> overrides) throws IOException, InterruptedException {
+        return start(work, lake, today, overrides, null);
+    }
+
+    /** As {@link #start(Path, Path, String, Map)}, every request (readiness included) carrying {@code authorization} (null: none). */
+    static PackagedServer start(Path work, Path lake, String today, Map<String, String> overrides, String authorization)
+            throws IOException, InterruptedException {
         Files.createDirectories(work);
         Path config = Files.createDirectories(work.resolve("config"));
         try (Stream<Path> s = Files.list(REPO.resolve("config"))) {
@@ -225,6 +233,7 @@ final class PackagedServer implements AutoCloseable {
             }
         });
         PackagedServer server = new PackagedServer(work, pb.start(), port);
+        server.authorization = authorization;
         try {
             server.awaitReady(Duration.ofMinutes(10));
         } catch (RuntimeException | InterruptedException e) {
@@ -253,16 +262,34 @@ final class PackagedServer implements AutoCloseable {
     }
 
     private int status(String path) throws IOException, InterruptedException {
-        return http.send(HttpRequest.newBuilder(URI.create(base + path)).timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.discarding()).statusCode();
+        return http.send(request(path).timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.discarding()).statusCode();
+    }
+
+    private HttpRequest.Builder request(String pathAndQuery) {
+        return request(pathAndQuery, authorization);
+    }
+
+    private HttpRequest.Builder request(String pathAndQuery, String auth) {
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(base + pathAndQuery));
+        return auth == null ? b : b.header("Authorization", auth);
+    }
+
+    /** One answer as JSON asked as another person ({@code authorization}: their bearer token); not 200 is an error naming the request. */
+    JsonNode get(String pathAndQuery, String auth) throws IOException, InterruptedException {
+        HttpResponse<String> r = http.send(request(pathAndQuery, auth).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
+        if (r.statusCode() != 200) {
+            throw new IllegalStateException(r.statusCode() + " for " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
+        }
+        return JSON.readTree(r.body());
     }
 
     /** One answer as JSON; an answer that is not 200 is an error naming the request. */
     JsonNode get(String pathAndQuery) throws IOException, InterruptedException {
-        HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5)).build(),
+        HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5)).build(),
                 HttpResponse.BodyHandlers.ofString());
         for (int i = 0; i < 6 && r.statusCode() == 503 && r.body().contains("DRS-9502"); i++) {   // a date that cannot be opened just yet: as asked, again
             Thread.sleep(15_000);
-            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
+            r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
         }
         if (r.statusCode() != 200) {
             throw new IllegalStateException(r.statusCode() + " for " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
@@ -272,7 +299,7 @@ final class PackagedServer implements AutoCloseable {
 
     /** One POST of a JSON body; an answer that is not 200 is an error naming the request. */
     JsonNode post(String pathAndQuery, String json) throws IOException, InterruptedException {
-        HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+        HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         if (r.statusCode() != 200) {
             throw new IllegalStateException(r.statusCode() + " for POST " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
@@ -282,7 +309,7 @@ final class PackagedServer implements AutoCloseable {
 
     /** One POST of a JSON body that creates something; an answer that is not 201 is an error naming the request. */
     JsonNode created(String pathAndQuery, String json) throws IOException, InterruptedException {
-        HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+        HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         if (r.statusCode() != 201) {
             throw new IllegalStateException(r.statusCode() + " for POST " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
@@ -292,7 +319,7 @@ final class PackagedServer implements AutoCloseable {
 
     /** Any request: the status and the body as JSON (an empty object when the body is not JSON). */
     Answer send(String method, String pathAndQuery) throws IOException, InterruptedException {
-        HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+        HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                 .method(method, HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
         JsonNode body;
         try {

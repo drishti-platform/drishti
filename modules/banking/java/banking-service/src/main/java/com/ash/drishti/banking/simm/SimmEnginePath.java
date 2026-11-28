@@ -21,6 +21,7 @@ import com.ash.drishti.api.error.ErrorCode;
 import com.ash.drishti.banking.compute.simm.SimmChoices;
 import com.ash.drishti.banking.frtb.FrtbData;
 import com.ash.drishti.kernel.api.security.Principal;
+import com.ash.drishti.kernel.api.services.EngineAnswer;
 import com.ash.drishti.kernel.api.services.Engines;
 import com.ash.drishti.kernel.api.services.Kernel;
 import java.time.LocalDate;
@@ -85,7 +86,7 @@ public class SimmEnginePath {
      * comparison with the counterparty's call sums them by risk class in that order, as in-tree).
      */
     record Answer(Map<String, Object> headline, List<Map<String, Object>> collectClasses, List<Map<String, Object>> postClasses,
-            Map<String, Object> collect, Map<String, Object> post) {}
+            EngineAnswer collect, EngineAnswer post) {}
 
     /** The steps' outputs (the explanation: charges, buckets, weighted sensitivities, concentration groups, add-on lines). */
     static final List<String> STEPS = List.of("simm-charge", "simm-bucket", "simm-factor", "simm-group", "simm-addon");
@@ -177,9 +178,9 @@ public class SimmEnginePath {
         List<String> outputs = new ArrayList<>(OUTPUTS);
         outputs.addAll(extra);
         prm.put("direction", "collect");
-        Map<String, Object> c = call(p, prm, day.date(), outputs);
+        EngineAnswer c = call(p, prm, day.date(), outputs);
         prm.put("direction", "post");
-        Map<String, Object> po = call(p, prm, day.date(), outputs);
+        EngineAnswer po = call(p, prm, day.date(), outputs);
         Map<String, Object> tc = one(c, "simm-total", s);
         Map<String, Object> tp = one(po, "simm-total", s);
         Map<String, Object> ver = one(c, "simm-version", s);
@@ -353,7 +354,7 @@ public class SimmEnginePath {
     Map<String, Object> explain(SimmService svc, Principal p, String scope, LocalDate date, String asked, SimmChoices ch, boolean post, String riskClass, int max) {
         Answer a = answer(svc, p, scope, date, asked, ch, STEPS);
         String s = String.valueOf(a.headline().get("SCOPE"));
-        Map<String, Object> r = post ? a.post() : a.collect();
+        EngineAnswer r = post ? a.post() : a.collect();
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("scope", s);
         m.put("direction", post ? "post" : "collect");
@@ -521,7 +522,7 @@ public class SimmEnginePath {
         return v instanceof Number n && Double.isFinite(n.doubleValue()) ? n.doubleValue() : null;
     }
 
-    private static Map<String, Double> byProduct(Map<String, Object> answer, String scope) {
+    private static Map<String, Double> byProduct(EngineAnswer answer, String scope) {
         Map<String, Double> out = new LinkedHashMap<>();
         for (Map<String, Object> r : rows(answer, "simm-product")) {
             if (scope.equals(r.get("SCOPE"))) {
@@ -531,24 +532,23 @@ public class SimmEnginePath {
         return out;
     }
 
-    private static Map<String, Object> one(Map<String, Object> answer, String table, String scope) {
+    private static Map<String, Object> one(EngineAnswer answer, String table, String scope) {
         for (Map<String, Object> r : rows(answer, table)) {
             if (scope.equals(r.get("SCOPE"))) {
                 return r;
             }
         }
-        @SuppressWarnings("unchecked")
-        List<Object> miss = (List<Object>) answer.getOrDefault("missing", List.of());
+        List<String> miss = answer.missing();
         throw new DrishtiException(ErrorCode.SIMM_NOT_INSTALLED, "the engine " + ENGINE + " answered no " + table + " of " + scope
                 + (miss.isEmpty() ? "" : " (not found: " + miss + ")"));
     }
 
-    private static List<Map<String, Object>> rows(Map<String, Object> answer, String name) {
+    private static List<Map<String, Object>> rows(EngineAnswer answer, String name) {
         List<Map<String, Object>> r = com.ash.drishti.banking.exposure.ExposureEnginePath.rows(answer, name);
         return r == null ? List.of() : r;
     }
 
-    private Map<String, Object> call(Principal p, Map<String, Object> params, LocalDate date, List<String> outputs) {
+    private EngineAnswer call(Principal p, Map<String, Object> params, LocalDate date, List<String> outputs) {
         Engines e = engines.get();
         if (e == null || !e.running(ENGINE)) {
             throw new DrishtiException(ErrorCode.ENGINE_BLOCKED, "the engine " + ENGINE + " is not running here (drishti-risk-ccr in lib/engines and "

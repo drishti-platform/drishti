@@ -331,18 +331,47 @@ final class LakeInputs implements Inputs {
             }
         }
 
+        /** The stamp, fixed the first time it is asked (a session's input stamps never change under it: a moved one makes it stale). */
+        private volatile String stamp;
+
+        /**
+         * The input's data versions (each bound kind's lake commit for the date) without reading a row (engine specification 5.2 rule 8):
+         * the rows read, when they are, are the same versions (a moved version makes the session stale and a new one reads afresh).
+         */
         @Override
         public String stamp() {
+            String s = stamp;
+            if (s == null) {
+                s = composeStamp();
+                stamp = s;
+            }
+            return s;
+        }
+
+        private String composeStamp() {
+            Loaded l = loaded;
+            if (l != null) {
+                return l.stamp();                                       // read already: the versions it read
+            }
             if (input.open()) {
                 StringBuilder s = new StringBuilder();
                 kinds.forEach(k -> s.append(s.length() == 0 ? "" : ";").append(k).append('=').append(data.stamp(k, date).orElse("?")));
                 return s.length() == 0 ? "absent" : s.toString();
             }
-            try {
-                return load().stamp();
-            } catch (EngineException e) {
-                return "unread";
+            if (kinds.isEmpty()) {
+                return "absent";
             }
+            StringBuilder s = new StringBuilder();             // as read() writes it, from the versions alone
+            for (String kind : kinds) {
+                s.append(s.length() == 0 ? "" : ";").append(kind).append('=');
+                java.util.NavigableSet<LocalDate> held = whole() ? data.dates(kind).orElse(null) : null;
+                if (held != null && !held.isEmpty()) {
+                    s.append(held.size()).append(" dates to ").append(held.last()).append(':').append(data.stamp(kind, held.last()).orElse("?"));
+                } else {
+                    s.append(data.stamp(kind, date).orElse(data.serves(kind) ? "?" : "absent"));
+                }
+            }
+            return s.toString();
         }
 
         @Override

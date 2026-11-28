@@ -163,7 +163,7 @@ public final class VarPivotProvider implements PivotProvider {
         Hierarchies hs = svc.hierarchies();
         Map<String, String> levels = new HashMap<>();
         hs.specs().forEach(s -> s.levelNames().forEach(l -> levels.put(l.toUpperCase(Locale.ROOT).replace('-', '_'), l)));
-        com.ash.drishti.banking.compute.var.Cells.Names read = svc.loader().names(com.ash.drishti.api.AsOf.of(day), hs);
+        com.ash.drishti.banking.compute.var.Cells.Names read = svc.loader().names(day, hs);
         java.util.function.BinaryOperator<String> out = (dim, value) -> {
             String level = levels.get(dim.substring(dim.lastIndexOf('.') + 1).toUpperCase(Locale.ROOT).replace('-', '_'));
             try {

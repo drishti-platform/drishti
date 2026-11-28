@@ -111,11 +111,12 @@ public final class HostedEngine implements AutoCloseable {
     private volatile HostContext context;
     private volatile Sessions sessions;
     /**
-     * The host's answer cache (engine specification 13 rule 6): a final answer kept by its stamp (engine version, descriptor, options, the
-     * input stamps of the session that answered, the request with its visibility signature), so a kept answer is served only to the same
-     * question, from the same viewer's rows, over the same data. A new instance (a start, an options change) starts empty; null: off.
+     * The host's answer cache (engine specification 13 rule 6), one for every engine of the host (null: off): a final answer kept by its
+     * stamp (engine version, descriptor, options, the input stamps of the session that answered, the request with its visibility
+     * signature), so a kept answer is served only to the same question, from the same viewer's rows, over the same data. This engine's
+     * entries leave when an instance starts or shuts down (an options change is a new instance), when their session closes or goes stale.
      */
-    private volatile AnswerCache answers;
+    private final AnswerCache answers;
     private final AtomicLong answerHits = new AtomicLong();
     private final AtomicLong answerMisses = new AtomicLong();
     /** The session key of the request on this thread: the input stamps a stamp names are that session's own (never another viewer's). */
@@ -129,8 +130,9 @@ public final class HostedEngine implements AutoCloseable {
     private volatile Instant since = Instant.now();
 
     HostedEngine(String id, EngineLib.Entry entry, EngineFile file, String fileProblem, EngineHostSettings settings, KindData data,
-            KindContracts contracts, WhereCompiler wheres, Outputs outputs, Auditor audit, Set<String> visibilityRules) {
+            KindContracts contracts, WhereCompiler wheres, Outputs outputs, Auditor audit, Set<String> visibilityRules, AnswerCache answers) {
         this.id = id;
+        this.answers = answers;
         this.entry = entry;
         this.file = file;
         this.fileProblem = fileProblem;
@@ -294,25 +296,51 @@ public final class HostedEngine implements AutoCloseable {
         if (c == null) {
             return;
         }
-        List<String> lines = c.logLines();
-        for (int k = logged.get(); k < lines.size(); k = logged.get()) {
-            if (logged.compareAndSet(k, k + 1)) {
-                LOG.info("engine {}: {}", id, lines.get(k));
+        int from = logged.get();
+        List<String> lines = c.logLines(from);                         // only what is new since the last look
+        for (int i = 0; i < lines.size(); i++) {
+            if (logged.compareAndSet(from + i, from + i + 1)) {
+                LOG.info("engine {}: {}", id, lines.get(i));
             }
         }
     }
 
-    /** The answer cache's figures for Admin, Caches: entries, the limit, hits and misses since the start (zeros when off). */
+    /** This engine's part of the answer cache for Admin, Caches: entries, bytes, hits and misses since the start (zeros when off). */
     public long[] answerCache() {
-        AnswerCache a = answers;
-        return new long[] {a == null ? 0 : a.size(), a == null ? 0 : settings.answers(), answerHits.get(), answerMisses.get()};
+        long[] mine = answers == null ? new long[2] : answers.of(id);
+        return new long[] {mine[0], mine[1], answerHits.get(), answerMisses.get()};
     }
 
-    /** Empties the answer cache (Admin, Caches: purge); the next ask of each question is answered by the engine again. */
-    public void purgeAnswers() {
+    /** Drops this engine's kept answers ({@code date} null: all; else those of snapshots of that business date); the next asks run again. */
+    public void purgeAnswers(LocalDate date) {
         if (answers != null) {
-            answers = new AnswerCache(settings.answers());
+            String d = date == null ? null : ",date=" + date + ",";
+            answers.removeIf(k -> k.engine().equals(id) && (d == null || ("," + k.snapshot() + ",").contains(d)));
         }
+    }
+
+    /** Drops this engine's kept answers of one session's snapshot (closed, gone stale, retired). */
+    private void dropAnswers(Snapshot snapshot) {
+        if (answers != null) {
+            String text = snapshot.text();
+            answers.removeIf(k -> k.engine().equals(id) && k.snapshot().equals(text));
+        }
+    }
+
+    /**
+     * Data of {@code kind} was written by this server: when this engine binds the kind, its open sessions are stale (the next ask opens a
+     * fresh one, which reads its inputs again) and the kept answers are dropped. True when it binds the kind.
+     */
+    public boolean inputsChanged(String kind) {
+        if (binding.inputs().values().stream().noneMatch(b -> b.kinds().contains(kind))) {
+            return false;
+        }
+        Sessions s = sessions;
+        if (s != null) {
+            s.keys().stream().map(Sessions.Key::snapshot).distinct().toList().forEach(s::stale);
+        }
+        purgeAnswers(null);
+        return true;
     }
 
     public int sessionsOpen() {
@@ -370,9 +398,9 @@ public final class HostedEngine implements AutoCloseable {
             context = ctx;
             admission = new Admission(file.limits().concurrent());
             instance = inst;
-            sessions = new Sessions(inst, file.snapshot().hot(), this::inputsFor);
+            sessions = new Sessions(inst, file.snapshot().hot(), this::inputsFor, this::sessionClosed);
             logged.set(0);
-            answers = settings.answers() > 0 ? new AnswerCache(settings.answers()) : null;
+            purgeAnswers(null);                                          // a new instance (a start, an options change) answers afresh
             transition(actor, "init", () -> inst.init(ctx));
 
         } finally {
@@ -425,7 +453,7 @@ public final class HostedEngine implements AutoCloseable {
             }
             inputsByKey.clear();
             viewers.clear();
-            answers = null;
+            purgeAnswers(null);
             try {
                 transition(actor, "shutdown", () -> i.shutdown());
             } catch (EngineException e) {
@@ -485,6 +513,37 @@ public final class HostedEngine implements AutoCloseable {
      * host's; the parameters are normalised; the session is the snapshot's (and the caller's, per viewer); the answer passes the output gate.
      */
     public Answer ask(Ask ask, ViewerAccess viewer) throws EngineException {
+        return answer(ask, viewer).answer();
+    }
+
+    /**
+     * An answer as the caller may see it, with its entry in the host's answer cache ({@code kept}, null when the answer is not kept: the
+     * cache off, a published ask, an interim answer): what a reader derives from the answer is kept there ({@link Answered#keep}), so it
+     * is reachable only through the same stamp (the same question, rows and data) and leaves with the answer.
+     */
+    public record Answered(Answer answer, AnswerCache.Kept kept, AnswerCache cache) {
+
+        /** Keeps a value derived from the answer under {@code name}, counted as {@code bytes}; returns the value kept first for that name. */
+        public Object keep(String name, Object value, long bytes) {
+            if (kept == null) {
+                return value;
+            }
+            Object had = kept.shaped().putIfAbsent(name, value);
+            if (had != null) {
+                return had;
+            }
+            cache.grow(kept, bytes);
+            return value;
+        }
+
+        /** A value kept under {@code name}, or null. */
+        public Object kept(String name) {
+            return kept == null ? null : kept.shaped().get(name);
+        }
+    }
+
+    /** As {@link #ask}, with the answer's entry in the host's answer cache. */
+    public Answered answer(Ask ask, ViewerAccess viewer) throws EngineException {
         try {
             return doAsk(ask, viewer);
         } catch (EngineException e) {
@@ -499,7 +558,7 @@ public final class HostedEngine implements AutoCloseable {
         }
     }
 
-    private Answer doAsk(Ask ask, ViewerAccess viewer) throws EngineException {
+    private Answered doAsk(Ask ask, ViewerAccess viewer) throws EngineException {
         EngineInstance i = instance;
         if (i == null) {
             throw unavailable();
@@ -527,7 +586,9 @@ public final class HostedEngine implements AutoCloseable {
         boolean perViewer = !"shared".equals(isolation);
         String signature = perViewer ? signature(viewer) : null;
         Visibility visibility = visibility(d, viewer, perViewer, signature);
-        Request request = new Request(UUID.randomUUID().toString(), ask.outputs(), params, visibility, viewer.actor(), 0L, ask.requestClass());
+        Request unhashed = new Request(UUID.randomUUID().toString(), ask.outputs(), params, visibility, viewer.actor(), 0L, ask.requestClass());
+        // hashed once: the cache's look-up and the engine's own stamp (Stamps.of) both read the hash the request carries
+        Request request = unhashed.withHash(snapshot, com.ash.engine.host.Stamping.request(snapshot, unhashed));
         Sessions.Key key = new Sessions.Key(snapshot, signature);
         if (perViewer) {
             viewers.put(signature, viewer);
@@ -535,33 +596,32 @@ public final class HostedEngine implements AutoCloseable {
         Duration timeout = Duration.ofSeconds(Math.max(1, file.limits().requestSeconds()));
         HostControl control = new HostControl(Instant.now().plus(timeout), Clock.systemUTC(), false);
         Answer answer;
+        AnswerCache.Kept entry = null;
         try (Admission.Permit permit = admission.admit(ask.requestClass(), id); Sessions.Lease lease = sessions.lease(key, control)) {
             LakeInputs.CURRENT.set(control);
             ASKING.set(key);
             try {
-                AnswerCache kept = ask.publish() ? null : answers;      // a published ask always runs (its tables are written)
-                // the stamp after the lease: the session is open and has read its inputs, so the stamp names what it holds
-                String stamp = kept == null ? null : context.stamp(snapshot, request).text();
-                Answer hit = stamp == null ? null : kept.get(stamp);
-                if (hit != null) {
+                AnswerCache cache = ask.publish() ? null : answers;     // a published ask always runs (its tables are written)
+                // the stamp after the lease: the session is open, so the stamp names the input versions it holds
+                String stamp = cache == null ? null : context.stamp(snapshot, request).text();
+                entry = stamp == null ? null : cache.get(stamp);
+                if (entry != null) {
                     answerHits.incrementAndGet();
-                    answer = hit;
+                    answer = entry.answer();
                 } else {
                     answer = i.request(() -> lease.session().ask(request, control));
                     forwardLog();
-                    if (kept != null) {
+                    if (cache != null) {
                         answerMisses.incrementAndGet();
-                        kept.put(answer);                               // under its own stamp; an interim answer is never kept
+                        entry = cache.put(answer, id, snapshot.text());   // under its own stamp; an interim answer is never kept
                     }
                 }
             } finally {
                 ASKING.remove();
                 LakeInputs.CURRENT.remove();
             }
-        } finally {
-            inputsByKey.keySet().retainAll(new java.util.HashSet<>(sessions.keys()));
         }
-        Answer gated = OutputGate.apply(d, answer, viewer, binding);
+        Answer gated = OutputGate.apply(d, answer, viewer, binding);   // on every answer, kept or not
         if (ask.publish()) {
             List<String> notes = outputs.publish(id, file, snapshot, gated);
             if (!notes.isEmpty()) {
@@ -571,10 +631,40 @@ public final class HostedEngine implements AutoCloseable {
             }
         }
         if (audit != null) {
-            audit.record(viewer.actor(), "engine-ask", "engine/" + id, ask.outputs() + " " + params + " " + snapshot.text() + " -> " + gated.status()
-                    + (gated.stamp() == null ? "" : " stamp " + gated.stamp().request()));
+            audit.record(viewer.actor(), "engine-ask", "engine/" + id, ask.outputs() + " " + auditParams(params) + " " + snapshot.text() + " -> "
+                    + gated.status() + (gated.stamp() == null ? "" : " stamp " + gated.stamp().request()));
         }
-        return gated;
+        return new Answered(gated, entry, answers);
+    }
+
+    /** The longest list an audit line writes out item by item (specification 3.2); a longer one is named by its count. */
+    static final int AUDIT_LIST_ITEMS = 32;
+
+    /**
+     * The parameters as the audit line names them: a list longer than {@link #AUDIT_LIST_ITEMS} items and a table by their size, never
+     * their values (the line's request hash, its {@code stamp}, is their digest): an audit line of a scope of 200,000 rows stays short.
+     */
+    static String auditParams(SortedMap<String, Object> params) {
+        StringBuilder b = new StringBuilder("{");
+        params.forEach((k, v) -> {
+            b.append(b.length() == 1 ? "" : ", ").append(k).append('=');
+            if (v instanceof java.util.Collection<?> c && c.size() > AUDIT_LIST_ITEMS) {
+                b.append("list:").append(c.size()).append(" items");
+            } else if (v instanceof com.ash.engine.Table t) {
+                b.append("table:").append(t.rows()).append(" rows");
+            } else {
+                b.append(v);
+            }
+        });
+        return b.append('}').toString();
+    }
+
+    /** A session closed (evicted, retired, the instance shut down): its inputs and its kept answers go with it. */
+    private void sessionClosed(Sessions.Key key) {
+        inputsByKey.remove(key);
+        if (sessions == null || sessions.keys().stream().noneMatch(k -> k.snapshot().equals(key.snapshot()))) {
+            dropAnswers(key.snapshot());
+        }
     }
 
     private EngineException unavailable() {
@@ -755,6 +845,7 @@ public final class HostedEngine implements AutoCloseable {
             String before = lastStamps.put(snap.text(), now.toString());
             if (before != null && !before.equals(now.toString())) {
                 s.stale(snap);
+                dropAnswers(snap);                                      // a new data version: the kept answers of the old one go now
                 stale.add(snap);
             }
         }

@@ -33,6 +33,7 @@ public final class VarCaches implements com.ash.drishti.server.caches.CacheGroup
     static final String DATES = "var.dates";
     static final String HOT = "var.hot-files";
     static final String VIEWS = "var.views";
+    static final String NAMES = "var.names";
     static final String SHARDS = "var.shard-books";
     static final String STANDALONES = "var.standalones";
     static final String REFUSALS = "var.refusals";
@@ -83,6 +84,8 @@ public final class VarCaches implements com.ash.drishti.server.caches.CacheGroup
                 true, Map.of("open", t.get("open"), "built", t.get("built"), "reopened", t.get("reopened"), "pinned", svc.pins().all().size())));
         out.add(CacheReport.of(VIEWS, "var", "Viewers' views per date, version, currency and role set", "heap", svc.access().cache(),
                 (long) svc.props().viewCacheMb() << 20, null, 3600L, "data-version", true));
+        out.add(CacheReport.of(NAMES, "var", "Node display names per date, hierarchies and reference-data version (the engine path's labels)",
+                "heap", svc.loader().namesCache(), null, 16L, null, "data-version (the naming kinds' versions)", true));
         out.add(CacheReport.of(STANDALONES, "var", "Each open book's whole positions' standalone VaRs, per lens (the totals over every part)",
                 "heap", svc.partTotals().cache(), VarPartTotals.OWN_LIMIT, null, 3600L, "the book (released with it)", true));
         VarShards sh = svc.shards();
@@ -106,8 +109,14 @@ public final class VarCaches implements com.ash.drishti.server.caches.CacheGroup
             }
             done.add(ANSWERS);
         }
-        if (all || VIEWS.equals(name)) {
+        if (all || VIEWS.equals(name) || NAMES.equals(name)) {
             svc.access().forget(date);
+            if (date == null) {
+                svc.loader().namesCache().invalidateAll();
+            } else {
+                svc.loader().namesCache().asMap().keySet().removeIf(k -> k.startsWith(date + "|"));
+            }
+            done.add(NAMES);
             done.add(VIEWS);
         }
         if (all || REFUSALS.equals(name)) {

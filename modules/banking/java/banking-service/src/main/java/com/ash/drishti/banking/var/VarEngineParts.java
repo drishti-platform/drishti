@@ -20,6 +20,7 @@ import com.ash.drishti.api.error.ErrorCode;
 import com.ash.drishti.banking.compute.var.ScopeResolver;
 import com.ash.drishti.banking.compute.var.VarBook;
 import com.ash.drishti.kernel.api.security.Principal;
+import com.ash.drishti.kernel.api.services.EngineAnswer;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -106,7 +107,7 @@ final class VarEngineParts {
         params.put("rows", VarEnginePath.ordinals(res.set()));
         params.put("node", res.node() == null ? "" : res.node());
         params.put("parts", all);
-        Map<String, Object> a = engine.ask(p, List.of("scope-contributions"), params, Map.of("date", date.toString()));
+        EngineAnswer a = engine.ask(p, List.of("scope-contributions"), params, Map.of("date", date.toString()));
         Map<Integer, Map<String, Object>> byPart = new LinkedHashMap<>();
         for (Map<String, Object> r : VarEnginePath.rows(a, "scope-contributions")) {
             byPart.put(((Number) r.get("PART")).intValue(), r);
@@ -152,7 +153,7 @@ final class VarEngineParts {
         params.put("rows", VarEnginePath.ordinals(res.set()));
         params.put("node", res.node() == null ? "" : res.node());
         params.put("bins", svc.props().histogramBins());
-        Map<String, Object> a = engine.ask(p, List.of("scope-path"), params, Map.of("date", date.toString()));
+        EngineAnswer a = engine.ask(p, List.of("scope-path"), params, Map.of("date", date.toString()));
         List<Map<String, Object>> r = VarEnginePath.rows(a, "scope-path");
         if (r.isEmpty()) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + VarEnginePath.ENGINE + " answered no path for "
@@ -169,7 +170,7 @@ final class VarEngineParts {
         params.put("rows", VarEnginePath.ordinals(res.set()));
         params.put("node", res.node() == null ? "" : res.node());
         params.put("bins", svc.props().histogramBins());
-        Map<String, Object> a = engine.ask(p, List.of("scope-path"), params, Map.of("date", date.toString()));
+        EngineAnswer a = engine.ask(p, List.of("scope-path"), params, Map.of("date", date.toString()));
         List<Map<String, Object>> r = VarEnginePath.rows(a, "scope-path");
         if (r.isEmpty()) {
             throw new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the engine " + VarEnginePath.ENGINE + " answered no path for "

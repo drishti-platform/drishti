@@ -19,6 +19,7 @@ import com.ash.engine.Descriptor;
 import com.ash.engine.EngineException;
 import com.ash.engine.EngineException.Kind;
 import com.ash.engine.RequestClass;
+import com.ash.engine.host.AnswerCache;
 import com.ash.engine.host.EngineFile;
 import com.ash.engine.host.EngineLib;
 import com.ash.engine.host.EngineTemplate;
@@ -84,10 +85,14 @@ public final class EngineHost implements AutoCloseable {
     private volatile FileLicence licence;
     private ScheduledExecutorService scheduler;
 
+    /** The host's one answer cache (specification 13 rule 6): every engine's answers by stamp, bounded by bytes; null: off. */
+    private final AnswerCache answers;
+
     /**
      * @param platform the loader of the platform classes the engines share (engine-api, tools, Lake, Rachana): the server's own
      */
     public EngineHost(EngineHostSettings settings, ClassLoader platform, Ports ports) {
+        this.answers = settings.answersBytes() > 0 ? new AnswerCache(settings.answersBytes()) : null;
         this.settings = settings;
         this.platform = platform;
         this.ports = ports;
@@ -124,7 +129,7 @@ public final class EngineHost implements AutoCloseable {
             lib = EngineLib.scan(settings.libPath(), platform, settings.provided(), switches, licence);
             for (EngineLib.Entry e : lib.entries()) {
                 HostedEngine h = new HostedEngine(e.id(), e, files.get(e.id()), fileProblems.get(e.id()), settings, ports.data(), ports.contracts(),
-                        ports.wheres(), ports.outputs(), ports.audit(), ports.visibilityRules());
+                        ports.wheres(), ports.outputs(), ports.audit(), ports.visibilityRules(), answers);
                 engines.put(e.id(), h);
             }
             checkPackUses();
@@ -215,6 +220,15 @@ public final class EngineHost implements AutoCloseable {
         }
     }
 
+    /** Data of {@code kind} was written by this server: the engines that read it open fresh sessions (HostedEngine#inputsChanged). */
+    public int inputsChanged(String kind) {
+        int n = 0;
+        for (HostedEngine h : engines.values()) {
+            n += h.inputsChanged(kind) ? 1 : 0;
+        }
+        return n;
+    }
+
     private void lookAtDataVersions() {
         for (HostedEngine h : engines.values()) {
             try {
@@ -271,6 +285,11 @@ public final class EngineHost implements AutoCloseable {
     /** "provides engine API 0.1, tools 1.1, Lake 0.9, Rachana 1.0" (17.5 rule 5). */
     public String platform() {
         return settings.provided().line();
+    }
+
+    /** The host's one answer cache, every engine's (null: off, {@code drishti.engine-lib.answers-mb} 0). */
+    public AnswerCache answers() {
+        return answers;
     }
 
     public EngineHostSettings settings() {

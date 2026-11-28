@@ -603,9 +603,29 @@
   services.CellSet public java.util.List<java.lang.Object> com.ash.drishti.kernel.api.services.CellSet.rows()
   services.CellSet public java.util.Map<java.lang.String, java.lang.Object> com.ash.drishti.kernel.api.services.CellSet.answer()
   services.CellSet public java.util.Map<java.lang.String, java.lang.Object> com.ash.drishti.kernel.api.services.CellSet.cells()
+  services.EngineAnswer public abstract <T> T com.ash.drishti.kernel.api.services.EngineAnswer.shaped(java.lang.String,java.util.function.Function<com.ash.drishti.kernel.api.services.EngineAnswer, T>)
+  services.EngineAnswer public abstract com.ash.drishti.kernel.api.services.EngineTable com.ash.drishti.kernel.api.services.EngineAnswer.table(java.lang.String)
+  services.EngineAnswer public abstract java.lang.String com.ash.drishti.kernel.api.services.EngineAnswer.key()
+  services.EngineAnswer public abstract java.lang.String com.ash.drishti.kernel.api.services.EngineAnswer.status()
+  services.EngineAnswer public abstract java.util.List<java.lang.String> com.ash.drishti.kernel.api.services.EngineAnswer.missing()
+  services.EngineAnswer public abstract java.util.List<java.lang.String> com.ash.drishti.kernel.api.services.EngineAnswer.notes()
+  services.EngineAnswer public abstract java.util.Map<java.lang.String, java.lang.String> com.ash.drishti.kernel.api.services.EngineAnswer.inputStamps()
+  services.EngineAnswer$Sized public abstract long com.ash.drishti.kernel.api.services.EngineAnswer$Sized.bytes()
+  services.EngineTable public abstract boolean com.ash.drishti.kernel.api.services.EngineTable.flag(java.lang.String,int)
+  services.EngineTable public abstract boolean com.ash.drishti.kernel.api.services.EngineTable.isNull(java.lang.String,int)
+  services.EngineTable public abstract double com.ash.drishti.kernel.api.services.EngineTable.number(java.lang.String,int)
+  services.EngineTable public abstract double[] com.ash.drishti.kernel.api.services.EngineTable.list(java.lang.String,int)
+  services.EngineTable public abstract int com.ash.drishti.kernel.api.services.EngineTable.find(java.lang.String,java.lang.String)
+  services.EngineTable public abstract int com.ash.drishti.kernel.api.services.EngineTable.rows()
+  services.EngineTable public abstract java.lang.Object com.ash.drishti.kernel.api.services.EngineTable.value(java.lang.String,int)
+  services.EngineTable public abstract java.lang.String com.ash.drishti.kernel.api.services.EngineTable.name()
+  services.EngineTable public abstract java.lang.String com.ash.drishti.kernel.api.services.EngineTable.text(java.lang.String,int)
+  services.EngineTable public abstract java.util.List<java.lang.String> com.ash.drishti.kernel.api.services.EngineTable.columns()
+  services.EngineTable public abstract long com.ash.drishti.kernel.api.services.EngineTable.integer(java.lang.String,int)
   services.Engines public abstract boolean com.ash.drishti.kernel.api.services.Engines.running(java.lang.String)
-  services.Engines public abstract java.util.Map<java.lang.String, java.lang.Object> com.ash.drishti.kernel.api.services.Engines.ask(com.ash.drishti.kernel.api.security.Principal,java.lang.String,java.util.List<java.lang.String>,java.util.Map<java.lang.String, java.lang.Object>,java.util.Map<java.lang.String, java.lang.String>)
-  services.Engines public abstract java.util.Map<java.lang.String, java.lang.Object> com.ash.drishti.kernel.api.services.Engines.ask(com.ash.drishti.kernel.api.services.Person,java.lang.String,java.util.List<java.lang.String>,java.util.Map<java.lang.String, java.lang.Object>,java.util.Map<java.lang.String, java.lang.String>)
+  services.Engines public abstract com.ash.drishti.kernel.api.services.EngineAnswer com.ash.drishti.kernel.api.services.Engines.ask(com.ash.drishti.kernel.api.security.Principal,java.lang.String,java.util.List<java.lang.String>,java.util.Map<java.lang.String, java.lang.Object>,java.util.Map<java.lang.String, java.lang.String>)
+  services.Engines public abstract com.ash.drishti.kernel.api.services.EngineAnswer com.ash.drishti.kernel.api.services.Engines.ask(com.ash.drishti.kernel.api.services.Person,java.lang.String,java.util.List<java.lang.String>,java.util.Map<java.lang.String, java.lang.Object>,java.util.Map<java.lang.String, java.lang.String>)
+  services.Engines public default int com.ash.drishti.kernel.api.services.Engines.inputsChanged(java.lang.String)
   services.History public abstract com.ash.drishti.kernel.api.services.Series com.ash.drishti.kernel.api.services.History.series(com.ash.drishti.kernel.api.services.Person,com.ash.drishti.api.EntityRef,java.lang.String,int,java.time.LocalDate)
   services.InlineRequest public final boolean com.ash.drishti.kernel.api.services.InlineRequest.equals(java.lang.Object)
   services.InlineRequest public final int com.ash.drishti.kernel.api.services.InlineRequest.hashCode()
@@ -821,6 +841,9 @@ security.Principal
 services.Access
 services.BusinessDates
 services.CellSet
+services.EngineAnswer
+services.EngineAnswer$Sized
+services.EngineTable
 services.Engines
 services.History
 services.InlineRequest

@@ -177,3 +177,10 @@ def test_a_site_folder_missing_unset_in_production_or_inside_a_release_fails(tmp
     assert U.FAIL in levels(rep) or (old / "config").is_dir() is False
     (old / "config").mkdir(exist_ok=True)
     assert "one tree" in text(U.check(str(new), str(old), p, keys={"drishti.site.dir": str(old / "config")}, run=fake_run(HAVE)))
+
+
+def test_a_binary_package_names_its_release_from_the_manifest(tmp_path):
+    inner = release(tmp_path / "pkg", "drishti")
+    (inner / ".mvn" / "maven.config").unlink()
+    (tmp_path / "pkg" / "MANIFEST.json").write_text(json.dumps({"release": "i8b"}), encoding="utf-8")
+    assert U.version_of(inner) == "i8b"

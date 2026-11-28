@@ -3798,6 +3798,8 @@ for a small machine (Admin → Health → Disk shows what holds it).
 # /etc/drishti/prod.ini: no secret in this file; a value runs to the end of its line, so no comment after a value
 [roots]
 drishti.home=/opt/drishti/current/drishti
+# the release's own Python, through the link: setup would otherwise write the resolved folder and an upgrade would not switch it
+drishti.python=/opt/drishti/current/python/bin/python3.13
 drishti.data.dir=/srv/drishti/data
 drishti.modules.home=/opt/drishti/current/drishti/modules
 # the site folder: every site file and every Admin change; the release is never written (production refuses to start without it)
@@ -3807,8 +3809,9 @@ drishti.site.dir=/etc/drishti
 url=http://127.0.0.1:18480
 ```
 
-`setup` ([3.1](#31-what-setup-tells-you)) adds `drishti.python`, the Python the server starts for its Python work (feeds, compute workers); the
-console runs under the same interpreter ([6.2](#62-the-console-unit)).
+`drishti.python` is the Python the server starts for its Python work (feeds, compute workers); the console runs under the same interpreter
+([6.2](#62-the-console-unit)). Write it as the `current` link as above: `setup` ([3.1](#31-what-setup-tells-you)) does not change a line that is
+there (it says `[skip] drishti.python`), so the upgrade switches the Python with the release.
 
 Both services read the file (`-Ddrishti.settings.file=` on the server, `--settings` on the console, which takes only the keys under
 `console.` and the keys it shares with the server). An explicit `-D` or command-line argument beats the files; the files beat the
@@ -4379,7 +4382,8 @@ NEW=2.9.12 ; OLD=$(basename "$(readlink -f /opt/drishti/current)") ; B=/backup/d
 PY=/opt/drishti/current/python/bin/python3.13 ; DR="$PY /opt/drishti/current/drishti/tools/drishti.py --settings /etc/drishti/prod.ini"   # the RUNNING release's Python and tools
 # 1. drain and stop: the console first, then the server (the stop drains first, section 6.1)
 sudo systemctl stop drishti-console
-sudo -u drishti $DR node drain --server http://127.0.0.1:18480 --wait 240
+export DRISHTI_DRAIN_TOKEN_FILE=/root/drishti-drain.token                                # an administrator's personal API token with the node:drain scope (mode 600)
+sudo -E -u drishti $DR node drain --server http://127.0.0.1:18480 --wait 240
 sudo systemctl stop drishti-server
 # 2. back up with everything stopped: the site's files, the identity database, the content store (rollback puts them back)
 sudo mkdir -p $B && sudo cp -a /etc/drishti $B/etc-drishti && sudo cp -a /srv/drishti/data/identity /srv/drishti/data/fstore $B/
@@ -4436,46 +4440,34 @@ not needed. When all is well again, move the failed folders away and keep them f
 
 #### 11.6 Tried once
 
-Tried on a scratch machine on 2026-11-28 (a server on port 28480; two release folders; the second changes the pin `markdown>=3.6` to `>=3.7`
-and has its own Python prefix; the scratch folder stands in for `/opt/drishti`; one jar serves both, so the acceptance on the new version was
-rejected on purpose to exercise the rollback). The check first, run with the running Python, then with the new one:
+Tried on a scratch machine on 2026-11-28 from the package built from the merged tree: release `i8a` installed from `drishti-i8a-linux-x64.tar.gz`
+(3,871 files, `package verified`), its own Python, `current -> releases/i8a`, the release folder read only, settings only in the site folder
+(`drishti.site.dir`), the data folder apart, the production profile with a first administrator from `DRISHTI_SEED_*`. The scratch folder stands in for
+`/opt/drishti`, `/etc/drishti` and `/srv/drishti/data`. An Admin change (Admin -> Engines, pivot off) landed in the site folder (`find <release> -newer`
+empty). A copy of the release stands in for the next one (`i8b`, same pins, so `python/i8b` is a link to the same prefix).
 
 ```text
-$ python/2.9.12/bin/python releases/2.9.12/tools/drishti.py --settings etc/prod.ini upgrade check releases/2.9.12 --python current/python/bin/python
-[ OK ] the new release is 2.9.12 at /opt/drishti/releases/2.9.12
-[ OK ] the running release is 2.9.11 at /opt/drishti/releases/2.9.11
-[TODO] the Python pins changed; the new release needs a Python of its own, made and filled by you BEFORE the switch, and the running release's Python must not be touched ...
-[TODO]     changed: markdown>=3.6  ->  markdown>=3.7
-[FAIL] the Python for the new release (/opt/drishti/current/python/bin/python) is the running release's (/opt/drishti/current/python/bin/python): its libraries would change under the running console. ...
-upgrade check: 1 to fix before the switch, 3 to do or confirm
-[exit 1]
-$ ... upgrade check releases/2.9.12 --python python/2.9.12/bin/python
-[ OK ] /opt/drishti/python/2.9.12/bin/python has every library of the new release at the pinned version (requirements.txt, python.lock, the Lake wheel)
-[TODO] drishti.demo.enabled (in prod.ini) is not in the new release's CONFIGURATION.md: if the new release retired it the server REFUSES to start ...
-upgrade check: 0 to fix before the switch, 4 to do or confirm; no switch is blocked
-[exit 0]
+$ drishti.py --settings prod.ini upgrade check releases/i8b          (run with the running release's Python)
+[ OK ] the new release is i8b at .../opt/drishti/releases/i8b/drishti
+[ OK ] the running release is i8a at .../opt/drishti/releases/i8a/drishti
+[ OK ] the Python pins are unchanged: the running release's Python can serve the new release as it is (still verified below)
+[ OK ] .../python/i8b/bin/python3.13 has every library of the new release at the pinned version (requirements.txt, python.lock, the Lake wheel)
+[ OK ] the site folder .../etc/drishti is outside both releases and stays as it is (1 settings file(s) compared with the new release)
+[ OK ] every key of the 11 site settings keys is in the new release's configuration catalogue (a retired key would refuse the start)
+[ OK ] the same 12 modules in both
+[TODO] before the switch: back up the identity database and the content store ..., and keep the previous release folder and its Python
+upgrade check: 0 to fix before the switch, 1 to do or confirm; no switch is blocked                                     [exit 0]
+$ drishti.py node drain --server http://127.0.0.1:29481 --wait 60       (DRISHTI_DRAIN_TOKEN_FILE set)
+drishti-node: safe to stop                                                                                           [exit 0]
+current -> releases/i8b; previous -> releases/i8a        (the server's DRISHTI_HOME is .../current/drishti; its open files are under releases/i8b)
+readiness {"status":"UP"}  console /readyz {"status":"UP","server":"reachable"}  sign-in as the first administrator: 303; the Admin change is still there
+rollback: stop both, current -> releases/i8a, the backup of etc, identity and fstore put back, start:
+readiness {"status":"UP"}, console UP, sign-in 303; the server's open files are under releases/i8a
 ```
 
-Then the switch, the failed acceptance and the rollback (`dr` is `current/python/bin/python current/tools/drishti.py --settings etc/prod.ini`):
-
-```text
-before: current -> releases/2.9.11; python -> /opt/drishti/python/2.9.11
-acceptance: running "version":"2.9.11.i7n", readiness {"status":"UP"}                     ACCEPTED
-$ dr node drain --server http://127.0.0.1:28480 --wait 30      drishti-node: safe to stop        [exit 0]
-$ dr stop server                                               server: stopped (pid 230491)      [exit 0]
-current -> releases/2.9.12; previous -> releases/2.9.11; python -> /opt/drishti/python/2.9.12
-$ dr setup --check        ... [  ok] python /opt/drishti/current/python/bin/python 3.13.15 ... [  ok] libraries ... Drishti is ready.
-$ dr start server --background    Drishti server: drishti-server-2.9.12-exec.jar ... home /opt/drishti/releases/2.9.12 ...
-                                  server: up on http://192.168.2.77:28480                        [exit 0]
-acceptance: running "version":"2.9.11.i7n", readiness {"status":"UP"}, wanted "2.9.12"    REJECTED
-$ dr stop server                                               server: stopped (pid 238323)      [exit 0]
-current -> releases/2.9.11; python -> /opt/drishti/python/2.9.11
-$ dr start server --background    Drishti server: drishti-server-2.9.11-exec.jar ... home /opt/drishti/releases/2.9.11 ...
-                                  server: up on http://192.168.2.77:28480                        [exit 0]
-acceptance: running "version":"2.9.11.i7n", readiness {"status":"UP"}, wanted "2.9.11"    ACCEPTED
-```
-
-The data restore was tried as well (stop, move `identity` and `fstore` aside, copy the backup in, start: readiness `UP`).
+Without `DRISHTI_DRAIN_TOKEN_FILE` (or `DRISHTI_DRAIN_TOKEN`) a server with sign-in on answers the drain with 401 and the tool says so and goes on to the stop.
+After a rollback `previous` still names the release that was running before the upgrade: set it to the failed release (`ln -sfn releases/<failed> /opt/drishti/previous`) when you
+keep that folder for the investigation.
 
 - **A cluster upgrades one node at a time**, servers first, consoles last, draining each before its stop: `tools/rolling.py` does it from an
   inventory (`deploy/rolling.example.yaml`; `--dry-run` prints every step). Releases run side by side during the roll

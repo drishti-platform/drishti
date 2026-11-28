@@ -47,9 +47,14 @@ def release_home(path: str | Path) -> Path:
 
 
 def version_of(home: Path) -> str:
+    """The release's name: the Maven revision of a checkout, else the ``release`` of the binary package's MANIFEST.json (next to ``drishti/``)."""
     try:
         return (re.search(r"-Drevision=(\S+)", (home / ".mvn" / "maven.config").read_text(encoding="utf-8")) or [None, ""])[1]
     except OSError:
+        pass
+    try:
+        return str(json.loads((home.parent / "MANIFEST.json").read_text(encoding="utf-8")).get("release") or "")
+    except (OSError, ValueError):
         return ""
 
 

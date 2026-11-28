@@ -77,8 +77,7 @@ public class EngineHostConfiguration {
 
     @Bean(destroyMethod = "close")
     public EngineHost engineHost(ConfigurableEnvironment env, SourceRouter router, PackRegistry packs, EngineCatalogue catalogue,
-            ObjectProvider<AuditLog> audit, ObjectProvider<EngineRegistry> registry,
-            ObjectProvider<com.ash.drishti.kernel.api.services.VectorViews> views) {
+            ObjectProvider<AuditLog> audit, ObjectProvider<EngineRegistry> registry) {
         Path home = Roots.home();
         Path config = Path.of(env.getProperty(Roots.CONFIG, Roots.config()));
         Path data = Path.of(env.getProperty("drishti.data.dir", Roots.data()));
@@ -91,11 +90,7 @@ public class EngineHostConfiguration {
         HostedEngine.Auditor auditor = log == null ? null : log::record;
         Outputs outputs = new Outputs(new LakeOutputStore(env::resolveRequiredPlaceholders, env.getProperty("drishti.engine-lib.store-format", "delta")));
         EngineHost.Ports ports = new EngineHost.Ports(new RouterKindData(router, Duration.ofSeconds(env.getProperty("drishti.engine-lib.read-seconds",
-                Long.class, 60L)), () -> {                                                   // the server's own and a loaded module's (the bridge)
-                    java.util.List<com.ash.drishti.kernel.api.services.VectorViews> all = new java.util.ArrayList<>(views.orderedStream().toList());
-                    all.addAll(com.ash.drishti.common.Extensions.of(com.ash.drishti.kernel.api.services.VectorViews.class));
-                    return all;
-                }), KindContracts.of(manifests), PackUses.of(manifests), new ElWhere(), outputs, auditor, VISIBILITY_RULES,
+                Long.class, 60L))), KindContracts.of(manifests), PackUses.of(manifests), new ElWhere(), outputs, auditor, VISIBILITY_RULES,
                 env::resolvePlaceholders, id -> catalogue.get(id).isPresent() || registry.getIfAvailable() != null && registry.getIfAvailable().known(id),
                 EngineHostConfiguration::nextCron);
         return new EngineHost(settings, EngineHost.class.getClassLoader(), ports);

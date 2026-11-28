@@ -366,6 +366,124 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
    on the capture). `GET /compare?b=now&path=engine` reads now from the engine. A lens other than the offered one and a scope whose
    parts are positions or terms are refused in words on the engine path (captured in-tree).
 
+### Status, speed lane S2 (engine side; handed over 2026-11-28 11:4x; branch `r2/speed-engine` in drishti, drishti-risk and drishti-engine, all pushed)
+
+Steps 2, 5, 6, 7, 8 and 9 of `R2_ENGINE_SPEED_DESIGN.md` (lane S1 builds 0, 1, 3, 4, 10, 11). Every mechanism is a general engine-API or
+host capability written into drishti-engine `spec/1/SPEC.md` (4.1, 5.1, 5.2 rules 8 and 9 as built, 7.2 rules 4 to 6, 9.1, 9.3 rules 4
+and 5, 11.2 ENG-5025, 12.4 law `image`, 18 rule 8) and `docs/architecture/ENGINES_IN_DRISHTI.md`. Commits: drishti 31eef9f..`bc1501878`
+(merges origin/r2/vres), drishti-risk `31eef9f`, `132633b`, `8701996` (the last also adds `MarketDerived.java` and `MarketRows.java`, which
+the step 2 and 5 commits used but missed: those two commits alone do not compile), drishti-engine `4151887`, `68a9f2b`.
+
+**Done (code, unit tests):**
+- Step 2: constant `descriptor()`; `Tables.Builder` one-pass check of ordered rows; `VarBook.anyWhole` looks only at the books a set
+  touches; node and whole-position measures and each visibility's rows kept with the built book (`MarketDerived`, session state); parts
+  read as in-tree's (node whole: aggregate; position whole: its row).
+- Step 5: the date opens with its small inputs; vector inputs read in one pass straight into the builder (`MarketRows`); extras at first
+  need; `LakeInputs`: stamps composed from data versions without a read and fixed once taken, a scan's rows released after it, outline kept.
+- Step 7: `Kept`, `Image`, `ImageWriter`, `HeapImage` (engine-api); `KeptImages` (engine-host: plain-I/O write, part-by-part map through
+  the host's `Mapper`, host key incl. the session's own input stamps and visibility, one builder per key, leases, superseded/over-limit
+  release); Drishti `HostedEngine` wires it under `<data>/engines/<id>/kept` with the kernel's `FileMaps`; Admin, Caches `engines.kept`
+  (`EngineKeptImages`); kit law `image`. `KeptImagesTest` green.
+- Step 8: mapped-tier books on their image (`VarHotFile.write(Sink)`/`open(Parts)`, `MarketImage`); removed: `zero-copy` option,
+  `HostRows`, `withFloat32Rows(Vectors...)`, `VarVectorViews`, kernel SPI `VectorViews`, `vectorView` in `KindData`/`LakeInputs`/
+  `RouterKindData`, the `var.zero-copy` setting. `VarHotFileTest` (layout via parts to the bit) green; kit case `headline-mapped-by-hand`.
+- Step 9: `on: start` + `data-version` prepare asks (`config/engines/market-risk.yaml`), `Sessions` opens on a host thread with
+  `ENG-5025` after `limits.open-wait-seconds`, stale-until-successor with a note, `preparing` tracked by the host (`awaitPrepared`),
+  `ENG-5025` → 503 `DRS-1024` `EnginePreparing` (busy problem: the console's one busy message), card `sessionStates`/`preparing`;
+  `inputsChanged` (r2/vres) now runs the data-version look (one staleness mechanism: each open session's fixed stamps vs the sources' now).
+  `SessionsTest`, `EngineFileTest`, `EngineHostTest`, `HostPartsTest` green.
+
+**Runs (100,000 positions, mapped; in-tree same run in brackets):**
+
+| | before (design) | RUN 2 (steps 2+5) | RUN 3 (2+5+7+8+9) |
+|---|---:|---:|---:|
+| figures_differ | 0 | 0 | 0 |
+| inner warm p50 / p99 ms | 141 / 284 | 60 / 118 (10 / 20) | 45 / 90 (8 / 15) |
+| leaf first ask p50 / p99 ms | 405 / 670 | 68 / 120 (9 / 15) | 52 / 87 (8 / 13) |
+| tree p50 ms | 4,677 | 1,512 (186) | 1,275 (181) |
+| first engine ask of the date | 46 s | 19.5 s | 22.1 s (the start prepare failed, below) |
+| RSS after the engine's open | +2.0 GB | +1.47 GB | +1.65 GB |
+
+RUN 2: `RiskSideBySideTest` 0 differences in all 12 sections, one test red (below); `ConsumersSideBySideTest` 59 answers 0 differences,
+red only on the var-result count (fixed by r2/vres). RUN 3: `ConsumersSideBySideTest` **green**; `MarketRecordedIT` green; market-risk kit:
+the same pre-existing failure kinds only, every law held incl. `image` 18/18; `PreparedDateTest` **failed at 11:38**; `RiskSideBySideTest`
+stopped unfinished at the hand-over.
+
+**PreparedDateTest diagnosis.** The start trigger's prepare ask failed: `the parameter window is not a int: For input string: "all"`
+(server log of `server-prepared-mapped`): the test servers set `DRISHTI_VAR_SCENARIO_WINDOW=all`, so the ask's
+`window: ${drishti.module.banking.var.window:250}` resolved to `all`. Nothing was prepared; the first server became ready only by user
+asks, and after the restart no ask was made, so `awaitReady` timed out (600 s). Fix: give the prepare ask the window the engine path
+itself asks with (`VarEnginePath.dateWindow()` maps `all` to the whole set): a numeric property for the engine (0 = the whole set) or the
+module resolving it; keep the params identical to the users' asks so the cache key matches.
+
+**Remaining:**
+- Step 6 is **blocked**: the kit writes a certificate only for a passing run and the market-risk kit fails on pre-existing groups (delivery:
+  7 openblas preset references; scan: 338 findings in the shaded hostcompat classes; `absence` law; explain; 3 case expectations: the same
+  lines as on `r2/exposure-routes`). `filter-equivalence` and `interleaving` hold. Isolation stays `per-viewer`, `hot: 1`. Until it is
+  certified, prepared dates and kept images serve the viewers whose signature equals `system`'s (no row rules); a restricted viewer still
+  builds its own book in its first ask (no "preparing" for that wait).
+- Step 9: the prepare window fix above; rerun `PreparedDateTest` (scripted ask at start, ready, first ask, reload while asking, restart
+  with the image) and measure READY-after-commit; spill of the heap build to `workDir()` not done (the heap book is transient, then written
+  to the image and released).
+- Step 8: the engine heap held for the date (histogram) and reopen-from-image timings are not measured yet (they need the prepare fix).
+- `RiskSideBySideTest.theContributionsOfEveryScopeKindAreTheSameOnBothPaths` (RUN 2) fails on `TRD:MX-20000081` (2026-09-28): a supplied
+  position's trade id is its position id, so the engine resolves no trade, `hostPositions` returns no parts and `VarEnginePath.positionParts`
+  still sends `parts` with `scope-var` alone, which the host refuses (`ENG-3003`, DRS-1022) instead of the expected "ask it in-tree".
+  `VarEnginePath` is S1's file: send `parts` only when there are parts, or refuse that scope kind in words.
+
+**Traps:** the risk commits 31eef9f and 132633b do not build alone (see above). A stale session answers with a note until its successor
+is ready: a test that asks right after a publish may see the previous version once. The kit `SampleKitIT` health-time check flakes under
+load. `MarketKitIT`/`MarketRecordedIT` need the module's own `verify` (combo's `-Dit.test` filter loses their properties).
+
+### Status, speed lane S2b (engine side; 2026-11-28 13:xx; branch `r2/speed-engine` in drishti, drishti-risk and drishti-engine)
+
+Owner direction (13:0x): i8 in decent shape, pages within about 1.2 to 2 s; deeper speed work and step 6 move to i9.
+
+**Prepared dates, finished.** The start trigger's prepare asks are the requests the VaR pages make (an answer is kept under its
+request's stamp): `config/engines/market-risk.yaml` runs `ask: [ prepare-words, prepare-index, prepare-nodes, prepare-pnodes ]` (the
+date's stamp look, the index's six outputs, `node-var`, `node-pvar`), each with `window` and `currency` read from the same settings as
+the pages (`drishti.module.banking.var.window`, whose `all` the engine takes as a word for 0: parameter `words`, ENGINE_SPEC 3.2;
+`.reporting-currency`). A trigger's `ask` may be a list; consecutive prepare asks of a date are one preparation (the date shows
+"preparing" until the last is cached). A preparation of a stale date runs on its successor, held back from other callers, who keep the
+stale session's noted answers until it ends (7.2 rule 4): before this, the preparation was answered by the stale session and the first
+user ask after a load built the new book itself (16 to 21 s, seen in thread dumps). Data-version watching is every running engine's,
+trigger or not (9.3 rule 5); an input's stamp names the version read: every read of one version, a read finding a newer version than
+the session's stamp marks it stale and is answered "preparing", never served under the old stamp (5.2 rule 8; one stamp form, read or
+not). Tests: `EngineHostTest` (a commit to a bound kind with no trigger: the next answers are the new data under a new key; a read of a
+newer version refused), `HostPartsTest`, `SessionsTest` (a held successor), `ParamsTest`, `EngineFileTest`.
+
+PreparedDateTest (100,000 positions, mapped; 13:07) **green**: an ask at start "preparing" (503, DRS-1024) in 2.1 s; ready 4.8 s
+later; first ask after ready 1.47 s (the parts it asks are not prepared); a var-limit load committed while asking: 254 asks, every one
+200 (the stale version, noted), the longest 1.43 s; stale seen 76 s after the commit (the external loader: the host's poll), ready 90 s
+after it; first ask after the load 63 ms; restart with the kept image: ready 46 ms, first ask 2.0 s; the engine's sessions hold 280 MB,
+kept image 320 MB on disk. Same build (12:1x, before the held successor): RiskSpeedCheckTest 0 differences (inner p50 29 ms, leaf
+33, tree 653; engine open 6.5 s), ConsumersSideBySideTest green (117 answers), RiskSideBySideTest 15 of 16 with 0 differences (the
+red is `TRD:MX-20000081`, S1b's), MarketRecordedIT green.
+
+**Step 6 (shared isolation): moved to i9, not done.** Isolation stays `per-viewer`, `hot: 1`. Kit work done in this lane (drishti-risk
+`2363d11`, drishti-engine `fe6ddf0`): workbooks in the functions the three spreadsheets share over whole ranges; node-pvar names at the
+answer's first row; period high/low formulas `$.rows[*].VALUE`; `needs-any: [ pnl-vector, scenario-pv ]` with the kit's absence law for
+alternatives (every law now holds: 260 of 260); three hand cases in their outputs' key order; summation on the host's executor; Java
+linear algebra in the engine (option `linear-algebra` removed: it changed nothing); FRTB parameters read with StrictYaml (no Jackson
+in risk-kernel or risk-market main; unused Arrow, SLF4J and Jackson dependencies removed). Kit: 27 failed lines to 4; scan 338 to 58.
+**i9: the remaining kit work** for a certificate (then `isolation: shared`, `hot: 2`, visibility as a RowSet selection, the
+desk-limited second viewer's first ask under 0.5 s):
+1. Delivery and scan (58 findings): the native-library holder (`Blas`, `NativeBlas`, `Canary`, `GuardedBlas` and the bytedeco
+   dependencies in risk-kernel: the engine no longer uses them; remove them from what the engine JAR carries, SPLIT_EXEMPTIONS K6);
+   `MappedMatrix`/`FileMaps` (reflection; an engine maps no file: VarBook.Hot and VarHotFile's file paths split from the image layout,
+   K5/K6); `ShardedVectors`/`ShardGather` (threads; K8); `VarBook.positionCacheLimit`, `VarBook.Builder` nanoTime, `VarHotFile`
+   currentTimeMillis and byte-array constants, `OrdinalSet.NO_RUNS`, `PlaygroundWorkbook.MARGINS`, `Branding.current`; `SumPool` (test
+   support in main, as `FeedFiles`).
+2. Explain: a defined name per measure of node-pvar (`OUT_NODE_PVAR_HVAR` missing) and whatever the next run shows behind it.
+3. Coverage (139 gaps): 23 outputs no case asks (node-var, node-components, basket-var, node-pvar-components, the official outputs,
+   frtb-sa, frtb-contributions, the fourteen scope-* outputs), the enum values of curvature-source, girr-correlation, measure, scenario,
+   ten-day-method and of the options rank-rule, pvar-weighting, backtest-count; the declared columns no case reads (every scenario-pv
+   column: no case feeds scenario-pv; most identity columns of pnl-vector; default-risk, residual-risk, fx-spot, ...: trim what the
+   engine never reads or add the cases that read it); a NOT_FOUND case for fx-scenario; `market-risk.codes.yaml` with a case per own
+   code (RSK-3120 to RSK-3144). By hand, with sources, as the existing cases.
+
+**Not in this lane**: `VarEnginePath.positionParts` (`TRD:MX-20000081`, RiskSideBySideTest's one red) is S1b's.
+
 ### Status, R2 lane B (2026-11-28 07:1x, branch `r2/consumers-speed`; drishti-risk `r2/consumers-speed`)
 
 - **(3) Consumers, done**: the system-basket and position pages behind `var.consumers.route` (Appendix A row; new host class

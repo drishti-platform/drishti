@@ -747,7 +747,6 @@
   services.Series$Point public java.lang.String com.ash.drishti.kernel.api.services.Series$Point.source()
   services.Series$Point public java.time.LocalDate com.ash.drishti.kernel.api.services.Series$Point.dataDate()
   services.Series$Point public java.time.LocalDate com.ash.drishti.kernel.api.services.Series$Point.date()
-  services.VectorViews public abstract java.lang.Object com.ash.drishti.kernel.api.services.VectorViews.view(java.lang.String,java.lang.String,java.time.LocalDate)
   shard.ShardGather public static <P> P com.ash.drishti.kernel.api.shard.ShardGather.gather(int[],java.util.function.IntPredicate,java.util.function.IntFunction<P>,java.util.function.IntFunction<P>,com.ash.drishti.kernel.api.shard.ShardGather$Combine<P>,java.util.concurrent.Executor)
   shard.ShardGather public static com.ash.drishti.kernel.api.shard.ShardGather$Combine<double[]> com.ash.drishti.kernel.api.shard.ShardGather.sum(int)
   shard.ShardGather$Combine public abstract P com.ash.drishti.kernel.api.shard.ShardGather$Combine.add(P,P)
@@ -875,7 +874,6 @@ services.SearchAnswer$Failure
 services.SearchAnswer$Row
 services.Series
 services.Series$Point
-services.VectorViews
 shard.ShardGather
 shard.ShardGather$Combine
 shard.ShardedMeasure

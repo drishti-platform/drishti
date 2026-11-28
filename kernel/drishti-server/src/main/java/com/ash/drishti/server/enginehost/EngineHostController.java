@@ -266,6 +266,17 @@ public class EngineHostController {
         }
         r.put("inputs", inputs);
         r.put("sessions", h.sessionsOpen());
+        List<Map<String, Object>> states = new ArrayList<>();                 // each session opening (with the engine's stage), ready or stale
+        for (com.ash.engine.host.Sessions.State st : h.sessionStates()) {
+            Map<String, Object> sm = new LinkedHashMap<>();
+            sm.put("snapshot", st.key().snapshot().text());
+            sm.put("state", st.state());
+            sm.put("stage", st.stage() == null ? "" : st.stage());
+            sm.put("since", st.since().toString());
+            states.add(sm);
+        }
+        r.put("sessionStates", states);
+        r.put("preparing", h.preparingNow());                                 // a prepare ask running: the date, since when, the stage
         r.put("memoryBytes", h.memoryBytes());
         r.put("waiting", h.waiting());
         r.put("problems", h.problems().stream().map(Object::toString).toList());
@@ -346,6 +357,21 @@ public class EngineHostController {
             body.put("retry", e.retry());
             return ResponseEntity.status(status(e)).body(body);
         }
+    }
+
+    /** ENG-5025 (a snapshot being prepared, 7.2 rule 5) as the server's preparing answer: its title, the stage and when to ask again. */
+    static com.ash.drishti.api.error.EnginePreparing preparing(EngineException e) {
+        Map<String, String> d = e.detail();
+        long retry;
+        try {
+            retry = Long.parseLong(d.getOrDefault("retry-after-seconds", "2"));
+        } catch (NumberFormatException x) {
+            retry = 2;
+        }
+        String snapshot = d.getOrDefault("snapshot", "");
+        String date = snapshot.replaceAll(".*date=([0-9-]+).*", "$1");
+        return new com.ash.drishti.api.error.EnginePreparing("Preparing " + (date.isBlank() ? "the data" : date),
+                d.getOrDefault("stage", "opening") + " (since " + d.getOrDefault("since", "now") + ")", retry, e.getMessage());
     }
 
     static HttpStatus status(EngineException e) {

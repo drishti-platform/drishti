@@ -190,7 +190,7 @@ public final class EngineHost implements AutoCloseable {
             }
             if (t.every() != null) {
                 long ms = duration(t.every()).toMillis();
-                timers.add(scheduler.scheduleWithFixedDelay(() -> fire(h, t.ask()), ms, ms, TimeUnit.MILLISECONDS));
+                timers.add(scheduler.scheduleWithFixedDelay(() -> fire(h, t.asks()), ms, ms, TimeUnit.MILLISECONDS));
             } else if (t.cron() != null && ports.cron() != null) {
                 cron(h, t);
             }
@@ -204,19 +204,19 @@ public final class EngineHost implements AutoCloseable {
         }
         long delay = Math.max(0, Duration.between(Instant.now(), next).toMillis());
         timers.add(scheduler.schedule(() -> {
-            fire(h, t.ask());
+            fire(h, t.asks());
             cron(h, t);
         }, delay, TimeUnit.MILLISECONDS));
     }
 
-    private void fire(HostedEngine h, String ask) {
+    private void fire(HostedEngine h, List<String> asks) {
         if (!"running".equals(h.state())) {
             return;
         }
         try {
-            h.runAsk(ask, RequestClass.BATCH);
+            h.runAsks(asks, RequestClass.BATCH);
         } catch (EngineException | RuntimeException e) {
-            LOG.warn("engines: {}'s scheduled ask {} did not answer: {}", h.id(), ask, e.getMessage());
+            LOG.warn("engines: {}'s scheduled asks {} did not answer: {}", h.id(), asks, e.getMessage());
         }
     }
 

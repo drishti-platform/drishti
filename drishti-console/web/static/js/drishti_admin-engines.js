@@ -65,7 +65,20 @@
     if (!h) { return ''; }
     var inputs = (h.inputs || []).map(function (i) { return i.input + ' <- ' + ((i.tables || []).join(' + ') || 'absent') + ' (rule ' + i.rule + ': ' + i.how + ')'; });
     return ' <span class="eng-muted" title="' + esc(inputs.join('\n')) + '">' + esc(h.jar) + ' · ' + esc((h.health || {}).state || '')
-      + ' · ' + esc(h.isolation) + (h.sessions ? ' · ' + h.sessions + ' session(s)' : '') + '</span>';
+      + ' · ' + esc(h.isolation) + (h.sessions ? ' · ' + h.sessions + ' session(s)' : '') + '</span>' + sessionStates(h);
+  }
+  /** Each session as the host keeps it (ENGINE_SPEC 7.2): opening with the stage the engine named, ready, or stale while its successor opens. */
+  function sessionStates(h) {
+    var preparing = (h.preparing || []).map(function (p) {
+      var date = String(p.snapshot || '').replace(/.*date=([0-9-]+).*/, '$1');
+      return ' <span class="eng-pill a" data-eng-preparing title="' + esc('since ' + p.since) + '">' + esc(date + ' preparing: ' + p.stage) + '</span>';
+    }).join('');
+    return preparing + (h.sessionStates || []).map(function (st) {
+      var date = String(st.snapshot || '').replace(/.*date=([0-9-]+).*/, '$1');
+      var tone = st.state === 'ready' ? 'g' : st.state === 'opening' ? 'a' : 'n';
+      return ' <span class="eng-pill ' + tone + '" data-eng-session="' + esc(st.state) + '" title="' + esc('since ' + st.since) + '">'
+        + esc(date + ' ' + st.state + (st.state === 'opening' && st.stage ? ': ' + st.stage : '')) + '</span>';
+    }).join('');
   }
   function drawServer() {
     var body = $('[data-eng-table] tbody');

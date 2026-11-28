@@ -75,6 +75,9 @@ public class KernelEngines implements Engines {
                         new PrincipalAccess(p, entitlements, packs)));
             }
         } catch (EngineException e) {
+            if ("ENG-5025".equals(e.code())) {
+                throw EngineHostController.preparing(e);                // every module's page shows it as the one busy message, no module code
+            }
             throw new Kernel.Refused(EngineHostController.status(e).value(), e.code(), e.getMessage());
         } catch (RuntimeException e) {
             throw e;

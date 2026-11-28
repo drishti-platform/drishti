@@ -291,6 +291,10 @@ final class PackagedServer implements AutoCloseable {
             Thread.sleep(15_000);
             r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
         }
+        for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: as a page does, after Retry-After
+            Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
+            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
+        }
         if (r.statusCode() != 200) {
             throw new IllegalStateException(r.statusCode() + " for " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
         }
@@ -301,6 +305,11 @@ final class PackagedServer implements AutoCloseable {
     JsonNode post(String pathAndQuery, String json) throws IOException, InterruptedException {
         HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+        for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: after Retry-After
+            Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
+            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+                    .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+        }
         if (r.statusCode() != 200) {
             throw new IllegalStateException(r.statusCode() + " for POST " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
         }
@@ -311,6 +320,11 @@ final class PackagedServer implements AutoCloseable {
     JsonNode created(String pathAndQuery, String json) throws IOException, InterruptedException {
         HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+        for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: after Retry-After
+            Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
+            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+                    .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+        }
         if (r.statusCode() != 201) {
             throw new IllegalStateException(r.statusCode() + " for POST " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
         }

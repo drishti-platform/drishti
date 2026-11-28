@@ -101,6 +101,33 @@ class HostPartsTest {
     }
 
     /**
+     * ENGINE_SPEC 5.2 rules 8 and 9: a stamp is composed from the sources' data versions without reading a row and is fixed once taken;
+     * the rows a scan read are released when it ends (the next scan reads the source again; the source's column cache is the one copy),
+     * while what the read showed (present, columns, rows) is kept.
+     */
+    @Test
+    void aStampIsNotAReadAndAScansRowsAreNotKept() throws Exception {
+        Fixtures.Kinds data = owned();
+        InputTable t = inputs(Fixtures.viewer("ann", Map.of(), Set.of()), Map.of(), data).table("items");
+        assertThat(t.stamp()).isEqualTo("item=v1");
+        assertThat(data.reads.get()).as("a stamp reads no row").isZero();
+        t.scan(new Scan(List.of("ID"), Filter.ALL, 100), b -> { });
+        assertThat(t.present()).isTrue();
+        assertThat(t.rows()).isEqualTo(3);
+        assertThat(data.reads.get()).isEqualTo(1);
+        t.scan(new Scan(List.of("ID"), Filter.ALL, 100), b -> { });
+        assertThat(data.reads.get()).as("released after the scan: read again").isEqualTo(2);
+        assertThat(t.columns()).as("the outline is kept").contains("GROUP");
+        assertThat(data.reads.get()).isEqualTo(2);
+        // a commit after the stamp was fixed: the stamp stays, and a read of the new version is refused as "preparing", never served
+        // under the old stamp (the host is told: the session is stale)
+        data.stamps.put("item", "v2");
+        assertThat(t.stamp()).as("fixed once taken").isEqualTo("item=v1");
+        assertThatThrownBy(() -> t.scan(new Scan(List.of("ID"), Filter.ALL, 100), b -> { }))
+                .isInstanceOfSatisfying(EngineException.class, e -> assertThat(e.code()).isEqualTo("ENG-5025")).hasMessageContaining("item=v2");
+    }
+
+    /**
      * An input the engine declares {@code per: []} (not read per date: an official-records history) holds the rows of every date its
      * kind holds, oldest first, each date's read under the caller's rule; an input without {@code per} holds the snapshot date's rows.
      */

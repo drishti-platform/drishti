@@ -50,7 +50,9 @@ and Admin → Engines state the versions in one line: "provides engine API 0.1, 
 | `not installed` | an engine file names it and no JAR registers it (`ENG-5030`) |
 | `blocked` | a check fails: the API or a platform library too new (`ENG-1002`, `ENG-1005`), two JARs for one id (`ENG-1006`), a product the licence does not grant (`ENG-1014`), the pin or trust (`ENG-1011`, `ENG-1012`), the engine file (`ENG-1010`, `ENG-1013`), the binding (`ENG-2011`, `ENG-2012`) |
 
-5. The engines that are on are started (`init`, then `start`).
+5. The engines that are on are started (`init`, then `start`). An engine whose file has an `on: start` trigger then runs its named ask on a
+   host thread: a `prepare` ask opens the newest date (`snapshot: { date: latest }`: the newest date of the first input its data-version
+   trigger names), builds or maps its kept images and fills the answer cache, so the first person who asks is answered from a ready date.
 6. When the server is ready, each engine with an engine file is attached to the engine registry. It then shows on Admin → Engines with the
    built-in engines, and has one switch, History, the API gate and cluster routing.
 
@@ -109,6 +111,38 @@ carries); the options are hashed once per instance; an input's stamp is composed
 fixed for the session; the audit line names a list of more than 32 items by its count beside the request's hash, never item by item; the
 engine's log lines are forwarded from where the host last read; a session's inputs are released when it closes.
 
+**Prepared dates** (engine specification 9.3 rules 4 and 5, 7.2 rules 4 and 5). The host keeps a date ready instead of opening it when
+someone asks:
+
+- `on: start` runs a `prepare` ask when the engine reaches running; `on: data-version` runs it when the newest date of its inputs is new
+  or a new version of it lands (the lake's commit: a load, a publish), after the trigger's `quiet` period and at most its `max-wait`.
+  A trigger's `ask` may be a list, run in order; consecutive prepare asks of one date are one preparation (the date shows "preparing"
+  until the last is cached). An answer is kept under its request's stamp, so each prepare ask is a request a page makes: the same outputs,
+  its parameters read from the same settings as the page's (`config/engines/market-risk.yaml`: the VaR pages' index, node figures and
+  parametric node figures, `window` from `drishti.module.banking.var.window`, whose `all` is the engine's word for 0, the currency from
+  `.reporting-currency`).
+  The data-version look is the one way the host learns that inputs changed, run for every engine whether or not its file has a
+  `data-version` trigger (the trigger only adds the asks it runs): it polls every `drishti.engine-lib.poll-seconds`, and a
+  module that writes a kind an engine reads (a capture's publish) tells the host at once (`Engines.inputsChanged(kind)`), which looks
+  then. A session whose inputs' versions moved since it opened is stale. An input's stamp is fixed when the session opens and every
+  read is of the version it names: a read that finds a newer version (a commit the look has not seen yet) marks the session stale and
+  is answered "preparing", never with the new rows under the old stamp.
+- A stale session keeps answering, each answer noted ("a newer version of 2026-09-30 is being prepared; this answer is of the version
+  before"), while its successor opens from the new data; the host swaps when the successor is ready. A snapshot the lake has moved past is
+  never served without that note.
+- An interactive ask for a date that is opening waits at most `limits.open-wait-seconds` (default 2), then is answered `503` with
+  `DRS-1024` (from the engine's `ENG-5025`), `Retry-After` and words: "Preparing 2026-09-30", the stage the engine names while it opens.
+  Every page shows it as the console's one busy message (the countdown, asked again by itself); no page has code of its own for it.
+- Admin → Engines lists each session of an engine: `opening` with the stage, `ready`, or `stale` while its successor opens.
+
+**Kept images** (engine specification 18 rule 8). What an engine builds from a date's inputs and reads many times (the market-risk engine's
+book: the float32 position rows, the float64 node aggregates and the skeleton) is written once into a file the host owns,
+`<data>/engines/<id>/kept/<snapshot>/<name>-<digest>.kept`, mapped read-only through the kernel's `FileMaps` and leased to the sessions that
+read it. The host keys it by the engine, its version, descriptor and options, the snapshot, the stamps of the inputs and the visibility;
+the engine names it only. A restart, an eviction or a second session of the same data maps the file instead of reading the lake again; a
+new data version is a new key, and the older image is deleted once no session leases it. Admin → Caches lists them as `engines.kept`
+(bytes, leases, current); purge deletes those no session leases; `limits.disk-gb` bounds the folder.
+
 ## 4. Inputs
 
 **Binding.** For each input, the first rule that applies:
@@ -130,7 +164,9 @@ makes the items of each record's list-of-records field the input's rows, each wi
 Admin shows each input's tables and the rule that bound it.
 
 **Reading.** Rows come only through the engine API's `Inputs` (EN-40). The host reads a kind through the router, which for a lake
-connector is Drishti Lake's read API. The columns arrive as arrays by reference, read once per session. The host then applies, before the
+connector is Drishti Lake's read API. The columns arrive as arrays by reference; the host keeps them only while a scan reads them (the
+source's column cache is the one copy) and keeps of an input only its outline (present, columns, rows). An input's stamp is composed from
+the sources' data versions without reading a row, and is fixed for the session when it opens. The host then applies, before the
 engine sees a row:
 
 - the column map (the engine sees the contract's names);

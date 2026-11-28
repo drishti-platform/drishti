@@ -35,6 +35,14 @@ async def _send(request: Request, method: str, path: str, **kw):
     return await request.app.state.backend._send(method, path, ident(request), **kw)
 
 
+def _lens_home(request: Request) -> dict:
+    """The Home the person's lens opens (``home.home`` of the lens's file), passed on as the default start: the server uses it only for a person
+    who has not chosen a start Home of their own, and only when it is one offered to them."""
+    from routes.edition_routes import edition_of
+    name = edition_of(request).home_name
+    return {"params": {"home": name}} if name else {}
+
+
 def _failed(e: BackendError) -> JSONResponse:
     return JSONResponse({"code": e.code, "detail": e.detail}, status_code=e.status if 400 <= (e.status or 0) < 600 else 502)
 
@@ -44,10 +52,10 @@ async def home(request: Request):
     """The person's Home: the page is a shell; the first paint's ViewModel rides in it (one read, no flash of an empty page). A person who is
     offered no Home goes to the public landing."""
     try:
-        got = await _send(request, "GET", "/homes/view")
+        got = await _send(request, "GET", "/homes/view", **_lens_home(request))
     except BackendError as e:
         if e.status in (403, 404):
-            return RedirectResponse("/", status_code=303)
+            return RedirectResponse("/?home=none" if _lens_home(request) else "/", status_code=303)   # the public landing ("?home=none": "/" does not send a lens back here)
         raise
     cols = ((got.get("view") or {}).get("layout") or {}).get("columns") or []
     layout = "cockpit" if len(cols) >= 12 else "calm"
@@ -57,7 +65,7 @@ async def home(request: Request):
 @router.get("/api/home/view")
 async def view(request: Request):
     try:
-        return JSONResponse(await _send(request, "GET", "/homes/view"), headers={"Cache-Control": "no-store"})
+        return JSONResponse(await _send(request, "GET", "/homes/view", **_lens_home(request)), headers={"Cache-Control": "no-store"})
     except BackendError as e:
         return _failed(e)
 
@@ -72,7 +80,8 @@ async def state(request: Request):
         return JSONResponse({"code": "DRS-5001", "detail": str(e)}, status_code=400)
     try:
         got = await _send(request, "POST", "/homes/state", json={"action": str(body.get("action") or ""), "panel": str(body.get("panel") or ""),
-                                                                  "keys": [str(k) for k in body.get("keys") or [] if isinstance(k, str)][:20]})
+                                                                  "keys": [str(k) for k in body.get("keys") or [] if isinstance(k, str)][:20]},
+                          **_lens_home(request))
     except BackendError as e:
         return _failed(e)
     return JSONResponse(got, headers={"Cache-Control": "no-store"})

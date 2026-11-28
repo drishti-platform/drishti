@@ -55,13 +55,6 @@ FEATURE_PATHS = {"bi": ("/bi", "/admin/bi"), "forms": ("/forms", "/form/"), "dat
 # admin_pages); a filter's admin.pages keeps some of them.
 
 
-# The landings' page (LENSES.md › The design): each edition names its own (home.template, home.titles); a file that names none keeps
-# Drishti Risk's, as before 2.9.7. Only templates under home/ named *_landing.html are taken.
-_LANDING_TEMPLATE = re.compile(r"(?:home/|[a-z0-9-]+:)[a-z0-9_]+_landing\.html")
-DEFAULT_LANDING_TEMPLATE = "home/risk_landing.html"
-DEFAULT_LANDING_TITLES = {"desk": "Risk desk", "command": "Command first", "map": "Risk map"}
-
-
 def words() -> set[str]:
     """Every reserved word: the kernel's and those the modules register (core/plugins.py)."""
     from core import plugins as _plugins
@@ -81,12 +74,6 @@ def mnemonics() -> set[str]:
     """The registered words that are also a pack's mnemonic: run as the pack's where the edition switches the word off."""
     from core import plugins as _plugins
     return {w.word for w in _plugins.words() if w.mnemonic}
-
-
-def landing_refused() -> set[str]:
-    """Words a landing's read refuses: the kernel's own words (not PIVOT) and the modules' that are not also mnemonics."""
-    from core import plugins as _plugins
-    return (set(WORDS) - {"PIVOT"}) | {w.word for w in _plugins.words() if not w.mnemonic}
 
 
 def set_lens(name: str | None) -> None:
@@ -284,34 +271,11 @@ class Edition:
             return chips
         return _modules.lens_chips(self.name) or []
 
-    def landings(self) -> list[str]:
-        out = self._get("home.landings") if self.active else None
-        return [str(x) for x in out] if isinstance(out, list) else []
-
     @property
-    def landing(self) -> str:
-        return str(self._get("home.landing") or "today") if self.active else "today"
-
-    @property
-    def landing_template(self) -> str:
-        """The page that draws the edition's landings (``home.template``: the console's ``home/<name>_landing.html``, or a hosted module's
-        ``<module>:<name>_landing.html``, e.g. ``economy:world_landing.html``; it names its own script and style). Anything else, or a file
-        that names none (written before 2.9.7), keeps the Drishti Risk page."""
-        t = str(self._get("home.template") or "") if self.active else ""
-        return t if _LANDING_TEMPLATE.fullmatch(t) else DEFAULT_LANDING_TEMPLATE
-
-    def landing_titles(self) -> dict[str, str]:
-        """Each offered landing's title on Home's switch (``home.titles``); a landing the file does not title: the Drishti Risk titles
-        of before, else its id."""
-        named = self._get("home.titles") if self.active else None
-        named = {str(k): str(v) for k, v in named.items()} if isinstance(named, dict) else {}
-        return {x: named.get(x) or DEFAULT_LANDING_TITLES.get(x) or x.replace("-", " ").capitalize() for x in self.landings()}
-
-    def landing_by_role(self, key: str = "home.landing-by-role") -> dict[str, str]:
-        """``home.landing-by-role`` ({role: landing}): read, wired to role-based access later (LENSES.md). The same shape under
-        another key: Drishti Trading's ``trading.landing-by-role``, for the person's trading role (LENSES.md › The design)."""
-        m = self._get(key) if self.active else None
-        return {str(k): str(v) for k, v in m.items()} if isinstance(m, dict) else {}
+    def home_name(self) -> str | None:
+        """The role Home this lens opens (``home.home``: the name of a Home of the server, docs/architecture/ROLE_HOME_SUTRAS.md); None when it names none."""
+        h = str(self._get("home.home") or "") if self.active else ""
+        return h if re.fullmatch(r"[a-z][a-z0-9-]{1,63}", h) else None
 
     def help_categories(self) -> list[str] | None:
         if self.filtering is not self:

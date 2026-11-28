@@ -149,3 +149,18 @@ def test_the_start_home_is_chosen_on_the_server():
     c = _in(app, "qa-admin")
     assert c.put("/api/home/me", json={"home": "trader"}).json() == {"start": "trader"}
     assert ("PUT", "/homes/me", "qa-admin") in fake.calls
+
+
+def test_a_lens_passes_the_home_it_names_as_the_default_start(monkeypatch):
+    from routes import edition_routes, role_home_routes
+
+    class Lens:
+        home_name = "trader"
+
+    class Full:
+        home_name = None
+
+    monkeypatch.setattr(edition_routes, "edition_of", lambda request: Lens())
+    assert role_home_routes._lens_home(None) == {"params": {"home": "trader"}}
+    monkeypatch.setattr(edition_routes, "edition_of", lambda request: Full())
+    assert role_home_routes._lens_home(None) == {}

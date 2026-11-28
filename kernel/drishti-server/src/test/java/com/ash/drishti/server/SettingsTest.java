@@ -72,12 +72,12 @@ class SettingsTest {
         String cy = "cy-" + System.nanoTime();
         String bearer = "Bearer " + tokens.mint(cy, List.of("viewer"), 60);
         mvc.perform(get("/api/v1/me/settings").header("Authorization", bearer))
-                .andExpect(jsonPath("$.lens").isEmpty()).andExpect(jsonPath("$.homeLanding").isEmpty());
-        patchAs(cy, "{\"lens\":\"risk\",\"homeLanding\":\"map\"}").andExpect(status().isOk())
-                .andExpect(jsonPath("$.lens").value("risk")).andExpect(jsonPath("$.homeLanding").value("map"));
+                .andExpect(jsonPath("$.lens").isEmpty());
+        patchAs(cy, "{\"lens\":\"risk\"}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.lens").value("risk"));
         mvc.perform(get("/api/v1/me/settings").header("Authorization", bearer))
-                .andExpect(jsonPath("$.lens").value("risk")).andExpect(jsonPath("$.homeLanding").value("map"));
-        patchAs(cy, "{\"lens\":null}").andExpect(jsonPath("$.lens").isEmpty()).andExpect(jsonPath("$.homeLanding").value("map"));
+                .andExpect(jsonPath("$.lens").value("risk"));
+        patchAs(cy, "{\"lens\":null}").andExpect(jsonPath("$.lens").isEmpty());
         // Drishti Trading's View as (LENSES.md 14): a trader or a desk, kept and read back; anything else refused
         patchAs(cy, "{\"tradingView\":\"trader:TRDR-ASHAH\"}").andExpect(status().isOk()).andExpect(jsonPath("$.tradingView").value("trader:TRDR-ASHAH"));
         mvc.perform(get("/api/v1/me/settings").header("Authorization", bearer)).andExpect(jsonPath("$.tradingView").value("trader:TRDR-ASHAH"));

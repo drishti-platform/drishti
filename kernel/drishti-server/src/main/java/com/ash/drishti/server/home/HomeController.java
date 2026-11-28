@@ -104,11 +104,14 @@ public class HomeController {
         return HomeState.of(prefs.get(p.user(), NS, STATE_KEY).orElse(null));
     }
 
-    private Map<String, Object> page(Principal p, HomeState state, java.time.Instant now) {
+    private Map<String, Object> page(Principal p, HomeState state, java.time.Instant now, String lensHome) {
         List<HomeDefinition> o = offered(p);
         boolean admin = entitlements.isAdmin(p);
         List<String> names = o.stream().map(HomeDefinition::name).toList();
         String chosen = prefs.get(p.user(), NS, "start").map(n -> n.path("home").asText("")).orElse("");
+        if (chosen.isEmpty() && lensHome != null && names.contains(lensHome)) {
+            chosen = lensHome;                                // the Home of the lens the person is in, until they choose a start Home of their own
+        }
         String start = catalogue.start(o, chosen).map(HomeDefinition::name).orElseThrow(() -> new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "no Home is offered to you"));
         HomeDefinition d = mine(state.homeToShow(start, admin, names), p);
         HomeComposer.Composed c = composer.compose(p, d, state, now);
@@ -134,8 +137,8 @@ public class HomeController {
 
     /** The caller's Home as one document: the Home's Sutra bound over the home tables as the caller, with the caller's own state applied. */
     @GetMapping("/view")
-    public Map<String, Object> view(@RequestAttribute(Principal.ATTRIBUTE) Principal p) {
-        return page(p, stateOf(p), java.time.Instant.now());
+    public Map<String, Object> view(@RequestParam(required = false) String home, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        return page(p, stateOf(p), java.time.Instant.now(), home);
     }
 
     /**
@@ -143,7 +146,7 @@ public class HomeController {
      * now is. {@code viewas} is an administrator's and names a Home that is offered; one visit counts per half hour.
      */
     @PostMapping("/state")
-    public Map<String, Object> act(@RequestBody JsonNode body, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+    public Map<String, Object> act(@RequestBody JsonNode body, @RequestParam(name = "home", required = false) String lensHome, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
         java.time.Instant now = java.time.Instant.now();
         HomeState before = stateOf(p);
         String action = body.path("action").asText("");
@@ -151,15 +154,15 @@ public class HomeController {
         body.path("keys").forEach(k -> keys.add(k.asText("")));
         List<String> visible = List.of();
         if ("up".equals(action) || "down".equals(action)) {
-            visible = page(p, before, now).get("panels") instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+            visible = page(p, before, now, lensHome).get("panels") instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
         }
         if ("visited".equals(action) && before.lastVisit() != null && java.time.Duration.between(before.lastVisit(), now).toMinutes() < HomeState.VISIT_MINUTES) {
-            return page(p, before, now);                      // one visit counts per half hour: a refresh does not erase "since you were here"
+            return page(p, before, now, lensHome);                      // one visit counts per half hour: a refresh does not erase "since you were here"
         }
         List<String> names = offered(p).stream().map(HomeDefinition::name).toList();
         HomeState after = before.apply(action, body.path("panel").asText(""), now, keys, visible, entitlements.isAdmin(p), names);
         prefs.put(p.user(), NS, STATE_KEY, after.toJson());
-        return page(p, after, now);
+        return page(p, after, now, lensHome);
     }
 
     /** The Homes offered to the caller, the one to open first marked. One role, one Home: the console shows no picker. */

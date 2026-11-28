@@ -33,25 +33,5 @@ menus:                                   # by id, per menu: the order this lens 
   placeholder: "TRD 1000001, BOOK BOOK-RATES-1, VAR BOOK BOOK-RATES-1, EXP CPTY:CP-ALDERSHOT, CTRD CP-ALDERSHOT …  then <GO>"
 
 home:
-  landing: trader                        # the default landing: trader (A, Trader desk), desk (B, Desk head), explorer (C, Explorer)
-  landings: [trader, desk, explorer]     # the landings a person may pick on Home (their choice is kept in their settings)
-  template: home/trading_landing.html    # the page that draws them (it names its script and style: drishti_trading-landing.js, drishti_trading-landing.css)
-  titles: { trader: Trader desk, desk: Desk head, explorer: Explorer }
-  landing-by-role: {}                    # {access role: landing}: wins over the person's choice when set (the RBAC hook, as the others)
+  home: trader    # the role Home this lens opens (config/homes/, docs/architecture/ROLE_HOME_SUTRAS.md): a Home Sutra on the one Home page
   sections: { stats: off, grammar: off, pipeline: off, capabilities: off, views: off }   # the product's Home (signed out, or landing=today)
-
-trading:                                 # the Trading landings (LENSES.md › The design); read-only, as the person, with their roles and masks
-  # "my" scope: who is who. A person named here sees their trader's books (trader) or their desk (desk); role: desk-head opens the
-  # Desk head landing first. The server's drishti.trading.people (its application.local.yaml) adds people and wins for a name in both.
-  # A person not named: a trader record whose TRADER_ID or NAME is theirs (match-records), else the "View as" picker, remembered in their
-  # settings (tradingView). An administrator may always pick. Scoping only chooses what the landing shows: it never widens access.
-  people:
-    drishti-dev-admin: { trader: TRDR-ASHAH }        # the demo's administrator reads A. Shah's books (the demo data's rates trader)
-    # t.brennan: { desk: DESK-COMM, role: desk-head }
-  match-records: true                    # fall back to a matching trader record (TRADER_ID = TRDR-<USER>, or the same NAME)
-  landing-by-role: { desk-head: desk, trader: trader }   # the same {role: landing} hook for the trading role: below the person's own choice
-  live-statuses: [NEW, VALIDATED, AMENDED]                # a trade counts in DV01, top lists and the check when its status is one of these
-  limit-days: 5                          # the Desk head's limit use by book: this many business dates (the official records)
-  pnl-var-days: 60                       # the Desk head's P&L against VaR: this many days of the desk's official history
-  max-rows: 20000                        # the most trade valuations read per date for a scope (more: the figures say partial)
-

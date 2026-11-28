@@ -212,14 +212,3 @@ def test_the_site_and_the_edition_set_and_cap_a_pages_parts(client, monkeypatch)
     monkeypatch.setattr(s, "get", lambda k, d=None: {"pages": {"var": {"contrib": "glance", "tiles": {"max": "glance"}}}} if k == "ui.phone" else real(k, d))
     html = _page(client, "/var?scope=BANK", PHONE).text
     assert _tier(html, "contrib") == "glance" and _tier(html, "tiles") == "glance"
-
-
-def test_the_risk_landing_on_a_phone(backend, monkeypatch):
-    from test_edition import RISK_ABOUT, _app, _client
-    app = _app(backend, monkeypatch)
-    server_answers.follow(app, RISK_ABOUT)
-    c = _client(app)
-    c.cookies.set("drishti-device", "phone")
-    html = c.get("/").text
-    assert _tier(html, "tiles") == "must" and _tier(html, "card-1") == "must" and _tier(html, "table") == "glance"
-    assert 'data-phone-reveal="quick"' in html

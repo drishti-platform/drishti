@@ -12,17 +12,10 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 
-"""An edition's Home landings and the lens (docs/guides/ADMIN_GUIDE.md › The design; docs/guides/ADMIN_GUIDE.md).
+"""The lens (docs/guides/ADMIN_GUIDE.md › The design; docs/guides/ADMIN_GUIDE.md).
 
-Landings: an edition lists the landings it offers (``home.landings``: Drishti Risk's ``desk``, ``command`` and ``map``, Drishti World's
-``desk``, ``explorer`` and ``map``, Drishti Market's ``desk``, ``explorer`` and ``quality``, Drishti Trading's ``trader``, ``desk`` and
-``explorer``), its default (``home.landing``), the page that draws them (``home.template``) and their titles (``home.titles``); a person
-picks one from the links on Home and the choice is kept in their settings (``homeLanding``), as other preferences are.
-``home.landing-by-role`` ({role: landing}) is read and, when configured, wins over the person's choice: the hook for role-based access
-later; Drishti Trading's ``trading.landing-by-role`` (the same shape, for the person's trading role) picks the first landing below their
-choice. ``/api/home/search`` is the landings' one read: the server's search grammar, for a command the edition shows; Drishti Market's
-figures and Drishti Trading's are the market-data and trading modules' (worked out on the server, /api/v1/market-data/landing and
-/api/v1/trading/landing; passed on by plugins/banking/routes/trading_routes.py, with its landing rule registered in core/plugins.py).
+A lens names the Home it opens (``home.home`` of its file: a role Home of the server, docs/architecture/ROLE_HOME_SUTRAS.md); the page is the one
+Home page (``/home``, routes/role_home_routes.py), the same mechanism as every role's Home.
 
 The lens: ``/lens/<name>`` opens an edition the server offers as a lens (``drishti.lenses``, one or more) for this person; opening another
 while in one switches; ``/lens/leave`` closes it. Kept in the person's settings (``lens``), so every server of a cluster and every console
@@ -33,12 +26,10 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 
-from core.edition import landing_refused
-from core import plugins
 from core.backend import BackendError
-from core.edition import DEFAULT_LANDING_TEMPLATE, Edition
+from core.edition import Edition
 from routes.common import ident, render
 
 router = APIRouter(include_in_schema=False)
@@ -48,107 +39,9 @@ def edition_of(request) -> Edition:
     return getattr(request.state, "edition", None) or request.app.state.editions.instance
 
 
-async def landing_for(request, ed: Edition) -> str | None:
-    """The landing this person sees, or None for the product's Home (no landings, or ``home.landing: today``)."""
-    offered = ed.landings()
-    if not offered or ed.landing == "today":
-        return None
-    asked = request.query_params.get("landing")
-    if asked == "today":
-        return None
-    me = getattr(request.state, "identity", None)
-    by_role = ed.landing_by_role()                      # the RBAC hook: wins only when configured
-    for role in (me.roles if me else ()):
-        if by_role.get(role) in offered:
-            return by_role[role]
-    if asked in offered:
-        return asked
-    mine = getattr(request.state, "settings", None) or {}
-    chosen = str(mine.get("homeLanding") or "")
-    if chosen in offered:
-        return chosen
-    # a module's rule, below the person's own choice (Drishti Trading: the trading role picks the first landing; LENSES.md section 6)
-    if (by_rule := await plugins.landing_by_rules(request, ed, offered, me, mine)) is not None:
-        return by_rule
-    return ed.landing if ed.landing in offered else offered[0]
-
-
-async def render_landing(request, ed: Edition, landing: str, cards: list):
-    """One of the edition's landings: a shell (``home.template``) whose panels read the servers' own answers, drawn by the script the
-    template names (Drishti Risk: the engines' /api/var and /api/exposure, drishti_risk-landing.js; Drishti World: the packs' kinds through
-    /api/home/search and /api/raw, drishti_world-landing.js). What the page needs of the person is read here: their monitors (Risk's
-    ``command``) and their recent commands of the edition (World's ``explorer``)."""
-    titles = ed.landing_titles()
-    offered = [{"id": x, "title": titles[x], "href": f"/home/landing/{x}"} for x in ed.landings()]
-    chips = [str(c) for c in ed.home_chips if ed.typed_shown(str(c))]          # the lens's (registry), each only while its function is on
-    monitors, recents = [], []
-    backend, me = request.app.state.backend, ident(request)
-    if landing == "command":                              # Risk's B: the person's monitors
-        try:
-            mine = await backend.mine("GET", "/monitors", me)
-            monitors = [str(m.get("name") if isinstance(m, dict) else m) for m in (mine or [])][:8]
-        except BackendError:
-            monitors = []
-    if landing == "explorer":                             # World's B: the person's recent commands the edition shows
-        try:
-            seen = []
-            for c in await backend.command_history(me) or []:
-                c = str(c).strip()
-                if c and c not in seen and ed.typed_shown(c):
-                    seen.append(c)
-            recents = seen[:6]
-        except BackendError:
-            recents = []
-    template, extra = ed.landing_template, {}
-    if ":" in template:                                  # a hosted module's page (economy:world_landing.html), in the module's own environment
-        from starlette.templating import Jinja2Templates
-
-        from core import modules as _modules
-        part = request.app.state.module_parts.part(template.split(":", 1)[0])
-        if part is None or not _modules.module_on(part.id):
-            template = DEFAULT_LANDING_TEMPLATE         # its module went: the product's Home
-        else:
-            extra["_templates"] = Jinja2Templates(env=request.app.state.module_parts.env(part, request.app.state.templates.env))
-    return render(request, template, **extra, landing=landing, landings=offered, cards=cards, chips=chips, monitors=monitors,
-                  recents=recents, topics=[str(t) for t in ed._get("home.topics") or []], stale_days=stale_days(ed),
-                  hierarchies=[str(h) for h in ed._get("home.hierarchies") or ["MGMT"]], screen="home")
-
-
-@router.get("/api/home/search")
-async def landing_search(request: Request, q: str = ""):
-    """The landings' read (World's panels): the server's search grammar (``ECON order by GDP_USD_BN desc limit 20``), read-only, for a
-    signed-in person whose edition (or lens) shows the command; the server filters again by the person's lens (X-Drishti-Lens). A hidden
-    command answers 404 DRS-4023, as on the command line."""
-    ed = edition_of(request)
-    head = q.split()[0].upper() if q.split() else ""
-    if getattr(request.state, "identity", None) is None:
-        return JSONResponse({"detail": "sign in first"}, status_code=401)
-    if not ed.active or not head or not ed.command_shown(head) or head in landing_refused():
-        return JSONResponse({"code": "DRS-4023", "detail": f"{head or 'the command'} is not part of {ed.title if ed.active else 'a landing'}"},
-                            status_code=404)
-    try:
-        return JSONResponse(await request.app.state.backend.search(q, ident(request)), headers={"Cache-Control": "no-store"})
-    except BackendError as e:
-        return JSONResponse({"code": e.code, "detail": e.detail}, status_code=e.status if 400 <= (e.status or 0) < 600 else 502)
-
-
-def stale_days(ed: Edition) -> int:
-    """Drishti Market's ``quality.stale-days`` (default 2): data older than the business date by more business days than this is stale."""
-    try:
-        n = int(ed._get("quality.stale-days", 2))
-    except (TypeError, ValueError):
-        n = 2
-    return max(0, min(n, 60))
-
-
 def _confirm(request: Request, action: str, title: str, text: str):
     """A change a link asks for answers a GET with its form: only a POST changes anything (drishti_theme-init.js posts the links directly)."""
     return render(request, "confirm_post.html", action=action, title=title, text=text)
-
-
-@router.get("/home/landing/{name}")
-async def choose_landing_form(request: Request, name: str):
-    return _confirm(request, f"/home/landing/{quote(name)}", "Open this landing", f"Home will open with the {name} landing from now on.")
 
 
 @router.get("/lens/leave")
@@ -161,15 +54,6 @@ async def open_lens_form(request: Request, name: str):
     if getattr(request.state, "identity", None) is None:
         return RedirectResponse(f"/login?next={quote('/lens/' + name)}", status_code=303)
     return _confirm(request, f"/lens/{quote(name)}", "Open the lens", f"See the product through the {name} lens.")
-
-
-@router.post("/home/landing/{name}")
-async def choose_landing(request: Request, name: str):
-    """Remembers the person's landing (their settings, ``homeLanding``) and opens Home with it."""
-    me = getattr(request.state, "identity", None)
-    if me is not None and name in edition_of(request).landings():
-        await _patch(request, {"homeLanding": name})
-    return RedirectResponse("/", status_code=303)
 
 
 @router.post("/lens/leave")

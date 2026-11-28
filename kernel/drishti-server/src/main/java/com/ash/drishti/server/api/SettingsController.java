@@ -105,11 +105,11 @@ public class SettingsController {
                     }
                     next.put("locale", v.asText());
                 }
-                case "lens", "homeLanding" -> {          // the edition a person opened as a lens; their choice of an edition's landing (LENSES.md 8)
+                case "lens" -> {                         // the edition a person opened as a lens (LENSES.md 8); its Home is a Home Sutra
                     if (!v.asText().matches("[a-z0-9][a-z0-9-]{0,63}")) {
-                        throw bad(e.getKey() + " is an edition or landing name (lower-case letters, digits and dashes)");
+                        throw bad("lens is an edition name (lower-case letters, digits and dashes)");
                     }
-                    next.put(e.getKey(), v.asText());
+                    next.put("lens", v.asText());
                 }
                 case "tradingView" -> {                 // Drishti Trading's "View as": a trader or a desk (LENSES.md 14); never widens access
                     if (!v.asText().matches("(trader|desk):[A-Za-z0-9][A-Za-z0-9._~-]{0,79}")) {

@@ -64,7 +64,6 @@ public class MySettings {
         out.set("pinned", s.path("pinned").isArray() ? s.get("pinned") : json.createArrayNode());
         out.set("savedSearches", s.path("savedSearches").isArray() ? s.get("savedSearches") : json.createArrayNode());
         out.set("lens", s.path("lens").isTextual() ? s.get("lens") : json.nullNode());                  // LENSES.md 8: the console reads them back
-        out.set("homeLanding", s.path("homeLanding").isTextual() ? s.get("homeLanding") : json.nullNode());
         out.set("tradingView", s.path("tradingView").isTextual() ? s.get("tradingView") : json.nullNode());   // Drishti Trading's View as
         out.set("varView", s.path("varView").isObject() ? s.get("varView") : json.nullNode());        // the VaR page's lens (2.9.7)
         return out;

@@ -19,7 +19,7 @@ lenses:
   - id: risk
     title: Risk
     modules: [banking]
-    home: home/risk_landing.html
+    home: risk-manager     # the role Home this lens opens (config/homes/)
     functions: [CPTY, GRP, LE, BOOK, DESK, TRDR, CCP, TRD, CTRD, PTRD, LTRD, FX, PORT, POS, PNLV, SPV, FXS, SSET, VLIM, VRES, VOFF, AGR, CSA,
       NSET, LIM, COLL, MC, XRUN, XPATH, EXP, PREDEAL, XOFC, NSMTM, CPMTM, VAR, PVAR, SMAT, SWIN, FRSA, SIMM, MCUBE]
     cards:                               # Home's quick cards: each opens its command; one whose function is off is not shown
@@ -31,7 +31,7 @@ lenses:
   - id: trading
     title: Trading
     modules: [banking]
-    home: home/trading_landing.html
+    home: trader     # the role Home this lens opens (config/homes/)
     functions: [TRD, CTRD, PTRD, LTRD, ITRD, BOOK, DESK, TRDR, POS, VLIM, VRES, TVAL, PNLV, PORT, DPNL, PNL, SENS, CPTY, GRP, NSET, NSMTM,
       CPMTM, LIM, PREDEAL, EXP, CRV, REPO, FIX, IRV, CPV, FX, FXF, FXV, EQ, EQX, CMD, CMDC, BND, CDS, VAR]
     cards:                               # Home's quick cards: each opens its command; one whose function is off is not shown
@@ -43,7 +43,7 @@ lenses:
   - id: market
     title: Market
     modules: [external-data, banking]   # capital markets' functions over the market-data pack (the banking module's while its engines read it)
-    home: home/market_landing.html
+    home: market-data     # the role Home this lens opens (config/homes/)
     functions: [CRV, REPO, IRV, CPV, FIX, INF, INFC, FX, FXF, FXV, CDS, BND, EQ, EQX, DIV, EQV, CMD, CMDC, CMDV, CORR, CORRC, EQB, USEQ, IDX, SIC, EDGAR, FILING, FACT, PXH, FUND, HELD, TRACK]
     cards:                               # Home's quick cards: each opens its command; one whose function is off is not shown
       - { title: "A curve: points, zero rates, discount factors, forwards, history", cmd: CRV CRV-USD-OIS, icon: graph-up }

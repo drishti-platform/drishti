@@ -63,8 +63,6 @@ ALLOWED = {
     "static/js/drishti_busy.js": {"visual": VISUALS},
     "static/js/drishti_dyk.js": {"visual": VISUALS},
     "static/js/drishti_landing.js": {"visual": VISUALS},
-    "plugins/banking/static/js/drishti_market-landing.js": {"visual": VISUALS},
-    "plugins/banking/static/js/drishti_trading-landing.js": {"visual": VISUALS},
     "static/js/drishti_bi-transform-view.js": {"numbers": BI, "visual": VISUALS},
     # BI and the Pivot (wip/e-migrate-bi)
     "static/js/drishti_bi-layer-ops.js": {"numbers": BI},
@@ -79,7 +77,6 @@ ALLOWED = {
     # VaR, exposure and the risk screens (wip/e-migrate-var)
     "plugins/banking/static/js/drishti_exposure-explorer.js": {"numbers": VAR},
     "plugins/banking/static/js/drishti_frtb-sa.js": {"numbers": VAR},
-    "plugins/banking/static/js/drishti_risk-landing.js": {"numbers": VAR},
     "plugins/banking/static/js/drishti_scenario-matrix.js": {"numbers": VAR},
     "plugins/banking/static/js/drishti_simm.js": {"numbers": VAR},
     "plugins/banking/static/js/drishti_stress-window.js": {"numbers": VAR},

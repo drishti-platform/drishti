@@ -87,10 +87,9 @@ class EditionTwoLensesServerTest {
     @Test
     void theLensAndTheLandingAreKeptByTheSettingsApiAndHideNothing() throws Exception {
         String ana = "ana-" + System.nanoTime();
-        assertThat(settings(ana, "{\"lens\":\"world\",\"homeLanding\":\"explorer\"}").path("lens").asText()).isEqualTo("world");
+        assertThat(settings(ana, "{\"lens\":\"world\"}").path("lens").asText()).isEqualTo("world");
         JsonNode back = ok(get("/api/v1/me/settings").header("Authorization", bearer(ana)));                 // read back, as the console does
         assertThat(back.path("lens").asText()).isEqualTo("world");
-        assertThat(back.path("homeLanding").asText()).isEqualTo("explorer");
         List<String> everything = functions(ana, null);
         assertThat(everything).contains("VRES", "EXP", "TRD", "ECON", "USEQ", "FUND", "CRV");
         List<String> datasets = datasets(ana, null);

@@ -26,7 +26,6 @@ import com.ash.drishti.api.error.ErrorCode;
 import com.ash.drishti.identity.content.ContentStore;
 import com.ash.drishti.identity.content.FileContentStore;
 import com.ash.drishti.identity.db.EmbedAppEntity;
-import com.ash.drishti.identity.db.IdentityRepositories;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;

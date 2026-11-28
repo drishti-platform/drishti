@@ -17,32 +17,32 @@
     },
     "BOOK" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "CAL" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "CBANK" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "central-banks"
     },
     "CBNK" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "central-banks"
     },
     "CBSER" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "central-banks"
     },
     "CCP" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "CCR" : {
@@ -57,8 +57,13 @@
     },
     "CLR" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
+    },
+    "CLYP" : {
+      "loaded" : false,
+      "module" : "trading-systems",
+      "pack" : "calypso"
     },
     "CMD" : {
       "loaded" : true,
@@ -75,11 +80,6 @@
       "module" : "market-data",
       "pack" : "market-data"
     },
-    "CMPD" : {
-      "loaded" : false,
-      "module" : null,
-      "pack" : "compute-demo"
-    },
     "CNV" : {
       "loaded" : false,
       "module" : "genomics",
@@ -87,7 +87,7 @@
     },
     "CO" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "news-and-markets"
     },
     "COLL" : {
@@ -102,7 +102,7 @@
     },
     "CORE" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "CORR" : {
@@ -122,7 +122,7 @@
     },
     "CPTY" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "CPV" : {
@@ -142,7 +142,7 @@
     },
     "CTRD" : {
       "loaded" : false,
-      "module" : "banking",
+      "module" : "trading-systems",
       "pack" : "trading"
     },
     "CVA" : {
@@ -157,7 +157,7 @@
     },
     "DESK" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "DIV" : {
@@ -187,23 +187,28 @@
     },
     "ECG" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "ECON" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "EDGAR" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "ELEC" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
+    },
+    "ENDR" : {
+      "loaded" : false,
+      "module" : "trading-systems",
+      "pack" : "endur"
     },
     "EQ" : {
       "loaded" : true,
@@ -232,22 +237,22 @@
     },
     "FACT" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "FCST" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "FILING" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "FISC" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "FIX" : {
@@ -262,12 +267,12 @@
     },
     "FUND" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "funds"
     },
     "FUNDS" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "funds"
     },
     "FX" : {
@@ -292,37 +297,42 @@
     },
     "GDELT" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "gdelt-events"
     },
     "GDLT" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "gdelt-events"
     },
     "GENOMICS" : {
       "loaded" : false,
       "module" : "genomics",
-      "pack" : "genomics-showcase"
+      "pack" : "genomics"
     },
     "GLEIF" : {
-      "loaded" : false,
-      "module" : null,
+      "loaded" : true,
+      "module" : "reference-data",
       "pack" : "gleif"
     },
     "GRP" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "HELD" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "funds"
+    },
+    "ICIX" : {
+      "loaded" : false,
+      "module" : "trading-systems",
+      "pack" : "ici"
     },
     "IDX" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "INF" : {
@@ -342,52 +352,52 @@
     },
     "ISS" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "ITRD" : {
       "loaded" : false,
-      "module" : "banking",
+      "module" : "trading-systems",
       "pack" : "trading"
     },
     "JUR" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "LABR" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "LE" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "LEI" : {
-      "loaded" : false,
-      "module" : null,
+      "loaded" : true,
+      "module" : "reference-data",
       "pack" : "gleif"
     },
     "LEIC" : {
-      "loaded" : false,
-      "module" : null,
+      "loaded" : true,
+      "module" : "reference-data",
       "pack" : "gleif"
     },
     "LEIG" : {
-      "loaded" : false,
-      "module" : null,
+      "loaded" : true,
+      "module" : "reference-data",
       "pack" : "gleif"
     },
     "LEIM" : {
-      "loaded" : false,
-      "module" : null,
+      "loaded" : true,
+      "module" : "reference-data",
       "pack" : "gleif"
     },
     "LEIR" : {
-      "loaded" : false,
-      "module" : null,
+      "loaded" : true,
+      "module" : "reference-data",
       "pack" : "gleif"
     },
     "LIM" : {
@@ -397,12 +407,12 @@
     },
     "LTRD" : {
       "loaded" : false,
-      "module" : "banking",
+      "module" : "trading-systems",
       "pack" : "trading"
     },
     "MACRO" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "MC" : {
@@ -420,9 +430,14 @@
       "module" : "banking",
       "pack" : "market-risk"
     },
+    "MURX" : {
+      "loaded" : false,
+      "module" : "trading-systems",
+      "pack" : "murex"
+    },
     "NEWS" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "news-and-markets"
     },
     "NSET" : {
@@ -437,53 +452,48 @@
     },
     "NSTAT" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "national-statistics"
     },
     "NWMK" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "news-and-markets"
     },
     "OECD" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "oecd"
     },
     "OECDP" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "oecd"
     },
     "OECDS" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "oecd"
     },
     "OFFC" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "ONEWS" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "official-news"
     },
     "PARTY" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "PATHWAY" : {
       "loaded" : false,
       "module" : "genomics",
       "pack" : "genomics-showcase"
-    },
-    "PBOOK" : {
-      "loaded" : false,
-      "module" : null,
-      "pack" : "compute-demo"
     },
     "PNL" : {
       "loaded" : false,
@@ -512,12 +522,12 @@
     },
     "PREL" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "official-news"
     },
     "PRESS" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "official-news"
     },
     "PROT" : {
@@ -530,44 +540,29 @@
       "module" : "genomics",
       "pack" : "protein-engineering"
     },
-    "PSTRIP" : {
-      "loaded" : false,
-      "module" : null,
-      "pack" : "compute-demo"
-    },
-    "PSUM" : {
-      "loaded" : false,
-      "module" : null,
-      "pack" : "compute-demo"
-    },
-    "PSUMJ" : {
-      "loaded" : false,
-      "module" : null,
-      "pack" : "compute-demo"
-    },
     "PTRD" : {
       "loaded" : false,
-      "module" : "banking",
+      "module" : "trading-systems",
       "pack" : "trading"
     },
     "PXH" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "QUOTE" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "news-and-markets"
     },
     "REGE" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "REGN" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "REPO" : {
@@ -607,7 +602,7 @@
     },
     "SIC" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "SIMM" : {
@@ -617,7 +612,7 @@
     },
     "SOCI" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
     },
     "SPV" : {
@@ -642,7 +637,7 @@
     },
     "STCAN" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "national-statistics"
     },
     "STR" : {
@@ -655,29 +650,34 @@
       "module" : "genomics",
       "pack" : "genomics-showcase"
     },
+    "SWPO" : {
+      "loaded" : false,
+      "module" : "trading-systems",
+      "pack" : "swapone"
+    },
     "TOPIC" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "news-and-events",
       "pack" : "news-and-markets"
     },
     "TRACK" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "funds"
     },
     "TRD" : {
       "loaded" : false,
-      "module" : "banking",
+      "module" : "trading-systems",
       "pack" : "trading"
     },
     "TRDR" : {
       "loaded" : true,
-      "module" : null,
+      "module" : "reference-data",
       "pack" : "core"
     },
     "TRDS" : {
       "loaded" : false,
-      "module" : "banking",
+      "module" : "trading-systems",
       "pack" : "trading"
     },
     "TVAL" : {
@@ -687,12 +687,12 @@
     },
     "USEQ" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "USEQS" : {
       "loaded" : true,
-      "module" : "capitalmarkets",
+      "module" : "external-data",
       "pack" : "us-equities"
     },
     "VCALL" : {
@@ -717,23 +717,28 @@
     },
     "WDEV" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-development"
     },
     "WDI" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-development"
     },
     "WDIS" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-development"
     },
     "WRLD" : {
       "loaded" : true,
-      "module" : "economy",
+      "module" : "external-data",
       "pack" : "world-economy"
+    },
+    "WSSX" : {
+      "loaded" : false,
+      "module" : "trading-systems",
+      "pack" : "wss"
     },
     "XOFC" : {
       "loaded" : false,
@@ -762,9 +767,10 @@
       "tagline" : "Companies, funds, markets and economies. One grammar."
     },
     "domains" : {
-      "capitalmarkets" : "capitalmarkets",
-      "economy" : "economy",
-      "market-data" : "market-data"
+      "external-data" : "external-data",
+      "market-data" : "market-data",
+      "news-and-events" : "news-and-events",
+      "reference-data" : "reference-data"
     },
     "feature-keys" : {
       "ai" : [ ],
@@ -800,7 +806,7 @@
         "tagline" : "Companies, funds, markets and economies. One grammar."
       },
       "commands" : {
-        "allow" : [ "CORE", "CPTY", "GRP", "ISS", "CCP", "LE", "BOOK", "DESK", "TRDR", "CAL", "CLR", "USEQS", "USEQ", "IDX", "SIC", "EDGAR", "FILING", "FACT", "PXH", "FUNDS", "FUND", "HELD", "TRACK", "WRLD", "ECON", "MACRO", "FCST", "LABR", "FISC", "ECG", "REGE", "JUR", "PARTY", "OFFC", "ELEC", "REGN", "SOCI", "NWMK", "TOPIC", "NEWS", "CO", "QUOTE", "WDEV", "WDI", "WDIS", "CBNK", "CBANK", "CBSER", "STCAN", "NSTAT", "OECDP", "OECD", "OECDS", "ONEWS", "PRESS", "PREL", "GDLT", "GDELT", "MKT", "CRV", "REPO", "FX", "FXF", "FXV", "IRV", "CPV", "EQ", "EQX", "DIV", "EQV", "CDS", "INF", "INFC", "CMD", "CMDC", "CMDV", "FIX", "BND", "CORR", "CORRC", "EQB" ],
+        "allow" : [ "WRLD", "ECON", "MACRO", "FCST", "LABR", "FISC", "ECG", "REGE", "JUR", "PARTY", "OFFC", "ELEC", "REGN", "SOCI", "WDEV", "WDI", "WDIS", "CBNK", "CBANK", "CBSER", "STCAN", "NSTAT", "OECDP", "OECD", "OECDS", "USEQS", "USEQ", "IDX", "SIC", "EDGAR", "FILING", "FACT", "PXH", "FUNDS", "FUND", "HELD", "TRACK", "NWMK", "TOPIC", "NEWS", "CO", "QUOTE", "ONEWS", "PRESS", "PREL", "GDLT", "GDELT", "MKT", "CRV", "REPO", "FX", "FXF", "FXV", "IRV", "CPV", "EQ", "EQX", "DIV", "EQV", "CDS", "INF", "INFC", "CMD", "CMDC", "CMDV", "FIX", "BND", "CORR", "CORRC", "EQB", "CORE", "CPTY", "GRP", "ISS", "CCP", "LE", "BOOK", "DESK", "TRDR", "CAL", "CLR", "GLEIF", "LEI", "LEIG", "LEIR", "LEIC", "LEIM" ],
         "words" : {
           "AGR" : "off",
           "CCUBE" : "off",
@@ -870,8 +876,8 @@
         "var" : "off"
       },
       "help" : {
-        "domains" : [ "capitalmarkets", "economy" ],
-        "knowledge" : [ "core", "market-data", "us-equities", "funds", "world-economy", "news-and-markets", "world-development", "central-banks", "national-statistics", "oecd", "official-news", "gdelt-events" ],
+        "domains" : [ "external-data", "news-and-events", "reference-data" ],
+        "knowledge" : [ "core", "gleif", "market-data", "world-economy", "world-development", "national-statistics", "oecd", "central-banks", "funds", "us-equities", "news-and-markets", "official-news", "gdelt-events" ],
         "title" : "Drishti Finance Help"
       },
       "home" : {
@@ -882,7 +888,7 @@
         "top" : [ "views", "domains", "create", "admin", "help" ]
       },
       "packs" : {
-        "enabled" : [ "core", "market-data", "us-equities", "funds", "world-economy", "news-and-markets", "world-development", "central-banks", "national-statistics", "oecd", "official-news", "gdelt-events" ]
+        "enabled" : [ "core", "gleif", "market-data", "world-economy", "world-development", "national-statistics", "oecd", "central-banks", "funds", "us-equities", "news-and-markets", "official-news", "gdelt-events" ]
       },
       "title" : "Drishti Finance"
     },
@@ -1019,9 +1025,9 @@
         }
       }
     },
-    "modules" : [ "capitalmarkets", "economy", "market-data" ],
+    "modules" : [ "external-data", "news-and-events", "market-data", "reference-data" ],
     "name" : "finance",
-    "packs" : [ "core", "market-data", "us-equities", "funds", "world-economy", "news-and-markets", "world-development", "central-banks", "national-statistics", "oecd", "official-news", "gdelt-events" ],
+    "packs" : [ "core", "gleif", "market-data", "world-economy", "world-development", "national-statistics", "oecd", "central-banks", "funds", "us-equities", "news-and-markets", "official-news", "gdelt-events" ],
     "settings" : {
       "layer" : {
         "ui" : {
@@ -1239,6 +1245,21 @@
     }
   },
   "modules" : [ {
+    "console-menus" : [ ],
+    "docs" : [ "reference-data" ],
+    "domain" : "reference-data",
+    "domain-label" : "",
+    "features" : [ ],
+    "id" : "reference-data",
+    "loaded" : true,
+    "menus" : [ ],
+    "packs" : [ "core", "gleif" ],
+    "requires" : [ ],
+    "state" : null,
+    "title" : "Reference data",
+    "version" : null,
+    "words" : [ "CORE", "CPTY", "GRP", "ISS", "CCP", "LE", "BOOK", "DESK", "TRDR", "CAL", "CLR", "GLEIF", "LEI", "LEIG", "LEIR", "LEIC", "LEIM" ]
+  }, {
     "console-menus" : [ {
       "columns" : [ {
         "items" : [ {
@@ -1418,7 +1439,7 @@
     "loaded" : true,
     "menus" : [ "curves", "volatility", "fx", "credit", "markets" ],
     "packs" : [ "market-data" ],
-    "requires" : [ ],
+    "requires" : [ "reference-data" ],
     "state" : null,
     "title" : "Market data",
     "version" : null,
@@ -1462,7 +1483,22 @@
       "id" : "blotter",
       "label" : "Blotter",
       "subject" : true
-    }, {
+    } ],
+    "docs" : [ ],
+    "domain" : "trading",
+    "domain-label" : "",
+    "features" : [ ],
+    "id" : "trading-systems",
+    "loaded" : true,
+    "menus" : [ "blotter" ],
+    "packs" : [ "trading", "endur", "calypso", "murex", "wss", "swapone", "ici" ],
+    "requires" : [ "market-data", "reference-data" ],
+    "state" : null,
+    "title" : "Trading systems",
+    "version" : null,
+    "words" : [ "TRD", "CTRD", "PTRD", "LTRD", "ITRD" ]
+  }, {
+    "console-menus" : [ {
       "columns" : [ {
         "items" : [ {
           "cmd" : "BOOK",
@@ -1768,13 +1804,13 @@
     "features" : [ "var", "exposure", "sensitivities", "frtb-sa", "simm", "mr-cube" ],
     "id" : "banking",
     "loaded" : true,
-    "menus" : [ "blotter", "positions", "risk", "counterparties" ],
-    "packs" : [ "trading", "market-risk", "counterparty-risk" ],
-    "requires" : [ "market-data" ],
+    "menus" : [ "positions", "risk", "counterparties" ],
+    "packs" : [ "market-risk", "counterparty-risk" ],
+    "requires" : [ "market-data", "reference-data", "trading-systems" ],
     "state" : null,
-    "title" : "Banking and risk",
+    "title" : "Risk",
     "version" : null,
-    "words" : [ "VAR", "PVAR", "SMAT", "SWIN", "PREDEAL", "EXP", "FRSA", "SIMM", "MCUBE", "SENS", "RFAC", "PLAY", "CCUBE", "TRD", "CTRD", "PTRD", "LTRD", "ITRD", "SCN", "STR", "FRTB", "PNL", "TVAL", "POS", "PORT", "PNLV", "SPV", "FXS", "SSET", "VLIM", "DPNL", "PNLH", "VRES", "VOFF", "SSPNL", "AGR", "CSA", "NSET", "LIM", "CVA", "SACCR", "COLL", "MC", "XRUN", "XPATH", "XOFC", "NSMTM", "CPMTM" ]
+    "words" : [ "VAR", "PVAR", "SMAT", "SWIN", "PREDEAL", "EXP", "FRSA", "SIMM", "MCUBE", "SENS", "RFAC", "PLAY", "CCUBE", "SCN", "STR", "FRTB", "PNL", "TVAL", "POS", "PORT", "PNLV", "SPV", "FXS", "SSET", "VLIM", "DPNL", "PNLH", "VRES", "VOFF", "SSPNL", "AGR", "CSA", "NSET", "LIM", "CVA", "SACCR", "COLL", "MC", "XRUN", "XPATH", "XOFC", "NSMTM", "CPMTM" ]
   }, {
     "console-menus" : [ {
       "columns" : [ {
@@ -1789,6 +1825,44 @@
         "title" : "News and quotes"
       } ],
       "id" : "markets"
+    }, {
+      "columns" : [ {
+        "items" : [ {
+          "desc" : "Type the country's code after the word (ECON CAN)",
+          "fill" : "ECON",
+          "icon" : "flag",
+          "id" : "econ",
+          "label" : "A country",
+          "requires" : [ "cmd:ECON" ]
+        }, {
+          "cmd" : "MACRO",
+          "desc" : "Every indicator of every economy",
+          "icon" : "graph-up",
+          "id" : "macro",
+          "label" : "Indicators",
+          "requires" : [ "cmd:MACRO" ]
+        }, {
+          "cmd" : "FCST",
+          "desc" : "The IMF's forecasts by economy",
+          "icon" : "binoculars",
+          "id" : "fcst",
+          "label" : "IMF forecasts",
+          "requires" : [ "cmd:FCST" ]
+        }, {
+          "cmd" : "REGE",
+          "desc" : "Sub-national regions and their figures",
+          "icon" : "map",
+          "id" : "rege",
+          "label" : "Regions",
+          "requires" : [ "cmd:REGE" ]
+        } ],
+        "title" : "Economies"
+      } ],
+      "domain" : "external-data",
+      "icon" : "globe2",
+      "id" : "economies",
+      "label" : "Economies",
+      "subject" : true
     }, {
       "columns" : [ {
         "items" : [ {
@@ -1828,19 +1902,34 @@
       "label" : "Companies",
       "subject" : true
     } ],
-    "docs" : [ "capitalmarkets" ],
-    "domain" : "capitalmarkets",
+    "docs" : [ "external-data" ],
+    "domain" : "external-data",
     "domain-label" : "",
     "features" : [ ],
-    "id" : "capitalmarkets",
+    "id" : "external-data",
     "loaded" : true,
-    "menus" : [ "markets", "companies" ],
-    "packs" : [ "us-equities", "funds" ],
+    "menus" : [ "markets", "economies", "companies" ],
+    "packs" : [ "world-economy", "world-development", "national-statistics", "oecd", "central-banks", "funds", "us-equities" ],
     "requires" : [ ],
     "state" : null,
-    "title" : "Capital markets",
+    "title" : "External data",
     "version" : null,
-    "words" : [ "USEQS", "USEQ", "IDX", "SIC", "EDGAR", "FILING", "FACT", "PXH", "FUNDS", "FUND", "HELD", "TRACK" ]
+    "words" : [ "WRLD", "ECON", "MACRO", "FCST", "LABR", "FISC", "ECG", "REGE", "JUR", "PARTY", "OFFC", "ELEC", "REGN", "SOCI", "WDEV", "WDI", "WDIS", "CBNK", "CBANK", "CBSER", "STCAN", "NSTAT", "OECDP", "OECD", "OECDS", "USEQS", "USEQ", "IDX", "SIC", "EDGAR", "FILING", "FACT", "PXH", "FUNDS", "FUND", "HELD", "TRACK" ]
+  }, {
+    "console-menus" : [ ],
+    "docs" : [ "genomics" ],
+    "domain" : "genomics",
+    "domain-label" : "",
+    "features" : [ ],
+    "id" : "genomics",
+    "loaded" : true,
+    "menus" : [ "genomics" ],
+    "packs" : [ "genomics", "genomics-showcase", "protein-engineering" ],
+    "requires" : [ ],
+    "state" : null,
+    "title" : "Genomics",
+    "version" : null,
+    "words" : [ "VARIANT", "GENE", "COHORT", "GWAS", "PROTEIN", "DESIGNS" ]
   }, {
     "console-menus" : [ {
       "columns" : [ {
@@ -1862,178 +1951,20 @@
         "title" : "News and quotes"
       } ],
       "id" : "markets"
-    }, {
-      "columns" : [ {
-        "items" : [ {
-          "desc" : "Type the country's code after the word (ECON CAN)",
-          "fill" : "ECON",
-          "icon" : "flag",
-          "id" : "econ",
-          "label" : "A country",
-          "requires" : [ "cmd:ECON" ]
-        }, {
-          "cmd" : "MACRO",
-          "desc" : "Every indicator of every economy",
-          "icon" : "graph-up",
-          "id" : "macro",
-          "label" : "Indicators",
-          "requires" : [ "cmd:MACRO" ]
-        }, {
-          "cmd" : "FCST",
-          "desc" : "The IMF's forecasts by economy",
-          "icon" : "binoculars",
-          "id" : "fcst",
-          "label" : "IMF forecasts",
-          "requires" : [ "cmd:FCST" ]
-        }, {
-          "cmd" : "REGE",
-          "desc" : "Sub-national regions and their figures",
-          "icon" : "map",
-          "id" : "rege",
-          "label" : "Regions",
-          "requires" : [ "cmd:REGE" ]
-        } ],
-        "title" : "Economies"
-      } ],
-      "domain" : "economy",
-      "icon" : "globe2",
-      "id" : "economies",
-      "label" : "Economies",
-      "subject" : true
     } ],
-    "docs" : [ "economy" ],
-    "domain" : "economy",
+    "docs" : [ "news-and-events" ],
+    "domain" : "news-and-events",
     "domain-label" : "",
     "features" : [ ],
-    "id" : "economy",
+    "id" : "news-and-events",
     "loaded" : true,
-    "menus" : [ "markets", "economies" ],
-    "packs" : [ "world-economy", "news-and-markets", "world-development", "central-banks", "national-statistics", "oecd", "official-news", "gdelt-events" ],
+    "menus" : [ "markets" ],
+    "packs" : [ "news-and-markets", "official-news", "gdelt-events" ],
     "requires" : [ ],
     "state" : null,
-    "title" : "Economy and public sector",
+    "title" : "News and events",
     "version" : null,
-    "words" : [ "WRLD", "ECON", "MACRO", "FCST", "LABR", "FISC", "ECG", "REGE", "JUR", "PARTY", "OFFC", "ELEC", "REGN", "SOCI", "NWMK", "TOPIC", "NEWS", "CO", "QUOTE", "WDEV", "WDI", "WDIS", "CBNK", "CBANK", "CBSER", "STCAN", "NSTAT", "OECDP", "OECD", "OECDS", "ONEWS", "PRESS", "PREL", "GDLT", "GDELT" ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ "genomics" ],
-    "domain" : "genomics",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "genomics",
-    "loaded" : true,
-    "menus" : [ "genomics" ],
-    "packs" : [ "genomics-showcase", "protein-engineering" ],
-    "requires" : [ ],
-    "state" : null,
-    "title" : "Genomics",
-    "version" : null,
-    "words" : [ "VARIANT", "GENE", "COHORT", "GWAS", "PROTEIN", "DESIGNS" ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "trading",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ ],
-    "state" : null,
-    "title" : "Trading",
-    "version" : null,
-    "words" : [ ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "source-calypso",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ "trading" ],
-    "state" : null,
-    "title" : "Source Calypso",
-    "version" : null,
-    "words" : [ ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "source-endur",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ "trading" ],
-    "state" : null,
-    "title" : "Source Endur",
-    "version" : null,
-    "words" : [ ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "source-ici",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ "trading" ],
-    "state" : null,
-    "title" : "Source ICI",
-    "version" : null,
-    "words" : [ ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "source-murex",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ "trading" ],
-    "state" : null,
-    "title" : "Source Murex",
-    "version" : null,
-    "words" : [ ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "source-swapone",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ "trading" ],
-    "state" : null,
-    "title" : "Source SwapOne",
-    "version" : null,
-    "words" : [ ]
-  }, {
-    "console-menus" : [ ],
-    "docs" : [ ],
-    "domain" : "trading",
-    "domain-label" : "",
-    "features" : [ ],
-    "id" : "source-wss",
-    "loaded" : true,
-    "menus" : [ ],
-    "packs" : [ ],
-    "requires" : [ "trading" ],
-    "state" : null,
-    "title" : "Source WSS",
-    "version" : null,
-    "words" : [ ]
+    "words" : [ "NWMK", "TOPIC", "NEWS", "CO", "QUOTE", "ONEWS", "PRESS", "PREL", "GDLT", "GDELT" ]
   } ],
   "schema" : 1,
   "under-construction" : [ {

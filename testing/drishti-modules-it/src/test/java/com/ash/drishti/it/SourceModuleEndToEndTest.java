@@ -101,7 +101,7 @@ class SourceModuleEndToEndTest {
         // the load, through the module's connector: its own table, the system stamped
         Path lake = tmp.resolve("lake");
         Path cfg = tmp.resolve("load.yaml");
-        Files.writeString(cfg, "source:\n  files: '" + file + "'\n  as-of: " + DAY + "\n  id: " + rule.path("key").asText() + "\n  pack: '" + pack + "'\n  connector: "
+        Files.writeString(cfg, "source:\n  files: '" + file + "'\n  as-of: " + DAY + "\n  id: " + rule.path("key").asText() + "\n  pack: '" + module + "'\n  connector: "
                 + connector + "\ntarget:\n  format: delta\n  path: '" + lake + "/trading/trade_swapone'\n  domain: trading\n  kind: trade\n");
         // the loader's resolution: this site's modules folder (drishti.modules.home), every module on (KERNEL_AND_MODULES.md section 18)
         com.ash.drishti.api.resolution.ConfigResolution.install(com.ash.drishti.api.resolution.ConfigResolution.offline(
@@ -114,7 +114,7 @@ class SourceModuleEndToEndTest {
         assertThat(lake.resolve("trading/trades_shared")).as("no shared table").doesNotExist();
 
         // the connector of the module's template, on the lake the load wrote
-        JsonNode template = yaml.readTree(Files.readString(module.resolve("connectors/trade-swapone.yaml")));
+        JsonNode template = yaml.readTree(Files.readString(module.resolve("pack.yaml"))).path("connectors").path("trade-swapone");
         Map<String, String> settings = new LinkedHashMap<>();
         template.path("settings").fields().forEachRemaining(e -> {
             if (e.getValue().isValueNode()) {
@@ -129,7 +129,7 @@ class SourceModuleEndToEndTest {
         settings.put("domain", "trading");
         settings.put("table.trade", "trade_swapone");
         settings.put("engine", "native");
-        settings.put("module-dir", module.toString());               // how the server finds the module's map file
+        settings.replaceAll((k, v) -> v.replace("${pack.dir}", module.toString()));   // the pack's own folder anchors its map file
         settings.put("id-map-disk.dir", tmp.resolve("cache/idmaps").toString());
         settings.put("doc-disk-cache.dir", tmp.resolve("cache/docs").toString());
         var cfgs = new LinkedHashMap<String, SourcesProperties.ConnectorSettings>();

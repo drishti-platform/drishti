@@ -19,3 +19,21 @@ sections:
   pages:
   - title: Trading systems and the live blotter
     file: ../guides/BANK_DATA_GUIDE.md
+  - title: Endur
+    file: ../packs/endur/README.md
+    pack: endur                    # the page follows the pack's switch: shown only while the pack is on
+  - title: Calypso
+    file: ../packs/calypso/README.md
+    pack: calypso                    # the page follows the pack's switch: shown only while the pack is on
+  - title: Murex
+    file: ../packs/murex/README.md
+    pack: murex                    # the page follows the pack's switch: shown only while the pack is on
+  - title: WSS
+    file: ../packs/wss/README.md
+    pack: wss                    # the page follows the pack's switch: shown only while the pack is on
+  - title: SwapOne
+    file: ../packs/swapone/README.md
+    pack: swapone                    # the page follows the pack's switch: shown only while the pack is on
+  - title: ICI
+    file: ../packs/ici/README.md
+    pack: ici                    # the page follows the pack's switch: shown only while the pack is on

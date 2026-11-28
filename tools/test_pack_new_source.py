@@ -18,7 +18,7 @@
     python3 -m pytest tools/test_pack_new_source.py -q
 
 A synthetic SwapOne-style file (tools/packgen/swapone_synth.py: invented names, its own field names and enums) -> the proposal gets the
-hand-written map's fields right; the edits, the map file and its reading; the source module's files and its fourteen checks (when the
+hand-written map's fields right; the edits, the map file and its reading; the source pack's files, `pack check` and the bundle (when the
 server jar is built); --load writes the rows into a lake table with SOURCE_SYSTEM stamped, read back through the map as canonical trades."""
 from __future__ import annotations
 
@@ -126,52 +126,66 @@ class TheEditsAndTheFile(Fixture):
         self.assertEqual(t["CLEARING_HOUSE"], doc["CLEARING_HOUSE"])          # kept as it is, for the module's section of the page
 
 
-class TheModule(Fixture):
+class ThePack(Fixture):
     def opts(self, *extra):
-        return MJ.build_parser().parse_args([str(self.file), "--source-for", "trade", "--system", "SWAPONE", "--out", str(self.dir / "mod" / "source-swapone"),
+        return MJ.build_parser().parse_args([str(self.file), "--source-for", "trade", "--system", "SWAPONE", "--out", str(self.dir / "packs" / "swapone"),
                                              "--dist", str(self.dir / "dist"), "--force", *extra])
 
     def test_the_command_line_needs_no_name_and_a_dry_run_writes_nothing(self):
         import drishti as cli
         a = self.opts("--shared-table", "trading.trades_shared", "--dry-run")
         self.assertEqual(MJ.run(a, cli, lambda *_: None), 0)
-        self.assertFalse((self.dir / "mod" / "source-swapone").exists())
+        self.assertFalse((self.dir / "packs" / "swapone").exists())
 
-    def test_the_module_has_the_shape_of_a_source_module(self):
+    def test_the_pack_has_the_shape_of_the_shipped_source_packs(self):
         import yaml
         import source_module as SMOD
         a = self.opts("--shared-table", "trading.trades_shared", "--live", "--write-back")
         n = SMOD.names(a)
-        mod = self.dir / "mod" / n["name"]
-        SMOD.write_module(a, n, self.map, mod, lambda *_: None)
-        m = yaml.safe_load((mod / "module.yaml").read_text())
-        self.assertEqual(m["id"], "source-swapone")
-        self.assertEqual(m["requires"], {"trading": ">=1.0 <2"})
+        self.assertEqual((n["name"], n["conn"], n["host"].name), ("swapone", "trade-swapone", "trading-systems"))
+        pack = self.dir / "packs" / n["name"]
+        SMOD.write_pack(a, n, self.map, pack, lambda *_: None)
+        m = yaml.safe_load((pack / "pack.yaml").read_text())
+        self.assertEqual((m["pack"], m["extends"], m["kinds"], m["domain"]), ("swapone", ["trading"], [], "banking"))
         self.assertEqual(m["dataload"], "dataload.yaml")
-        self.assertEqual(yaml.safe_load((mod / "dataload.yaml").read_text())["dataload"]["rules"][0], {"match": "swapone-*.jsonl*", "pack": "trading", "kind": "trade", "connector": "source-swapone", "date-from": "name"})
-        read = yaml.safe_load((mod / "connectors" / "source-swapone.yaml").read_text())
+        self.assertEqual(m["mappings"], {"trade": "mappings/swapone-trade.yaml"})
+        self.assertEqual(yaml.safe_load((pack / "dataload.yaml").read_text())["dataload"]["rules"][0],
+                         {"match": "swapone-*.jsonl*", "pack": "swapone", "kind": "trade", "connector": "trade-swapone", "date-from": "name"})
+        read = m["connectors"]["trade-swapone"]
         self.assertEqual(read["settings"]["where"], "SOURCE_SYSTEM = 'SWAPONE'")
         self.assertEqual(read["settings"]["set"], {"SOURCE_SYSTEM": "SWAPONE"})
-        self.assertEqual(read["settings"]["map"], "mappings/swapone-trade.yaml")
-        live = yaml.safe_load((mod / "connectors" / "source-swapone-live.yaml").read_text())
+        self.assertEqual(read["settings"]["map"], "${pack.dir}/mappings/swapone-trade.yaml")
+        live = m["connectors"]["trade-swapone-live"]
         self.assertIn("amend-trade", live["writes"])
         self.assertEqual(live["settings"]["broker"], "default")          # the broker by name: [broker.default] in the settings file
-        section = yaml.safe_load((mod / m["sections"][0]["fragment"]).read_text())
+        role = m["roles"]["trader-swapone"]
+        self.assertEqual((role["rows"], role["edit-systems"]), ({"trade": "SOURCE_SYSTEM = 'SWAPONE'"}, ["SWAPONE"]))
+        section = yaml.safe_load((pack / "sutras" / "common" / "trade-swapone.v1.fragment.yaml").read_text())
         self.assertEqual(section["panels"][0]["when"], "$.SOURCE_SYSTEM == 'SWAPONE'")
         self.assertIn("CLEARING_HOUSE", [c["label"] for c in section["panels"][0]["columns"]])
-        front = (mod / "docs" / "README.md").read_text().split("---")[1]
-        self.assertIn("module: source-swapone", front)
+        self.assertIn("SWAPONE", yaml.safe_load((pack / "config" / "about.yaml").read_text())["intro"])
+        self.assertFalse((pack / "module.yaml").exists(), "a source pack, not a module")
         own = SMOD.names(self.opts())
         self.assertEqual((own["table"], own["shared"]), ("trading.trade_swapone", False))
 
+    def test_a_pack_written_into_its_module_is_listed_there_off_by_default(self):
+        import source_module as SMOD
+        host = self.dir / "trading-systems"
+        host.mkdir(parents=True)
+        (host / "module.yaml").write_text("id: trading-systems\npacks:\n  folder: packs\n  list:\n  - trading\n  - murex\n  off-by-default:\n  - murex\ndata:\n  needs: x\n")
+        SMOD.add_to_module(host, "swapone", lambda *_: None)
+        SMOD.add_to_module(host, "swapone", lambda *_: None)                 # twice: listed once
+        text = (host / "module.yaml").read_text()
+        self.assertEqual(text, "id: trading-systems\npacks:\n  folder: packs\n  list:\n  - trading\n  - murex\n  - swapone\n  off-by-default:\n  - murex\n  - swapone\ndata:\n  needs: x\n")
+
     @unittest.skipUnless(verifier_built(), "needs the server jar in lib/ (python tools/drishti.py build jar) and a JDK")
-    def test_the_module_passes_the_fourteen_checks(self):
+    def test_the_pack_passes_pack_check_and_is_bundled(self):
         out = subprocess.run([sys.executable, str(HERE / "drishti.py"), "pack", "new", str(self.file), "--source-for", "trade", "--system", "SWAPONE",
-                              "--shared-table", "trading.trades_shared", "--live", "--write-back", "--out", str(self.dir / "chk" / "source-swapone"),
+                              "--shared-table", "trading.trades_shared", "--live", "--write-back", "--out", str(self.dir / "chk" / "swapone"),
                               "--dist", str(self.dir / "chk-dist"), "--force"], capture_output=True, text=True, cwd=ROOT,
                              env={**os.environ, "TMPDIR": str(self.dir)})
         self.assertEqual(out.returncode, 0, out.stdout[-3000:] + out.stderr[-2000:])
-        self.assertIn("all 14 conformance checks passed", out.stdout)
+        self.assertTrue((self.dir / "chk-dist" / "swapone-1.0.0.tar.gz").is_file())
 
 
 class TheLoad(Fixture):

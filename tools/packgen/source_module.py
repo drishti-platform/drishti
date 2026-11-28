@@ -14,7 +14,7 @@
 # See the LICENSE file in the root of this repository for the full terms.
 
 """`drishti.py pack new --source-for KIND --system SYS`: a new booking system's JSON Lines as a source of an existing kind (the Pack
-designer's second mode): a source module, not a new pack.
+designer's second mode): a source PACK, the shape of the six shipped ones (modules/trading-systems/packs/<system>/), not a new kind and not a module.
 
     python3 tools/drishti.py pack new data/incoming/swapone_trades.2026-11-13.jsonl --source-for trade --system SWAPONE \\
         --map-edits swapone-edits.json --load --deploy             # its own table, trading.trade_swapone (one table a trading system)
@@ -22,13 +22,15 @@ designer's second mode): a source module, not a new pack.
 1. Reads every record (tools/packgen/sourcemap.py) and proposes the field map native -> canonical, each with a confidence; the
    required canonical fields left without a native field and the native fields left without a canonical one are printed.
    --map-edits (JSON: {CANONICAL: null | {from} | {value} | {values}}) is the person's fixes; --dry-run stops here.
-2. Writes modules/source-<sys>/ (or --out), the shape of every source module: module.yaml (requires the kind's module), connectors/
-   (read: the lake table, its own or a shared one with where:, set: SOURCE_SYSTEM, map:; --live: a Kafka listener, off until the site
-   turns it on; --write-back: its writes: block), mappings/<sys>-<kind>.yaml, the inbox rule (dataload:), the section the module adds to
-   the kind's page (sutras/<kind>-<sys>.v1.fragment.yaml: the native fields with no canonical one, shown when SOURCE_SYSTEM is the
-   system's), data/needs.yaml and docs/ (README with front matter, a guide, help.yaml).
-3. Packs it into dist/source-<sys>-<version>.dmod with the one packager and runs its checks.
-4. --load: the native records into the table, SOURCE_SYSTEM stamped (drishti.py data ingest --store delta); --deploy: as pack new.
+2. Writes the pack folder (--out; default <the kind's module>/packs/<system>, i.e. modules/trading-systems/packs/<system>, and the
+   pack is added to that module's packs list, off by default): pack.yaml (extends the kind's pack, owns no kind; connectors: the read connector,
+   the lake table its own or a shared one with where:, set: SOURCE_SYSTEM, map: ${pack.dir}/...; --live: a Kafka listener, off until the site
+   turns it on; --write-back: its writes: block; dataload:, mappings:, an example role by SOURCE_SYSTEM), mappings/<sys>-<kind>.yaml,
+   dataload.yaml (the inbox rule), sutras/common/<kind>-<sys>.v1.fragment.yaml (the native fields with no canonical one, shown when
+   SOURCE_SYSTEM is the system's) and config/about.yaml (the README's intro: write it with tools/packgen/readme.py).
+3. Checks it (`pack check`) and bundles it (`pack bundle`: dist/<name>-<version>.tar.gz, deployable in Admin -> Packs).
+4. --load: the native records into the table, SOURCE_SYSTEM stamped (drishti.py data ingest --store delta); --deploy: the pack folder
+   is copied to the site's packs folder (config/packs) and switched on in Admin -> Artifacts.
 """
 from __future__ import annotations
 
@@ -56,8 +58,8 @@ TABLE_RE = re.compile(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*")
 
 
 def add_args(p) -> None:
-    g = p.add_argument_group("a source for an existing kind (a source module: the Pack designer's second mode)")
-    g.add_argument("--source-for", metavar="KIND", help="the files are a new source of this existing kind (trade): a source module, not a new pack")
+    g = p.add_argument_group("a source for an existing kind (a source pack of the kind's module: the Pack designer's second mode)")
+    g.add_argument("--source-for", metavar="KIND", help="the files are a new source of this existing kind (trade): a source pack extending the kind's pack, not a new kind")
     g.add_argument("--system", help="--source-for: the booking system, upper case (SWAPONE); stamped as SOURCE_SYSTEM at load")
     g.add_argument("--shared-table", metavar="DOMAIN.TABLE", help="--source-for: rows in a table several systems share, read with where: SOURCE_SYSTEM = '<SYS>'")
     g.add_argument("--own-table", metavar="DOMAIN.TABLE", help="--source-for: the system's own table (default <domain>.<kind>_<sys>)")
@@ -67,7 +69,7 @@ def add_args(p) -> None:
     g.add_argument("--map-out", type=pathlib.Path, help="--source-for: write the proposal (JSON) here as well")
     g.add_argument("--live", action="store_true", help="--source-for: add a Kafka listener (off until the site sets its servers and topic)")
     g.add_argument("--write-back", action="store_true", help="--source-for --live: add the blotter's write-back (amend-trade) to the listener")
-    g.add_argument("--inbox-match", help="--source-for: the inbox rule's file-name glob (default <sys>-*.jsonl*, as the shipped source modules)")
+    g.add_argument("--inbox-match", help="--source-for: the inbox rule's file-name glob (default <sys>-*.jsonl*, as the shipped source packs)")
 
 
 def names(a) -> dict:
@@ -84,12 +86,22 @@ def names(a) -> dict:
     table = a.shared_table or a.own_table or f"{domain}.{kind.replace('-', '_')}_{system.lower()}"
     if not TABLE_RE.fullmatch(table):
         raise SystemExit(f"the table is <domain>.<table> in lower case ({table})")
-    name = a.name or f"source-{low}"
+    name = a.name or low                                   # the pack's name: the system's, as the six shipped packs (murex, endur ...)
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
         raise SystemExit("--name is lower-case letters, digits and '-'")
     return {"system": system, "low": low, "kind": kind, "pack": pack, "table": table, "shared": bool(a.shared_table), "name": name,
             "map": f"mappings/{low}-{kind}.yaml", "section": f"sutras/{kind}-{low}.v1.fragment.yaml", "title": a.title or f"{system.title()} (source)",
-            "match": a.inbox_match or f"{low}-*.jsonl*", "contract": c}
+            "match": a.inbox_match or f"{low}-*.jsonl*", "contract": c, "host": host_module(pack), "conn": f"{kind}-{low}"}
+
+
+def host_module(pack: str) -> pathlib.Path | None:
+    """The module folder that ships the kind's pack (its manifest's packs.list): where a source pack of that kind belongs, else None."""
+    import yaml
+    for f in sorted((ROOT / "modules").glob("*/module.yaml")):
+        packs = (yaml.safe_load(f.read_text(encoding="utf-8")) or {}).get("packs") or {}
+        if pack in ((packs.get("list") if isinstance(packs, dict) else packs) or []):
+            return f.parent
+    return None
 
 
 def say_map(m: dict, say=print) -> None:
@@ -103,7 +115,7 @@ def say_map(m: dict, say=print) -> None:
         conf = f"{round(100 * r['confidence']):>3}%" if (r.get("from") or r.get("value") is not None) else "    "
         say(f"  {r['to']:<{w}} <- {src:<22} {conf}{flag}{vm}  {r['why'] if r.get('from') else ''}".rstrip())
     if m["unmapped"]:
-        say("  unmapped native fields (kept as they are; the module's section of the page shows them): "
+        say("  unmapped native fields (kept as they are; the pack's section of the page shows them): "
             + ", ".join(f"{u['field']} ({u['rows']:,})" for u in m["unmapped"]))
 
 
@@ -114,28 +126,29 @@ def write_yaml(path: pathlib.Path, data, head: str = HEADER) -> None:
 
 
 def connector_files(a, n: dict, m: dict) -> dict[str, dict]:
-    """The module's connectors: read (the table), and with --live a listener (with --write-back its writes:)."""
+    """The pack's connectors (written inline under `connectors:` of pack.yaml): read (the table), and with --live a listener (with --write-back its writes:)."""
     key = next((r["from"] for r in m["fields"] if r["to"] in (n["contract"].get("key") or [])[:1] and r.get("from")), None)
+    anchor = "${pack.dir}/" + n["map"]
     read = {"plugin": "delta", "kinds": [n["kind"]], "description": f"{n['system']}'s {n['kind']}s in the lake table {n['table']}"
             + (" (shared: this system's rows by where:)" if n["shared"] else " (its own table)"),
             "settings": {"lake": a.lake_name, "lake-tables": n["table"], **({"where": f"SOURCE_SYSTEM = '{n['system']}'"} if n["shared"] else {}),
-                         "set": {"SOURCE_SYSTEM": n["system"]}, "map": n["map"], "union": True, "source-name": n["name"]}}
-    out = {n["name"]: read}
+                         "set": {"SOURCE_SYSTEM": n["system"]}, "map": anchor, "union": True, "source-name": n["conn"]}}
+    out = {n["conn"]: read}
     if a.live:
-        live = {"plugin": "kafka", "enabled": f"${{DRISHTI_{n['system']}_LIVE:false}}", "kinds": [n["kind"]],
+        live = {"plugin": "kafka", "enabled": f"${{DRISHTI_STREAM_{n['system']}:false}}", "kinds": [n["kind"]],
                 "description": f"{n['system']}'s {n['kind']}s as they are booked (off until the site sets the servers and the topic)",
                 "settings": {"broker": "default", "topics": [f"{n['low']}.{n['kind']}s"], "kind": n["kind"],
-                             "id-field": key or "id", "set": {"SOURCE_SYSTEM": n["system"]}, "map": n["map"]}}
+                             "id-field": key or "id", "set": {"SOURCE_SYSTEM": n["system"]}, "map": anchor}}
         if a.write_back:
             live["writes"] = {f"amend-{n['kind']}": {"kind": n["kind"], "kafka": {"topic": f"{n['low']}.{n['kind']}s.amend", "shape": "document",
                               "version-field": "TRADE_VERSION", "changed-by": "UPDATED_BY", "changed-at": "SOURCE_UPDATE_TIME",
                               "change-id-field": "DRISHTI_CHANGE_ID"}, "confirm": "reply"}}
-        out[f"{n['name']}-live"] = live
+        out[f"{n['conn']}-live"] = live
     return out
 
 
 def section(n: dict, m: dict) -> dict:
-    """The module's section of the kind's page: the native fields with no canonical one, shown when SOURCE_SYSTEM is the system's."""
+    """The pack's section of the kind's page: the native fields with no canonical one, shown when SOURCE_SYSTEM is the system's."""
     ref = lambda f: "$." + f if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", f) else f"$['{f}']"           # noqa: E731
     cols = [{"label": u["field"], "bind": f"nonblank({ref(u['field'])}, '–')"} for u in m["unmapped"]] or \
            [{"label": "Fields", "bind": "'every native field has a canonical one'"}]
@@ -144,105 +157,65 @@ def section(n: dict, m: dict) -> dict:
     return {"rachana": 1.2, "fragment": frag, "version": 1, "description": f"{n['system']}'s own fields on the {n['kind']} page",
             "doc": {"summary": f"{n['system']}'s own fields on the {n['kind']} page", "description":
                     f"The native fields of {n['system']} with no canonical {n['kind']} field, shown as they are when SOURCE_SYSTEM is {n['system']}. "
-                    f"Contributed by the module {n['name']} (module.yaml sections:), not written into the {n['pack']} pack.",
+                    f"Contributed by the pack {n['name']}, not written into the {n['pack']} pack; it goes when the pack is switched off.",
                     "params": {}, "emits": [], "expects": [], "phone": "more", "examples": [{"use": f"{frag}@1"}], "since": "2.9.11"},
             "panels": [{"id": f"{n['low']}-fields", "kind": "kv", "title": f"{n['system']} fields", "when": when, "columns": cols}]}
 
 
-def write_module(a, n: dict, m: dict, mod: pathlib.Path, say=print) -> dict:
-    if mod.exists():
-        shutil.rmtree(mod)
+def base_domain(n: dict) -> str:
+    """The domain of the pack this one extends (the six shipped source packs say banking, as trading does)."""
+    import yaml
+    f = n["host"] / "packs" / n["pack"] / "pack.yaml" if n.get("host") is not None else None
+    return str((yaml.safe_load(f.read_text(encoding="utf-8")) or {}).get("domain") or n["pack"]) if f is not None and f.is_file() else n["pack"]
+
+
+def write_pack(a, n: dict, m: dict, pack: pathlib.Path, say=print) -> dict:
+    """The source pack, the shape of the six shipped ones (modules/trading-systems/packs/<system>/)."""
+    if pack.exists():
+        shutil.rmtree(pack)
     conns = connector_files(a, n, m)
-    for cname, doc in conns.items():
-        write_yaml(mod / "connectors" / f"{cname}.yaml", doc)
-    (mod / n["map"]).parent.mkdir(parents=True, exist_ok=True)
-    (mod / n["map"]).write_text(SM.map_yaml(m, HEADER), encoding="utf-8")
-    write_yaml(mod / n["section"], section(n, m))
-    write_yaml(mod / "data" / "needs.yaml", {"needs": [{"kind": n["kind"], "contract": ">=1.0 <2", "required": True}]})
-    rule = {"match": n["match"], "pack": n["pack"], "kind": n["kind"], "connector": n["name"], "date-from": "name"}
-    manifest = {"format": 1, "id": n["name"], "version": a.version, "title": n["title"],
-                "about": a.description or f"{n['system']} as a source of the canonical {n['kind']}: its connector, its field map, its inbox rule",
-                "domain": n["pack"], "publisher": {"id": a.publisher, "name": a.publisher}, "licence": {"feature": n["name"]},
-                "kernel": ">=0.2 <1.0", "rachana": ">=1.0", "contracts": ">=1.0", "plugin-api": ">=2.0", "elements": elements_range(),
-                "requires": {n["pack"]: ">=1.0 <2"}, "data": {"needs": "data/needs.yaml"},
-                "connectors": {"folder": "connectors", "list": sorted(conns)},
-                "mappings": {n["kind"]: n["map"]}, "dataload": "dataload.yaml",
-                "sections": [{"kind": n["kind"], "fragment": n["section"], "when": f"$.SOURCE_SYSTEM == '{n['system']}'"}],
-                "docs": {"readme": "docs/README.md", "help": "docs/help.yaml", "guides": ["docs/guide.md"], "tutorials": ["docs/tutorial.md"]},
-                "resources": {"memory-mb": 16}}
-    write_yaml(mod / "dataload.yaml", {"dataload": {"rules": [rule]}})
-    write_yaml(mod / "module.yaml", manifest)
-    docs(a, n, m, mod, conns)
-    say(f"\nwrote {mod}: module.yaml, {len(conns)} connector(s), {n['map']}, {n['section']}, the inbox rule ({n['match']}), docs/")
+    (pack / n["map"]).parent.mkdir(parents=True, exist_ok=True)
+    (pack / n["map"]).write_text(SM.map_yaml(m, HEADER), encoding="utf-8")
+    write_yaml(pack / "sutras" / "common" / f"{n['kind']}-{n['low']}.v1.fragment.yaml", section(n, m))
+    rule = {"match": n["match"], "pack": n["name"], "kind": n["kind"], "connector": n["conn"], "date-from": "name"}
+    write_yaml(pack / "dataload.yaml", {"dataload": {"rules": [rule]}})
+    manifest = {"pack": n["name"], "domain": base_domain(n), "version": a.version, "title": n["title"],
+                "description": a.description or f"{n['system']} as a source of the canonical {n['kind']}: its connector, its field map, its inbox rule",
+                "extends": [n["pack"]], "kinds": [], "sutras": "sutras", "connectors": conns, "dataload": "dataload.yaml",
+                "mappings": {n["kind"]: n["map"]},
+                "roles": {(f"trader-{n['low']}" if n["kind"] == "trade" else f"{n['kind']}-{n['low']}"): {"kinds": [n["kind"]], "edit": True, "rows": {n["kind"]: f"SOURCE_SYSTEM = '{n['system']}'"},
+                                                       "edit-systems": [n["system"]]}}}
+    write_yaml(pack / "pack.yaml", manifest)
+    write_yaml(pack / "config" / "about.yaml", {"about": 1, "intro": intro(a, n, m)})
+    host = n.get("host")
+    if host is not None and pack.resolve().parent.parent == host.resolve():
+        add_to_module(host, n["name"], say)
+    say(f"\nwrote {pack}: pack.yaml (extends {n['pack']}, {len(conns)} connector(s), the map, the inbox rule, an example role), {n['map']}, "
+        f"dataload.yaml, the page section, config/about.yaml")
     return manifest
 
 
-def docs(a, n: dict, m: dict, mod: pathlib.Path, conns: dict) -> None:
-    d = mod / "docs"
-    d.mkdir(parents=True, exist_ok=True)
+def add_to_module(host: pathlib.Path, name: str, say=print) -> None:
+    """Lists the new pack in its module's manifest (packs.list, and packs.off-by-default: a site switches a source system on)."""
+    f = host / "module.yaml"
+    text = f.read_text(encoding="utf-8")
+    if re.search(rf"^  - {re.escape(name)}$", text, re.M):
+        return
+    text = re.sub(r"(^packs:\n(?:  .*\n)*?  list:\n(?:  - .*\n)+)", lambda mm: mm.group(1) + f"  - {name}\n", text, count=1, flags=re.M)
+    if re.search(r"^  off-by-default:", text, re.M):
+        text = re.sub(r"(^  off-by-default:.*\n(?:  - .*\n)+)", lambda mm: mm.group(1) + f"  - {name}\n", text, count=1, flags=re.M)
+    f.write_text(text, encoding="utf-8")
+    say(f"listed the pack {name} in {f} (packs.list and packs.off-by-default)")
+
+
+def intro(a, n: dict, m: dict) -> str:
     layout = f"the shared table `{n['table']}`, its rows by `where: SOURCE_SYSTEM = '{n['system']}'`" if n["shared"] else f"its own table `{n['table']}`"
-    rows = "\n".join(f"| `{r['to']}` | {'`' + r['from'] + '`' if r.get('from') else ('`' + json.dumps(r['value']) + '` (constant)' if r.get('value') is not None else '–')} "
-                     f"| {round(100 * r['confidence']) if (r.get('from') or r.get('value') is not None) else ''} |"
-                     for r in m["fields"] if r.get("from") or r.get("value") is not None)
     keep = ", ".join(f"`{u['field']}`" for u in m["unmapped"]) or "none"
-    (d / "README.md").write_text(f"""---
-# Project Drishti · Any data. Any domain. One grammar.
-# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
-module: {n['name']}
-title: {json.dumps(n['title'])}
-domain: {n['pack']}
-summary: {json.dumps(f"{n['system']} as a source of the canonical {n['kind']}")}
-kinds: [{n['kind']}]
-source-system: {n['system']}
-requires: [{n['pack']}]
-generated-by: drishti.py pack new --source-for {n['kind']}
----
-
-# {n['title']}
-
-A source module (no code) made by `drishti.py pack new --source-for {n['kind']} --system {n['system']}` from {m['rows']:,} rows, every row read.
-It feeds the canonical `{n['kind']}` of the `{n['pack']}` module: nothing is added to that pack, and switching this module off (Admin ->
-Modules) takes {n['system']}'s rows out everywhere.
-
-## Data structures
-
-| Part | File | What it is |
-|---|---|---|
-| Read connector | `connectors/{n['name']}.yaml` | {layout}; `set: SOURCE_SYSTEM: {n['system']}`; `map: {n['map']}` |
-{''.join(f"| Listener | `connectors/{c}.yaml` | Kafka, off until the site sets its servers and topic{'; the blotter writes back through it' if 'writes' in conns[c] else ''} |{chr(10)}" for c in conns if c != n['name'])}| Field map | `{n['map']}` | canonical field <- native field or constant, value maps, the native fields kept |
-| Inbox rule | `dataload.yaml` (module.yaml `dataload:`) | files named `{n['match']}` in `data/inbox` (with `.ready`) load into `{n['table']}` |
-| Page section | `{n['section']}` | the native fields with no canonical one, on the `{n['kind']}` page when `SOURCE_SYSTEM = '{n['system']}'` |
-
-The map ({m['mapped']} of {len(m['fields'])} canonical fields):
-
-| Canonical | {n['system']} | Confidence % |
-|---|---|---|
-{rows}
-
-Native fields kept as they are: {keep}.{(' Required fields still without a source: ' + ', '.join('`' + x + '`' for x in m['missing']) + '.') if m['missing'] else ''}
-
-The guide: [guide.md](guide.md).
-""", encoding="utf-8")
-    (d / "guide.md").write_text(MD_HEADER + f"""# {n['title']}: guide
-
-{n['system']}'s files are a source of the canonical `{n['kind']}` (the product's tutorial "Add a source system" walks through it end to end).
-
-1. **Load.** Drop a file named `{n['match']}` with its `.ready` file in `data/inbox`: the inbox rule of `module.yaml` loads it into
-   `{n['table']}`, `SOURCE_SYSTEM` stamped `{n['system']}`. Or `drishti.py pack new <file> --source-for {n['kind']} --system {n['system']} --load`.
-2. **Read.** The connector `{n['name']}` reads {layout} through `{n['map']}`; `{n['kind'].upper()[:3]}` and every page of the kind show the rows.
-3. **Fix the map.** Edit `{n['map']}` (or run `pack new` again with `--map-edits`), pack the module again (`drishti.py module pack`).
-4. **Off and on.** Admin -> Modules: off takes {n['system']}'s rows out of every page and total; on brings them back.
-""", encoding="utf-8")
-    (d / "tutorial.md").write_text(MD_HEADER + f"""# {n['title']}: tutorial
-
-1. Copy a {n['system']} file named like `{n['match']}` into `data/inbox`, then an empty file of the same name ending `.ready`.
-2. Within one inbox cycle the file moves to `data/outbox`; Admin -> Data inbox shows the load ({n['table']}).
-3. Type `{n['contract'].get('mnemonic') or n['kind'].upper()} <GO>`: the list has {n['system']}'s rows (`SOURCE_SYSTEM = {n['system']}`); open one, the
-   section "{n['system']} fields" shows the native fields with no canonical field.
-4. Admin -> Modules -> {n['name']}: Disable; the rows are gone from the list and the totals. Enable brings them back.
-""", encoding="utf-8")
-    write_yaml(d / "help.yaml", {"sections": [{"id": n["name"], "title": n["title"], "pages": [{"title": f"{n['title']}: guide", "file": "guide.md"},
-                                                                                         {"title": f"{n['title']}: tutorial", "file": "tutorial.md"}]}]})
+    return (f"{n['system']} as a source of the canonical `{n['kind']}`, made by `drishti.py pack new --source-for {n['kind']} --system {n['system']}` from "
+            f"{m['rows']:,} rows, every row read. This pack owns no kind: it extends `{n['pack']}`, and its rows carry `SOURCE_SYSTEM = {n['system']}`. "
+            f"Its connector `{n['conn']}` reads {layout} through `{n['map']}` ({m['mapped']} of {len(m['fields'])} canonical fields mapped); files named "
+            f"`{n['match']}` in `data/inbox` (with `.ready`) load into `{n['table']}`. Native fields kept as they are: {keep}. Switch the pack on or off in "
+            f"Admin -> Artifacts: off takes {n['system']}'s rows out of every page and total, and its connectors, screens and inbox rule with them.")
 
 
 def load(a, n: dict, cli, say=print) -> int:
@@ -275,62 +248,7 @@ def load(a, n: dict, cli, say=print) -> int:
         return cli.main(args)
 
 
-def module_jars(src: pathlib.Path) -> list[str]:
-    """The jars for packing the module folder ``src``: a module with a server part (module.yaml's ``java.jars``) is packed with the
-    jars its Maven build made (``java/<part>/target/<name>-<version>.jar``, the version the one version file's), as packaging/dist packs
-    it; a folder module without one needs none. A jar not built is said with the command that builds it."""
-    import yaml
-    jars = ((yaml.safe_load((src / "module.yaml").read_text(encoding="utf-8")) or {}).get("java") or {}).get("jars") or []
-    if not jars:
-        return []
-    import version as V
-    ver = V.current(ROOT / "pom.xml", default="")
-    found = []
-    for name in jars:
-        stem = name.removesuffix(".jar")
-        built = sorted((src / "java").glob(f"*/target/{stem}-{ver}.jar"))
-        if not built:
-            raise SystemExit(f"{src.name}: its server part {name} is not built ({src.relative_to(ROOT)}/java/*/target/{stem}-{ver}.jar); "
-                             f"build it: ./mvnw -q package -DskipTests -pl {built_part(src, stem)} -am")
-        found.append(str(built[-1]))
-    return found
-
-
-def built_part(src: pathlib.Path, stem: str) -> str:
-    """The Maven project under ``src/java`` whose artifactId is ``stem`` (its folder, relative to the checkout), else the module's java folder."""
-    for pom in sorted((src / "java").glob("*/pom.xml")):
-        if f"<artifactId>{stem}</artifactId>" in pom.read_text(encoding="utf-8"):
-            return pom.parent.relative_to(ROOT).as_posix()
-    return (src / "java").relative_to(ROOT).as_posix()
-
-
-def required(a, cli, n: dict, dist: pathlib.Path) -> list[str]:
-    """The modules for `--with` of the check: the one this one requires (the kind's: modules/<pack>), packed beside it with its server part's jars when
-    it has one, so the runtime checks load both."""
-    import module_from_jsonl as MFJ
-    src = ROOT / "modules" / n["pack"]
-    if not (src / "module.yaml").is_file():
-        return []
-    import yaml
-    if (yaml.safe_load((src / "module.yaml").read_text(encoding="utf-8")) or {}).get("java") is not None:
-        # a module with code (its manifest's java: block) is not packed from its folder: its jar is the build's, and the build packs it
-        # (<pack>-<version>.dmod in modules/, beside the product's other modules)
-        # (the modules folder the build left, else packaging/dist's own output)
-        built = sorted(f for d in (ROOT / "modules", ROOT / "packaging" / "dist" / "target" / "dmod") for f in d.glob(f"{n['pack']}-[0-9]*.dmod"))
-        if not built:
-            print(f"the module {n['pack']} this one requires has code and is not built: run python tools/drishti.py build all first; "
-                  "its runtime checks are left without it", file=sys.stderr)
-        return [str(built[-1])] if built else []
-    out = dist / "requires"
-    out.mkdir(parents=True, exist_ok=True)
-    if MFJ.module_pack(cli, a, src, out, module_jars(src)):
-        return []
-    found = sorted(out.glob(f"{n['pack']}-*.dmod"))
-    return [str(found[-1])] if found else []
-
-
 def run(a, cli, say=print) -> int:
-    import module_from_jsonl as MFJ
     t0 = time.monotonic()
     n = names(a)
     say(f"reading every record of {len(SM.files_of(a.inputs))} file(s) ...")
@@ -345,30 +263,32 @@ def run(a, cli, say=print) -> int:
     if a.map_out:
         a.map_out.parent.mkdir(parents=True, exist_ok=True)
         a.map_out.write_text(json.dumps(m, default=str), encoding="utf-8")
-    mod = (a.out or ROOT / "modules" / n["name"]).resolve()
-    say(f"\nmodule {n['name']} {a.version}: {mod}; the kind {n['kind']} of {n['pack']}; "
+    default = (n["host"] / "packs" / n["name"]) if n["host"] is not None else (ROOT / "config" / "packs" / n["name"])
+    pack = (a.out or default).resolve()
+    say(f"\npack {n['name']} {a.version}: {pack}; the kind {n['kind']} of {n['pack']}; "
         + (f"the shared table {n['table']} with where: SOURCE_SYSTEM = '{n['system']}'" if n["shared"] else f"its own table {n['table']}"))
     if a.dry_run:
         say(f"dry run: nothing written ({time.monotonic() - t0:.1f} s)")
         return 0
-    if mod.exists() and any(mod.iterdir()) and not a.force:
-        raise SystemExit(f"{mod} exists; pass --force to replace it")
-    write_module(a, n, m, mod, say)
+    if pack.exists() and any(pack.iterdir()) and not a.force:
+        raise SystemExit(f"{pack} exists; pass --force to replace it")
+    write_pack(a, n, m, pack, say)
     if a.load and load(a, n, cli, say):
         return 1
     dist = (a.dist or ROOT / "dist").resolve()
-    say("\n== module pack")
-    if MFJ.module_pack(cli, a, mod, dist):
+    say("\n== pack check")
+    if cli.main(["pack", "check", str(pack)]):
         return 1
-    dmod = dist / f"{n['name']}-{a.version}.dmod"
-    say("\n== module check")
-    chk = MFJ.module_check(cli, a, dmod, *required(a, cli, n, dist))
-    say(f"\n{'checked' if not chk else 'CHECKS FAILED'}: {dmod} ({time.monotonic() - t0:.1f} s in all)")
-    if chk:
+    say("\n== pack bundle")
+    dist.mkdir(parents=True, exist_ok=True)
+    if cli.main(["pack", "bundle", str(pack), "--out", str(dist), "--no-check"]):
         return 1
+    say(f"\nchecked and bundled: {dist / (n['name'] + '-' + a.version + '.tar.gz')} ({time.monotonic() - t0:.1f} s in all)")
     if a.deploy:
-        target = MFJ.modules_dir(a)
-        target.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(dmod, target / dmod.name)
-        say(f"copied: {target / dmod.name} (restart the server to load it; Admin -> Modules lists it)")
+        site = pathlib.Path(os.environ.get("DRISHTI_PACKS_DIR") or ROOT / "config" / "packs")
+        if pack.resolve().parent != site.resolve():
+            target = site / n["name"]
+            shutil.rmtree(target, ignore_errors=True)
+            shutil.copytree(pack, target)
+            say(f"copied: {target} (switch the pack on in Admin -> Artifacts; it is read within seconds)")
     return 0

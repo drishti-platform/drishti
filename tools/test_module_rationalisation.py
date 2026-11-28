@@ -79,14 +79,15 @@ def test_a_source_pack_brings_its_connectors_map_rule_and_example_role(system):
     pack = ROOT / "modules" / "trading-systems" / "packs" / system
     m = yaml.safe_load((pack / "pack.yaml").read_text(encoding="utf-8"))
     assert m["pack"] == system and m["extends"] == ["trading"] and not m["kinds"]
-    assert (pack / "connectors" / f"trade-{system}.yaml").is_file() and (pack / "connectors" / f"trade-{system}-live.yaml").is_file()
     assert (pack / "mappings" / f"{system}-trade.yaml").is_file()
+    assert m["dataload"] == "dataload.yaml" and m["mappings"] == {"trade": f"mappings/{system}-trade.yaml"}
+    assert sorted(m["connectors"]) == [f"trade-{system}", f"trade-{system}-live"]
     rule = yaml.safe_load((pack / "dataload.yaml").read_text(encoding="utf-8"))["dataload"]["rules"][0]
     assert rule["pack"] == system and rule["connector"] == f"trade-{system}" and rule["kind"] == "trade"
     role = m["roles"][f"trader-{system}"]
     assert role["rows"]["trade"] == f"SOURCE_SYSTEM = '{system.upper()}'" and role["edit-systems"] == [system.upper()]
-    conn = yaml.safe_load((pack / "connectors" / f"trade-{system}.yaml").read_text(encoding="utf-8"))
-    assert conn["settings"]["set"]["SOURCE_SYSTEM"] == system.upper() and conn["settings"]["map"] == f"mappings/{system}-trade.yaml"
+    conn = m["connectors"][f"trade-{system}"]
+    assert conn["settings"]["set"]["SOURCE_SYSTEM"] == system.upper() and conn["settings"]["map"] == "${pack.dir}/mappings/" + f"{system}-trade.yaml"
 
 
 def test_the_distributions_name_the_new_modules_only():

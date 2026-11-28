@@ -64,7 +64,7 @@ panels:
     area: chg
     with:
       title: Since
-      since: "first($.meta).SINCE"
+      since: "${first($.meta).SINCE}"
       rows: { from: $.chg, columns: { key: SUBJECT, measure: MEASURE, before: THEN, after: NOW, change: CHANGE, why: WHY, kind: KIND, open: COMMAND } }
   - use: core/use-bar-table@1
     as: cpty

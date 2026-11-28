@@ -86,8 +86,8 @@ public class HomeConfiguration {
 
     @Bean
     public HomeTables homeTables(HomeProperties props, HomeStore store, HomeClock clock, ObjectProvider<MeasureSource> sources,
-            ObjectProvider<HomeTable> tables, ChangeEngineHost host, ExpectationService expectations) {
+            ObjectProvider<HomeTable> tables, ChangeEngineHost host, ExpectationService expectations, com.ash.drishti.server.security.Entitlements entitlements) {
         return new HomeTables(props, store, clock, sources.orderedStream().toList(), tables.orderedStream().toList(), host,
-                () -> List.<ExpectationService.State>copyOf(expectations.attention(Clock.systemUTC().instant())));
+                () -> List.<ExpectationService.State>copyOf(expectations.attention(Clock.systemUTC().instant())), entitlements::mayOpen);
     }
 }

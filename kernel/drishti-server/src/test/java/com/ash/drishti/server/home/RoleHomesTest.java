@@ -181,7 +181,7 @@ class RoleHomesTest {
     HomeTables tables(FakeVar var, HomeStore store) {
         BusinessDates dates = new BusinessDates(new BusinessDateProperties(null, "UTC", null, "2026-11-20"), Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC));
         return new HomeTables(new HomeProperties(true, null, data.toString(), null, null, null), store, new HomeClock(dates, Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC)),
-                List.of(var), List.of(), ChangeEngineHost.NOT_HOSTED, List::of);
+                List.of(var), List.of(), ChangeEngineHost.NOT_HOSTED, List::of, (who, kind) -> true);
     }
 
     @Test
@@ -338,7 +338,7 @@ class RoleHomesTest {
         new MeasureSnapshotJob(cat, store, clock, List.of(var)).run(LocalDate.parse("2026-11-19"), java.time.LocalTime.parse("17:00"));
         assertTrue(store.hasSnapshot(LocalDate.parse("2026-11-19")), "the firm snapshot exists, so serving it would show here");
         HomeTables t = new HomeTables(new HomeProperties(true, null, data.toString(), null, null, null), store, clock, List.of(var), List.of(),
-                ChangeEngineHost.NOT_HOSTED, List::of);
+                ChangeEngineHost.NOT_HOSTED, List::of, (who, kind) -> true);
         HomeDefinition trader = cat.find("trader").orElseThrow(), manager = cat.find("risk-manager").orElseThrow();
         Principal restricted = new Principal("trader-a", List.of("trader")), full = new Principal("chief", List.of("admin"));
 
@@ -360,6 +360,27 @@ class RoleHomesTest {
         assertEquals(1, mine.size(), "only the restricted person's desk");
         assertEquals(100_000.0, (Double) mine.get(0).get("CHANGE"), 1e-6, "their own change, not against the firm's desk figure");
         assertEquals(1_000_000.0, (Double) t.rows("home_desk_limits", full, manager).orElseThrow().get(0).get("CHANGE"), 1e-6);
+    }
+
+    /** Pre-gate S4: the load states and feed events a person sees are those of the kinds they may open, never another pack's. */
+    @Test
+    void loadStatesAndFeedEventsAreThePersonsPacksOnly() {
+        HomeStore store = new HomeStore(data, 30);
+        store.addEvent(LocalDate.parse("2026-11-20"), new HomeData.Event("feed", "market-data/curve", "load", Instant.parse("2026-11-20T09:00:00Z"), "curve loaded"));
+        store.addEvent(LocalDate.parse("2026-11-20"), new HomeData.Event("feed", "genomics/variant", "load", Instant.parse("2026-11-20T09:01:00Z"), "variant loaded"));
+        BusinessDates dates = new BusinessDates(new BusinessDateProperties(null, "UTC", null, "2026-11-20"), Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC));
+        List<com.ash.drishti.server.loads.ExpectationService.State> states = List.of(
+                new com.ash.drishti.server.loads.ExpectationService.State("market-data", "curve", LocalDate.parse("2026-11-20"), "08:00", "UTC", null, "LATE", null, null),
+                new com.ash.drishti.server.loads.ExpectationService.State("genomics", "variant", LocalDate.parse("2026-11-20"), "08:00", "UTC", null, "FAILED", null, null));
+        HomeTables t = new HomeTables(new HomeProperties(true, null, data.toString(), null, null, null), store,
+                new HomeClock(dates, Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC)), List.of(new FakeVar()), List.of(), ChangeEngineHost.NOT_HOSTED,
+                () -> states, (who, kind) -> who.roles().contains("admin") || kind.equals("curve"));
+        HomeDefinition d = catalogue().find("risk-manager").orElseThrow();
+        Principal market = new Principal("m", List.of("market-data-reader")), admin = new Principal("a", List.of("admin"));
+        assertEquals(List.of("curve"), t.rows("home_loads", market, d).orElseThrow().stream().map(r -> r.get("KIND")).toList());
+        assertEquals(2, t.rows("home_loads", admin, d).orElseThrow().size());
+        List<String> digest = t.rows("home_digest", market, d, Instant.parse("2026-11-20T00:00:00Z")).orElseThrow().stream().map(r -> String.valueOf(r.get("TEXT"))).toList();
+        assertTrue(digest.contains("curve loaded") && !digest.contains("variant loaded"), digest.toString());
     }
 
     /** A fake engine whose desk VaR moved: DESK-A now 150 (was 100), DESK-B unchanged. */
@@ -410,7 +431,7 @@ class RoleHomesTest {
         BusinessDates dates = new BusinessDates(new BusinessDateProperties(null, "UTC", null, "2026-11-20"), Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC));
         HomeTables t = new HomeTables(new HomeProperties(true, null, data.toString(), null, null, null), store,
                 new HomeClock(dates, Clock.fixed(Instant.parse("2026-11-20T18:00:00Z"), ZoneOffset.UTC)), List.of(new MovingVar()),
-                List.of(new OwnTable("module_table", List.of("one"))), ChangeEngineHost.NOT_HOSTED, List::of);
+                List.of(new OwnTable("module_table", List.of("one"))), ChangeEngineHost.NOT_HOSTED, List::of, (who, kind) -> true);
         Principal p = new Principal("u", List.of("r"));
         HomeDefinition one = c.find("one").orElseThrow(), two = c.find("two").orElseThrow();
 

@@ -56,10 +56,12 @@ public final class HomeTables {
     private final Map<String, HomeTable> extra = new LinkedHashMap<>();
     private final ChangeEngineHost changes;
     private final Supplier<List<ExpectationService.State>> loadStates;
+    /** Whether a person may open a kind (their roles and the kind's pack): load states and feed events of other packs are not theirs to see. */
+    private final java.util.function.BiPredicate<Principal, String> mayOpen;
     private final HomeProperties props;
 
     public HomeTables(HomeProperties props, HomeStore store, HomeClock clock, List<MeasureSource> sources, List<HomeTable> extra, ChangeEngineHost changes,
-            Supplier<List<ExpectationService.State>> loadStates) {
+            Supplier<List<ExpectationService.State>> loadStates, java.util.function.BiPredicate<Principal, String> mayOpen) {
         this.props = props;
         this.store = store;
         this.clock = clock;
@@ -67,6 +69,7 @@ public final class HomeTables {
         extra.forEach(t -> this.extra.put(t.name(), t));
         this.changes = changes;
         this.loadStates = loadStates;
+        this.mayOpen = mayOpen;
     }
 
     /** Every table a Home may read. */
@@ -97,7 +100,7 @@ public final class HomeTables {
             case "home_changes" -> Optional.of(changes(c));
             case "home_stress" -> Optional.of(List.of());      // TODO(R2): computed stress results (computed-risk-measures rule), no engine view yet
             case "home_mnemonics" -> Optional.of(mnemonics(c));
-            case "home_loads" -> Optional.of(loads());
+            case "home_loads" -> Optional.of(loads(p));
             case "home_calendar", "home_news" -> Optional.of(List.of());   // TODO(R2): the economy module's calendar and headline feeds
             // TODO(R2): each is served by the module that owns the data (a HomeTable bean): the edit module's held changes, the model-run ledger,
             // the risk module's margin calls (the collateral engine) and backtest (the VaR history: its VarHomeBacktest, done), the economy
@@ -237,7 +240,7 @@ public final class HomeTables {
     }
 
     private void stateRule(HomeTable.Context c, HomeDefinition.Rule r, List<Map<String, Object>> out) {
-        for (ExpectationService.State s : loadStates.get()) {
+        for (ExpectationService.State s : states(c.person())) {
             boolean failed = ExpectationService.FAILED.equals(s.state());
             boolean late = ExpectationService.LATE.equals(s.state()) || ExpectationService.MISSING.equals(s.state());
             if (r.when().equals("load-failed") ? !failed : !late) {
@@ -259,13 +262,24 @@ public final class HomeTables {
     }
 
     /** The loads that need a look (late, missing, failed), as the loader's expectations state them. */
-    private List<Map<String, Object>> loads() {
+    private List<Map<String, Object>> loads(Principal p) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (ExpectationService.State s : loadStates.get()) {
+        for (ExpectationService.State s : states(p)) {
             out.add(row("PACK", s.pack(), "KIND", s.kind(), "BUSINESS_DATE", String.valueOf(s.businessDate()), "STATE", s.state(), "DEADLINE",
                     s.deadline() == null ? "" : s.deadline().toString()));
         }
         return out;
+    }
+
+    /** The load states of the kinds the person may open (pre-gate S4: never another pack's loads). */
+    private List<ExpectationService.State> states(Principal p) {
+        return loadStates.get().stream().filter(s -> mayOpen.test(p, s.kind())).toList();
+    }
+
+    /** A feed event ({@code pack/kind}) of a kind the person may open. */
+    private boolean feedSeen(Principal p, HomeData.Event e) {
+        int slash = e.subject().indexOf('/');
+        return mayOpen.test(p, slash < 0 ? e.subject() : e.subject().substring(slash + 1));
     }
 
     // ----------------------------------------------------------------------------------------------------------- changes
@@ -292,7 +306,7 @@ public final class HomeTables {
         List<HomeData.Event> events = new ArrayList<>();
         for (LocalDate d : List.of(c.previous(), c.today())) {
             for (HomeData.Event e : store.events(d, since)) {
-                if (c.home().measures().events().contains(e.kind()) && (e.subjectKind().equals("feed") || visible.contains(e.subjectKind() + "|" + e.subject()))) {
+                if (c.home().measures().events().contains(e.kind()) && (e.subjectKind().equals("feed") ? feedSeen(c.person(), e) : visible.contains(e.subjectKind() + "|" + e.subject()))) {
                     events.add(e);                              // TODO(R2): trade events by the trade's row rules, not by the measures' subjects
                 }
             }
@@ -333,7 +347,7 @@ public final class HomeTables {
         List<Map<String, Object>> out = new ArrayList<>();
         for (LocalDate d = first; !d.isAfter(c.today()); d = d.plusDays(1)) {
             for (HomeData.Event e : store.events(d, since)) {
-                if (c.home().measures().events().contains(e.kind()) && (e.subjectKind().equals("feed") || visible.contains(e.subjectKind() + "|" + e.subject()))) {
+                if (c.home().measures().events().contains(e.kind()) && (e.subjectKind().equals("feed") ? feedSeen(c.person(), e) : visible.contains(e.subjectKind() + "|" + e.subject()))) {
                     out.add(row("AT", e.at().toString(), "KIND", e.kind(), "SUBJECT", e.subject(), "TEXT", e.text()));
                 }
             }

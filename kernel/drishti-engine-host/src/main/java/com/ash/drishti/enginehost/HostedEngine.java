@@ -29,6 +29,7 @@ import com.ash.engine.RequestClass;
 import com.ash.engine.Snapshot;
 import com.ash.engine.Visibility;
 import com.ash.engine.host.Admission;
+import com.ash.engine.host.AnswerCache;
 import com.ash.engine.host.Budget;
 import com.ash.engine.host.EngineFile;
 import com.ash.engine.host.EngineInstance;
@@ -109,6 +110,19 @@ public final class HostedEngine implements AutoCloseable {
     private volatile EngineInstance instance;
     private volatile HostContext context;
     private volatile Sessions sessions;
+    /**
+     * The host's answer cache (engine specification 13 rule 6): a final answer kept by its stamp (engine version, descriptor, options, the
+     * input stamps of the session that answered, the request with its visibility signature), so a kept answer is served only to the same
+     * question, from the same viewer's rows, over the same data. A new instance (a start, an options change) starts empty; null: off.
+     */
+    private volatile AnswerCache answers;
+    private final AtomicLong answerHits = new AtomicLong();
+    private final AtomicLong answerMisses = new AtomicLong();
+    /** The session key of the request on this thread: the input stamps a stamp names are that session's own (never another viewer's). */
+    private static final ThreadLocal<Sessions.Key> ASKING = new ThreadLocal<>();
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(HostedEngine.class);
+    /** How many of the instance's log lines are already in the server's log. */
+    private final java.util.concurrent.atomic.AtomicInteger logged = new java.util.concurrent.atomic.AtomicInteger();
     private volatile Admission admission;
     private volatile ExecutorService executor;
     private volatile String by = "";
@@ -274,6 +288,33 @@ public final class HostedEngine implements AutoCloseable {
         return s == null ? 0 : s.memoryBytes();
     }
 
+    /** The engine's own log lines (its context's log) into the server's log, each once, as they are written. */
+    private void forwardLog() {
+        HostContext c = context;
+        if (c == null) {
+            return;
+        }
+        List<String> lines = c.logLines();
+        for (int k = logged.get(); k < lines.size(); k = logged.get()) {
+            if (logged.compareAndSet(k, k + 1)) {
+                LOG.info("engine {}: {}", id, lines.get(k));
+            }
+        }
+    }
+
+    /** The answer cache's figures for Admin, Caches: entries, the limit, hits and misses since the start (zeros when off). */
+    public long[] answerCache() {
+        AnswerCache a = answers;
+        return new long[] {a == null ? 0 : a.size(), a == null ? 0 : settings.answers(), answerHits.get(), answerMisses.get()};
+    }
+
+    /** Empties the answer cache (Admin, Caches: purge); the next ask of each question is answered by the engine again. */
+    public void purgeAnswers() {
+        if (answers != null) {
+            answers = new AnswerCache(settings.answers());
+        }
+    }
+
     public int sessionsOpen() {
         Sessions s = sessions;
         return s == null ? 0 : s.keys().size();
@@ -330,6 +371,8 @@ public final class HostedEngine implements AutoCloseable {
             admission = new Admission(file.limits().concurrent());
             instance = inst;
             sessions = new Sessions(inst, file.snapshot().hot(), this::inputsFor);
+            logged.set(0);
+            answers = settings.answers() > 0 ? new AnswerCache(settings.answers()) : null;
             transition(actor, "init", () -> inst.init(ctx));
 
         } finally {
@@ -382,6 +425,7 @@ public final class HostedEngine implements AutoCloseable {
             }
             inputsByKey.clear();
             viewers.clear();
+            answers = null;
             try {
                 transition(actor, "shutdown", () -> i.shutdown());
             } catch (EngineException e) {
@@ -493,9 +537,25 @@ public final class HostedEngine implements AutoCloseable {
         Answer answer;
         try (Admission.Permit permit = admission.admit(ask.requestClass(), id); Sessions.Lease lease = sessions.lease(key, control)) {
             LakeInputs.CURRENT.set(control);
+            ASKING.set(key);
             try {
-                answer = i.request(() -> lease.session().ask(request, control));
+                AnswerCache kept = ask.publish() ? null : answers;      // a published ask always runs (its tables are written)
+                // the stamp after the lease: the session is open and has read its inputs, so the stamp names what it holds
+                String stamp = kept == null ? null : context.stamp(snapshot, request).text();
+                Answer hit = stamp == null ? null : kept.get(stamp);
+                if (hit != null) {
+                    answerHits.incrementAndGet();
+                    answer = hit;
+                } else {
+                    answer = i.request(() -> lease.session().ask(request, control));
+                    forwardLog();
+                    if (kept != null) {
+                        answerMisses.incrementAndGet();
+                        kept.put(answer);                               // under its own stamp; an interim answer is never kept
+                    }
+                }
             } finally {
+                ASKING.remove();
                 LakeInputs.CURRENT.remove();
             }
         } finally {
@@ -648,6 +708,13 @@ public final class HostedEngine implements AutoCloseable {
 
     /** The input stamps an answer's stamp names: those of the session being asked (the inputs it read). */
     private SortedMap<String, String> inputStamps(Snapshot snapshot) {
+        Sessions.Key asking = ASKING.get();
+        if (asking != null && asking.snapshot().equals(snapshot)) {
+            LakeInputs own = inputsByKey.get(asking);
+            if (own != null) {
+                return own.stamps();
+            }
+        }
         for (Map.Entry<Sessions.Key, LakeInputs> e : inputsByKey.entrySet()) {
             if (e.getKey().snapshot().equals(snapshot)) {
                 return e.getValue().stamps();

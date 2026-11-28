@@ -90,6 +90,7 @@ final class ModuleBridge {
         live(CapacityFigures.class, Contributions.Surface.SPI);
         live(Explainer.class, Contributions.Surface.SPI);
         live(ViewAugmenter.class, Contributions.Surface.SPI);
+        live(com.ash.drishti.kernel.api.services.VectorViews.class, Contributions.Surface.SPI);   // R2 zero copy: a module's held vectors to an engine
         live(PivotSourceProvider.class, Contributions.Surface.SPI);
         live(DomainVocabulary.class, Contributions.Surface.GLOSSARY);
         live(OfficialResults.class, Contributions.Surface.SPI);

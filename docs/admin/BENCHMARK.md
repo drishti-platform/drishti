@@ -54,6 +54,7 @@ work is in the [VaR guide](../guides/VAR_GUIDE.md) and the [exposure guide](../g
 20. [Drishti Elements: the grid engine at 1,000,000 rows](#20-drishti-elements-the-grid-engine-at-1000000-rows)
 21. [Measuring one installation](#21-measuring-one-installation)
 22. [Code volume by release](#22-code-volume-by-release)
+23. [Drishti Risk's engine path against in-tree (R2, 100,000 positions)](#23-drishti-risks-engine-path-against-in-tree-r2-100000-positions)
 
 ## 1. What is measured, and why
 
@@ -2121,3 +2122,48 @@ Lines of code at each release and now, **measured** from git by `python3 tools/c
 | v2.9.11.g | 2026-11-08 | 431,422 | 164,993 | 46,531 | 119,031 |
 | current | 2026-11-09 | 436,337 | 167,731 | 46,788 | 122,291 |
 <!-- code-volume:end -->
+
+## 23. Drishti Risk's engine path against in-tree (R2, 100,000 positions)
+
+The R2 speed check (`docs/plans/R2_CUT_PLAN.md` step 4a; the owner: 100,000 positions are enough): the same VaR answers asked of the
+in-tree VaR service and of Drishti Risk's `market-risk` engine through the host, on one packaged server, both paths warm, their figures
+compared. Measured 2026-11-28 on the workstation of section 3 while other lanes' builds and tests ran on it (wall times are an upper bound
+for a quiet machine; the two paths of one run share the same load, so their ratio is the reading).
+
+**Data.** `vargen.py`: 100,000 positions (one OTC trade each), one date (2026-09-30), 509 scenarios (the configured window: the newest
+250), 300 rule portfolios, the management, legal-entity and limit-letter hierarchies, limits; loaded with the Java loader.
+
+**Method** (`RiskSpeedCheckTest`, `testing/drishti-modules-it`): one server (`-Xmx6g`; the engine's books may use 3,000 MB,
+`DRISHTI_MARKET_RISK_MEMORY_MB`). The bank's headline first in-tree (the date's first open), then on the engine (its session's first
+read of the date), the resident memory after each; every inner node of the management hierarchy warm (a warm-up round on each path, then
+two rounds, p50 and p99 per path); the first 200 leaf nodes (books: their parts are positions, so the headline asks the engine for every
+position's contribution: the leaf-headline cost noted in lane G part 6); the tree of the hierarchy three times on each path (first and
+p50). VaR, ES and trades of every node asked, and every row of the tree, compared between the paths (none may differ). Three runs: the
+mapped tier with zero copy on (the host's hot-file float32 rows handed to the engine in place) and off (the engine builds its own float32
+rows), and the heap tier (float64 rows on both paths).
+
+```bash
+./mvnw -o verify -pl testing/drishti-modules-it -Dtest=RiskSpeedCheckTest -Dspeed.positions=100000 -Dsbs.xmx=6g \
+  -Ddrishti.risk.jars=<folder of the two Risk JARs> -Dspeed.python=<python with the lake tools> [-Dspeed.zero-copy=on] [-Dsbs.tier=heap]
+```
+
+**Results** (2026-11-28, the scripted run: p50 and p99 in milliseconds over 106 inner nodes asked twice warm, the first ask of 200 leaf
+nodes, the tree three times; VaR, ES and trades of every node asked and every tree row equal between the paths in all three runs):
+
+| Ask | Mapped, in-tree | Mapped, engine (zero copy off) | Mapped, engine (zero copy on) | Heap, in-tree | Heap, engine |
+|---|---:|---:|---:|---:|---:|
+| Headline of an inner node, p50 / p99 | 22 / 65 | 141 / 284 | 140 / 258 | 23 / 69 | 150 / 296 |
+| Headline of a leaf (a book, its parts positions), first ask, p50 / p99 | 18 / 42 | 405 / 670 | 394 / 582 | 20 / 76 | 528 / 850 |
+| The tree (1,106 rows), p50 | 550 | 4,677 | 3,218 | 144 | 1,479 |
+| The date's first open (s) | 0.28 | 46 | 46 | 0.56 | 49 |
+
+- **The host's answer cache** (`engines.answers`, ENGINES_IN_DRISHTI.md): of each run's 2,605 engine asks, 2,295 were answered from it
+  (the same question over the same data by a caller who sees the same rows) and 310 by the engine.
+- **Memory**: the server's resident memory with both paths open on the date, at the end: 5.7 GB (mapped, zero copy off), 5.9 GB (mapped, zero
+  copy on), 6.5 GB (heap), at `-Xmx6g`.
+- **Zero copy**: on, the host served the hot file's float32 rows of the date (100,000 positions) and the engine read them in place (the
+  server log names both); the figures are the same bits as with it off.
+- **Reading**: the engine path is within the plan's bound on none of the asks (3a.4: p50 within 5 %, p99 within 10 %). With the node tables
+  answered from the cache, what remains of a warm headline and of the tree is the host's own work per ask (lane B2 profile:
+  `docs/plans/R2_CUT_PLAN.md`, Status, R2 lane B2); a leaf's first ask is computed; the date's first open reads and builds every row in the
+  engine before zero copy swaps the host's rows in.

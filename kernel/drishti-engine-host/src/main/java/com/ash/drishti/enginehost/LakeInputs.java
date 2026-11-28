@@ -53,6 +53,10 @@ import java.util.function.Function;
  */
 final class LakeInputs implements Inputs {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(LakeInputs.class);
+    /** The views not served, said once each. */
+    private static final java.util.Set<String> TOLD = ConcurrentHashMap.newKeySet();
+
     /** A cancellation point. */
     @FunctionalInterface
     interface Check {
@@ -406,6 +410,39 @@ final class LakeInputs implements Inputs {
                 }
             }
             return Arrays.copyOf(keep, k);
+        }
+
+        /**
+         * A view the host already holds (R2_CUT_PLAN 3a, zero copy): a name that is not this input's vector column is asked of the host's
+         * modules ({@link KindData#vectorView}) for each bound kind on the session's date, and only when the caller reads the kind whole
+         * (no row rule, no where): a view is never filtered. Null when none is held; the vector column itself as the engine API's default.
+         */
+        @Override
+        public Object vectorView(String name) throws EngineException {
+            if (input.vector() != null && input.vector().equals(name)) {
+                return InputTable.super.vectorView(name);
+            }
+            if (where() != RowRule.ALL) {
+                return notServed(name, "the input has a where: a view is never filtered");
+            }
+            for (String kind : kinds) {
+                if (rule(kind) != RowRule.ALL) {
+                    return notServed(name, "the caller has a row rule on " + kind + ": a view is never filtered");
+                }
+                Object v = data.vectorView(kind, name, date);
+                if (v != null) {
+                    return v;
+                }
+            }
+            return notServed(name, "no service holds the view of " + kinds + " on " + date);
+        }
+
+        /** Null, with the reason said once per input, view and reason (the engine then builds its rows itself). */
+        private Object notServed(String view, String why) {
+            if (TOLD.add(this.name + "|" + view + "|" + why)) {
+                LOG.info("engine input {}: view {} not served ({})", this.name, view, why);
+            }
+            return null;
         }
 
         @Override

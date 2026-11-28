@@ -75,6 +75,7 @@ Every line names the setting and the fix; the console does the same (`The consol
 | P14 | The site folder is named and outside the release | none: you set `drishti.site.dir` (`DRISHTI_SITE_DIR`) | it is missing (server and console), is the release's configuration folder, or lies inside the release folder (server) | server check; `ProductionProfileTest`; `core/production.py`; `test_production_profile.py` |
 | P15 | Node traffic and the shared net key are encrypted | none: you state it | this node is clustered (`node.yaml` `enabled: true`) and advertises an `http://` address while `drishti.production.net-tls=mesh` (a private mesh encrypts it) is not declared | server check; `ProductionProfileTest` |
 | P16 | The data folder is named and outside the release | none: you set `drishti.data.dir` (`DRISHTI_DATA_DIR`, `/srv/drishti/data`) | it is unset (it would be `<home>/data`), relative, or inside the release folder | server check; `ProductionProfileTest` |
+| P17 | No published password signs in | none: a store made under demo or development keeps `drishti-dev-admin` and the demo users | any of them, enabled, still signs in with its published password (checked when the beans are built) | `ProductionAccountsCheck`; `ProductionAccountsCheckTest` |
 
 The checks run before any bean is built (`kernel/drishti-server`, `com.ash.drishti.server.profile.ProductionProfile`, run by
 `ProductionProfileProcessor`) and before the console's first request (`drishti-console/core/production.py`, called by

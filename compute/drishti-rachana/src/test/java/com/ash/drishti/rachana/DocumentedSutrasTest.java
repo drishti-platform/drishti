@@ -39,9 +39,9 @@ class DocumentedSutrasTest {
     @Test
     void sutraExamplesInDocsAndTutorialsAreValid() throws Exception {
         List<Path> files = new ArrayList<>();
-        for (String dir : List.of("../../docs", "../../drishti-console/web/guides", "../../config/packs", "../../modules")) {
+        for (String dir : List.of("../../docs", "../../config/packs", "../../modules")) {   // the guides are under docs/ (the console's web/guides folder is gone)
             try (Stream<Path> s = Files.walk(Path.of(dir))) {
-                s.filter(p -> p.toString().endsWith(".md") && !p.toString().contains("/sutras/"))
+                s.filter(p -> p.toString().endsWith(".md") && !p.toString().contains("/sutras/") && !p.toString().contains("/docs/products/"))   /* the product documents are checked by their own product */
                         .forEach(files::add);
             }
         }

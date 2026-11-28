@@ -1,0 +1,98 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# Genomics · the genomics module's own pack: variants, samples, genes and cohorts. The module's screens (variants, genes with the lollipop, cohorts, the
+# Home's cards) read these four kinds through the connector below, from the genomics lake; the files a person has (VCF, gene, sample and cohort
+# tables) and the public feeds reach the lake through the genomics loader (tools/loaders/genomics), never through the module.
+pack: genomics
+domain: genomics
+version: 1.0.0
+code: GENOMICS
+title: Genomics
+description: >-
+  Variants (one row per position and alternate allele), the samples that carry them, the genes they fall in and the cohorts the samples belong
+  to. The rows come from the genomics lake (genomicslake): the loader reads your VCF files and gene, sample and cohort tables into it, and its
+  synthetic demo data (data/testdata/genomics) is built into it by lake demo.
+kinds: [variant, sample, gene, cohort, clinvar-variant, ensembl-gene]
+connectors:
+  genomics-store:
+    plugin: delta
+    enabled: ${DRISHTI_LAKE_ENABLED:true}
+    kinds: [variant, sample, gene, cohort]
+    settings:
+      lake: genomicslake
+      lake-tables: genomics.variant,genomics.sample,genomics.gene,genomics.cohort
+  genomics-feeds:          # the feeds' own tables (kinds variant and gene in the lake file, read here by their table names so they never stand in for the tables above)
+    plugin: delta
+    enabled: ${DRISHTI_LAKE_ENABLED:true}
+    kinds: [clinvar-variant, ensembl-gene]
+    settings:
+      lake: genomicslake
+      lake-tables: genomics.clinvar-variant,genomics.ensembl-gene
+lake:                  # the recommended entries of its lake tables (the shipped lake file holds the same)
+  tables:
+    genomics.variant:
+      id: VARIANT_ID
+      promote: [CHROM, POS, REF, ALT, GENE, IMPACT, CONSEQUENCE]
+      retention: 260
+    genomics.sample:
+      id: SAMPLE_ID
+      promote: [COHORT, SEX, POPULATION]
+      retention: 260
+    genomics.gene:
+      id: GENE
+      promote: [CHROM, START]
+      retention: 260
+    genomics.cohort:
+      id: COHORT_ID
+      retention: 260
+    genomics.clinvar-variant:      # the clinvar feed's variants: the Home's ClinVar card reads this kind
+      id: VARIANT_ID
+      promote: [CHROM, POS, REF, ALT, GENE, IMPACT, CONSEQUENCE]
+      retention: 260
+    genomics.ensembl-gene:         # the ensembl feed's genes
+      id: GENE
+      promote: [CHROM, START]
+      retention: 260
+form:                  # what a person can search each kind by (the console's pick lists and filters)
+  variant:
+  - {path: VARIANT_ID, type: id, group: Identity}
+  - {path: GENE, type: text, group: Filters}
+  - {path: CHROM, type: text, group: Filters}
+  - {path: IMPACT, type: text, group: Filters}
+  - {path: CONSEQUENCE, type: text, group: Filters}
+  sample:
+  - {path: SAMPLE_ID, type: id, group: Identity}
+  - {path: COHORT, type: text, group: Filters}
+  - {path: SEX, type: text, group: Filters}
+  - {path: POPULATION, type: text, group: Filters}
+  gene:
+  - {path: GENE, type: id, group: Identity}
+  - {path: CHROM, type: text, group: Filters}
+  cohort:
+  - {path: COHORT_ID, type: id, group: Identity}
+  clinvar-variant:
+  - {path: VARIANT_ID, type: id, group: Identity}
+  - {path: GENE, type: text, group: Filters}
+  - {path: SIGNIFICANCE, type: text, group: Filters}
+  ensembl-gene:
+  - {path: GENE, type: id, group: Identity}
+  - {path: CHROM, type: text, group: Filters}
+routes:                # the connector that answers each kind
+  variant: genomics-store
+  sample: genomics-store
+  gene: genomics-store
+  cohort: genomics-store
+  clinvar-variant: genomics-feeds
+  ensembl-gene: genomics-feeds

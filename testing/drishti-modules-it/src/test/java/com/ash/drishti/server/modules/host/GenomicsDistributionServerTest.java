@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import com.ash.drishti.api.AsOf;
-import com.ash.drishti.api.EntityDocument;
 import com.ash.drishti.api.EntityRef;
 import com.ash.drishti.engine.source.SourceRouter;
 import com.ash.drishti.module.runtime.ModuleHealth;
@@ -47,7 +46,7 @@ import org.springframework.test.web.servlet.MvcResult;
 /**
  * Drishti Genomics (docs/architecture/KERNEL_AND_MODULES.md section 20.4) boots from its file alone: the thin kernel (drishti-server, no banking)
  * with the genomics module, built here from its sources (modules/genomics, the SDK's layout) and dropped into the modules folder as an administrator would. Its
- * brand, the Research lens, none of the kernel's packs (no counterparty, book or desk) and no risk word; the module loaded, its VCF reader
+ * brand, the Research lens, none of the kernel's packs (no counterparty, book or desk) and no risk word; the module loaded, its kinds read from the genomics lake
  * routed by the kernel like any connector, its kinds, functions, API and pages answering. The .dmod passes the fourteen checks.
  */
 @SpringBootTest(properties = {"drishti.distribution=genomics", "drishti.distributions-dir=../../config/distributions",
@@ -69,7 +68,7 @@ class GenomicsDistributionServerTest {
     /** The package dropped into the modules folder before the server starts (the launch boots it from the process's settings). */
     @org.junit.jupiter.api.BeforeAll
     static synchronized void drop() throws IOException {
-        for (String k : List.of("drishti.modules.home", "drishti.modules.sources", "drishti.modules.dev")) {
+        for (String k : List.of("drishti.modules.home", "drishti.modules.sources", "drishti.modules.dev", "lake.lakes.dir", "drishti.data.dir")) {
             KEPT.put(k, System.getProperty(k));
         }
         if (work == null) {
@@ -78,10 +77,32 @@ class GenomicsDistributionServerTest {
             Files.createDirectories(work.resolve("modules"));
             Files.copy(dmod, work.resolve("modules").resolve(dmod.getFileName()));     // dropped in, as an administrator would
             ModuleFixtures.write(work.resolve("placement.yaml"), "modules:\n  genomics:\n    parts:\n      api: { nodes: [local] }\n");
+            loadDemoLake(work.resolve("data").resolve("delta").resolve("genomicslake"));
+            Files.createDirectories(work.resolve("lakes"));       // the site's lake file of the module's lake (a site has it from set-up, config/lakes/genomicslake.yaml)
+            Files.copy(Path.of(TestRoots.repo(), "config", "lakes", "genomicslake.yaml"), work.resolve("lakes").resolve("genomicslake.yaml"));
         }
         System.setProperty("drishti.modules.home", work.resolve("modules").toString());
         System.clearProperty("drishti.modules.sources");
         System.clearProperty("drishti.modules.dev");
+        System.setProperty("drishti.data.dir", work.resolve("data").toString());     // the launch roots: the build's own data folder is a system property too
+        System.setProperty("lake.lakes.dir", work.resolve("lakes").toString());     // a launch root: read before the test's dynamic properties exist
+    }
+
+    /** The module reads the genomics lake: its demo rows (data/testdata/genomics) loaded into Delta tables the way the data inbox loads them. */
+    static void loadDemoLake(Path lake) throws IOException {
+        java.util.Map<String, String> keys = java.util.Map.of("variant", "VARIANT_ID", "sample", "SAMPLE_ID", "gene", "GENE");
+        for (var e : keys.entrySet()) {
+            Path file;
+            try (var files = Files.list(Path.of(TestRoots.repo(), "data", "testdata", "genomics", e.getKey()))) {
+                file = files.filter(f -> f.getFileName().toString().endsWith(".jsonl.gz")).findFirst().orElseThrow();
+            }
+            Path cfg = work.resolve("load-" + e.getKey() + ".yaml");
+            Files.writeString(cfg, "source:\n  files: '" + file.toAbsolutePath().normalize() + "'\n  as-of: 2026-11-16\n  id: " + e.getValue() + "\ntarget:\n  format: delta\n  path: '"
+                    + lake.resolve("genomics").resolve(e.getKey()) + "'\n  domain: genomics\n  kind: " + e.getKey() + "\n  table: " + e.getKey() + "\n");
+            java.io.ByteArrayOutputStream said = new java.io.ByteArrayOutputStream();
+            assertThat(com.ash.lake.load.LakeLoad.run(com.ash.drishti.lakehost.DrishtiLake.runtime(), new String[] {"--config", cfg.toString(), "-q"},
+                    new java.io.PrintStream(said, true, java.nio.charset.StandardCharsets.UTF_8))).as(e.getKey() + ": " + said.toString(java.nio.charset.StandardCharsets.UTF_8)).isZero();
+        }
     }
 
     @org.junit.jupiter.api.AfterAll
@@ -99,6 +120,7 @@ class GenomicsDistributionServerTest {
     static synchronized void settings(DynamicPropertyRegistry r) {
         r.add("drishti.placement.file", () -> work.resolve("placement.yaml").toString());
         r.add("drishti.data.dir", () -> work.resolve("data").toString());
+        r.add("lake.lakes.dir", () -> work.resolve("lakes").toString());
         r.add("drishti.bindings.file", () -> work.resolve("bindings.yaml").toString());
     }
 
@@ -123,8 +145,8 @@ class GenomicsDistributionServerTest {
         assertThat(getJson("/public/about").path("lenses").toString()).contains("research");
         List<String> packs = new ArrayList<>();
         getJson("/api/v1/packs").forEach(p -> packs.add(p.path("name").asText()));
-        assertThat(packs).as("none of the kernel's packs, no module's finance: the genomics module's own showcase packs")
-                .containsExactlyInAnyOrder("genomics-showcase", "protein-engineering");
+        assertThat(packs).as("none of the kernel's packs, no module's finance: the genomics module's own packs: genomics and its two showcase packs")
+                .containsExactlyInAnyOrder("genomics", "genomics-showcase", "protein-engineering");
         List<String> suggested = new ArrayList<>();
         getJson("/api/v1/command/suggest?q=C").forEach(s -> suggested.add(s.path("mnemonic").asText()));
         assertThat(suggested).doesNotContain("CPTY", "CCP", "CRV", "CDS");
@@ -144,14 +166,13 @@ class GenomicsDistributionServerTest {
     }
 
     @Test
-    void theModuleLoadsItsVcfReaderServesTheKindsAndItsFunctionsAndPagesAnswer() throws Exception {
+    void theModuleLoadsReadsTheLakeServesTheKindsAndItsFunctionsAndPagesAnswer() throws Exception {
         assertThat(node.runtime().health()).extracting(ModuleHealth::id, ModuleHealth::state)
                 .contains(org.assertj.core.groups.Tuple.tuple("genomics", ModuleHealth.State.LOADED));
-        List<EntityDocument> variants = new ArrayList<>();
-        assertThat(router.documents("variant", AsOf.LATEST, variants::add)).isTrue();
-        assertThat(variants).hasSize(120);
+        // the kinds are read in the delta connector's "effective" mode (an entity at a time: no whole-kind pass), so the variants are fetched by id
+        assertThat(router.fetch(EntityRef.of("variant", "HX-A001"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("HX-A001");
         assertThat(router.fetch(EntityRef.of("gene", "TP53"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("PROTEIN_LENGTH");
-        assertThat(router.fetch(EntityRef.of("cohort", "COH-A"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("HXS-001");
+        // the cohorts are computed by the module from the samples (a loaded cohort row only adds to them): no source holds the kind
         assertThat(router.fetch(EntityRef.of("sample", "HXS-013"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("COH-B");
         JsonNode gene = getJson("/api/v1/genomics/genes/TP53");
         assertThat(gene.path("variants").size()).isPositive();

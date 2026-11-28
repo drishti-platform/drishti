@@ -70,7 +70,7 @@ class AllShippedPacksTest {
     void everyExamplePackLoadsOnTopOfTheShippedOnes() {
         com.ash.drishti.api.resolution.ConfigResolution dirs = repo(EXAMPLES);
         List<String> examples = PackLoader.folders(List.of(EXAMPLES));
-        assertThat(examples).contains("finance", "genomics", "logistics", "retail-banking", "climate-risk", "operational-risk", "liquidity-risk")
+        assertThat(examples).contains("finance", "genomics-fixture", "logistics", "retail-banking", "climate-risk", "operational-risk", "liquidity-risk")
                 .doesNotContainAnyElementsOf(REPO.packs().names());
         for (String name : examples) {
             PackLoader loader = new PackLoader();

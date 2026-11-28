@@ -85,7 +85,8 @@ class PackAccessTest {
 
         mvc.perform(put("/api/v1/admin/packs/logistics").header("Authorization", admin).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"enabled\":false}")).andExpect(jsonPath("$.enabled").value(false));
-        mvc.perform(get("/api/v1/views/shipment/SHP-10042").header("Authorization", user)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/views/shipment/SHP-10042").header("Authorization", user))          // the switch is the lifecycle's suspend: the gate says so in words
+                .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("DRS-1037")));
         mvc.perform(get("/api/v1/packs").header("Authorization", user)).andExpect(jsonPath("$[*].name").value(not(hasItem("logistics"))));
         mvc.perform(get("/api/v1/command/suggest").param("q", "SHP").header("Authorization", user))
                 .andExpect(jsonPath("$[*].kind").value(not(hasItem("shipment"))));

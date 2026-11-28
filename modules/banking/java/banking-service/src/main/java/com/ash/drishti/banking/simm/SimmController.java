@@ -44,10 +44,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
  * ISDA SIMM (docs/guides/SIMM_GUIDE.md section 9), as the person:
  * <pre>
  *   GET  /api/v1/risk/simm?nettingSet=|scope=&amp;version=&amp;concentration=&amp;hvr=&amp;override=key=value&amp;path=engine|in-tree   SIMM: collect and post, by product and risk class
- *   GET  /api/v1/risk/simm/netting-sets?counterparty=            every netting set: computed, stored (labelled) or why not computed
- *   GET  /api/v1/risk/simm/explain?nettingSet=&amp;direction=collect|post&amp;class=   the steps: buckets, factors, CR, WS, K, S
- *   GET  /api/v1/risk/simm/against?nettingSet=                  the margin against the counterparty's call (crif-external)
- *   GET  /api/v1/risk/simm/versions                              the installed parameter files (and the refused ones, with why)
+ *   GET  /api/v1/risk/simm/netting-sets?counterparty=&amp;path=      every netting set: computed, stored (labelled) or why not computed
+ *   GET  /api/v1/risk/simm/explain?nettingSet=&amp;direction=collect|post&amp;class=&amp;path=   the steps: buckets, factors, CR, WS, K, S
+ *   GET  /api/v1/risk/simm/against?nettingSet=&amp;path=            the margin against the counterparty's call (crif-external)
+ *   GET  /api/v1/risk/simm/versions?path=                        the installed parameter files (and the refused ones, with why)
  *   GET  /api/v1/risk/simm/playground?nettingSet=&amp;compare=switch=value   PLAY SIMM: the grid, the Choices panel, a comparison in words
  *   GET  /api/v1/risk/simm/playground.xlsx?nettingSet=&amp;side=     the workbook of live formulas (switch cells in Config)
  *   GET  /api/v1/risk/simm/playground/template                   the shipped workbook: the hand-built examples, every parameter cell empty
@@ -114,7 +114,10 @@ public class SimmController {
     @GetMapping("/api/v1/risk/simm/netting-sets")
     public Map<String, Object> nettingSets(@RequestParam(required = false) String counterparty, @RequestParam(required = false) String version,
             @RequestParam(required = false) String concentration, @RequestParam(required = false) String hvr, AsOf asOf,
-            @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+            @RequestParam(required = false) String path, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        if (enginePath != null && enginePath.engine(path)) {           // R2: each computed set's figures from the ccr engine
+            return enginePath.nettingSets(svc, p, date(asOf), counterparty, version, choices(concentration, hvr, null));
+        }
         return svc.nettingSets(p, date(asOf), counterparty, version, choices(concentration, hvr, null));
     }
 
@@ -122,13 +125,22 @@ public class SimmController {
     public Map<String, Object> explain(@RequestParam(required = false) String nettingSet, @RequestParam(required = false) String scope,
             @RequestParam(defaultValue = "collect") String direction, @RequestParam(required = false, name = "class") String cls,
             @RequestParam(required = false) String version, @RequestParam(required = false) String concentration, @RequestParam(required = false) String hvr,
-            @RequestParam(required = false) List<String> override, AsOf asOf, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+            @RequestParam(required = false) List<String> override, AsOf asOf, @RequestParam(required = false) String path,
+            @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        if (enginePath != null && enginePath.engine(path)) {           // R2: the steps from the ccr engine's simm-charge, -bucket, -factor, -group, -addon
+            return enginePath.explain(svc, p, scope(nettingSet, scope), date(asOf), version, choices(concentration, hvr, override), "post".equalsIgnoreCase(direction),
+                    cls, svc.props().maxFactors());
+        }
         SimmService.Run run = run(p, nettingSet, scope, asOf, version, choices(concentration, hvr, override));
         return SimmAnswer.explain(run, "post".equalsIgnoreCase(direction), cls, svc.props().maxFactors());
     }
 
     @GetMapping("/api/v1/risk/simm/against")
-    public Map<String, Object> against(@RequestParam(required = false) String nettingSet, AsOf asOf, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+    public Map<String, Object> against(@RequestParam(required = false) String nettingSet, AsOf asOf, @RequestParam(required = false) String path,
+            @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        if (enginePath != null && enginePath.engine(path)) {           // R2: the engine's margins, the host's calls and tolerance
+            return enginePath.against(svc, p, nettingSet, date(asOf));
+        }
         SimmService.Run run = run(p, nettingSet, null, asOf, null, SimmChoices.defaults());
         if (run.nettingSet() == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the comparison with the counterparty's call is per netting set, not for " + run.scope());
@@ -139,7 +151,10 @@ public class SimmController {
     }
 
     @GetMapping("/api/v1/risk/simm/versions")
-    public Map<String, Object> versions() {
+    public Map<String, Object> versions(AsOf asOf, @RequestParam(required = false) String path, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        if (enginePath != null && enginePath.engine(path)) {           // R2: the lake's simm-parameters as the ccr engine reads them
+            return enginePath.versions(svc, p, date(asOf));
+        }
         svc.enabled();
         List<Map<String, Object>> rows = new ArrayList<>();
         for (SimmService.Version v : svc.versions()) {

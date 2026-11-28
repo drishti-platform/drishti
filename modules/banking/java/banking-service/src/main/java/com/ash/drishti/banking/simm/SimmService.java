@@ -530,6 +530,18 @@ public final class SimmService {
      * it has none, the reason where it cannot be computed; {@code counterparty} narrows the list.
      */
     public Map<String, Object> nettingSets(Principal p, LocalDate date, String counterparty, String asked, SimmChoices ch) {
+        return nettingSets(p, date, counterparty, asked, ch, (d, id) -> {
+            Run r = run(p, id, d, null, asked, ch, null);
+            return new SetFigures(r.version().version(), r.imCollect(), r.imPost(), r.collectRegime(), r.postRegime(), r.missingTrades(), r.calculationCurrency());
+        });
+    }
+
+    /** A computed netting set's row figures (in-tree or the engine's, R2). */
+    public record SetFigures(String version, Double imCollect, Double imPost, String collectRegime, String postRegime, Integer missingTrades, String currency) {}
+
+    /** The netting sets' list with each computed set's figures from {@code compute} (the date, the set's id); a refusal is the row's status. */
+    Map<String, Object> nettingSets(Principal p, LocalDate date, String counterparty, String asked, SimmChoices ch,
+            java.util.function.BiFunction<LocalDate, String, SetFigures> compute) {
         enabled();
         SimmData.Day day = data.day(new AsOf(date, null));
         if (!day.nettingSetsRead()) {
@@ -554,15 +566,15 @@ public final class SimmService {
             List<FrtbData.Record> recs = day.recordsBySet().getOrDefault(ns.id(), List.of());
             if (!recs.isEmpty()) {
                 try {
-                    Run r = run(p, ns.id(), day.date(), null, asked, ch, null);
+                    SetFigures r = compute.apply(day.date(), ns.id());
                     row.put("status", r.missingTrades() > 0 ? "computed, incomplete" : "computed");
-                    row.put("version", r.version().version());
+                    row.put("version", r.version());
                     row.put("imCollect", r.imCollect());
                     row.put("imPost", r.imPost());
                     row.put("collectRegime", r.collectRegime());
                     row.put("postRegime", r.postRegime());
                     row.put("missingTrades", r.missingTrades());
-                    row.put("currency", r.calculationCurrency());
+                    row.put("currency", r.currency());
                     sum[0] += r.imCollect();
                     sum[1] += r.imPost();
                     computed++;

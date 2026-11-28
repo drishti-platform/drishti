@@ -497,6 +497,16 @@ public class VarEnginePath {
      * the matured-items switch, a basket's own tree ({@code within}) and the parametric cells are answered in-tree for now.
      */
     public Map<String, Object> tree(Principal p, String hierarchy, LocalDate date, String ccy) {
+        return tree(p, hierarchy, date, ccy, null);
+    }
+
+    /**
+     * The same through a lens ({@code horizon} 10d by the square root of 10 or overlapping sums, {@code set=stressed}, an offered
+     * confidence): each node's VaR and ES from the engine's {@code node-var-horizon} on that lens (the headline's source, R2 proven), its
+     * level, parent and limit from {@code node-var}; limit use only where the node's limit is set for that lens, as in-tree. A null lens
+     * or the offered one is the tree above.
+     */
+    public Map<String, Object> tree(Principal p, String hierarchy, LocalDate date, String ccy, com.ash.drishti.banking.compute.var.VarLens lens) {
         if (date == null) {
             throw new DrishtiException(ErrorCode.BAD_REQUEST, "the engine path needs the business date: give asOf");
         }
@@ -514,10 +524,31 @@ public class VarEnginePath {
             throw new DrishtiException(ErrorCode.VAR_HIERARCHY_UNKNOWN, "no hierarchy " + h + " on " + date + " (it has "
                     + (present.isEmpty() ? "none: configure hierarchies: in the pack or drishti.var.hierarchies" : String.join(", ", present)) + ")");
         }
+        com.ash.drishti.banking.compute.var.VarLens dl = svc.props().defaultLens();
+        com.ash.drishti.banking.compute.var.VarLens l = lens == null ? dl : lens;
         Map<String, Object> a = ask(p, List.of("node-var"), params(dateWindow(), currency), Map.of("date", date.toString()));
         Map<String, Map<String, Object>> byId = new HashMap<>();
         for (Map<String, Object> r : rows(a, "node-var")) {
             byId.put(String.valueOf(r.get("NODE_ID")), r);
+        }
+        if (!l.equals(dl)) {                                             // the lens's figures: node-var-horizon, every node
+            Map<String, Object> params = params(dateWindow(), currency);
+            params.put("stressed", l.stressed());
+            params.put("horizon", l.tenDay() ? "10d" : "1d");
+            params.put("ten-day-method", l.method() == com.ash.drishti.banking.compute.var.VarLens.Method.SUM ? "sum" : "sqrt10");
+            lensConfidences(params, l);
+            Map<String, Map<String, Object>> lensed = new HashMap<>();
+            for (Map<String, Object> r : rows(ask(p, List.of("node-var-horizon"), params, Map.of("date", date.toString())), "node-var-horizon")) {
+                String id = String.valueOf(r.get("NODE_ID"));
+                Map<String, Object> base = byId.get(id);
+                if (base != null) {
+                    Map<String, Object> x = new HashMap<>(base);
+                    x.put("VAR", r.get("VAR"));
+                    x.put("ES", r.get("ES"));
+                    lensed.put(id, x);
+                }
+            }
+            byId = lensed;
         }
         com.ash.drishti.banking.compute.var.Cells.Names names = svc.loader().names(com.ash.drishti.api.AsOf.of(date), svc.hierarchies());
         List<Map<String, Object>> out = new ArrayList<>();
@@ -548,7 +579,7 @@ public class VarEnginePath {
             m.put("esExact", es);
             double limit = r.get("LIMIT") == null ? Double.NaN : ((Number) r.get("LIMIT")).doubleValue();
             boolean noLimit = Double.isNaN(limit);
-            boolean comparable = svc.loader().limitBasis(date, id).matches(svc.props().defaultLens());
+            boolean comparable = svc.loader().limitBasis(date, id).matches(l);
             m.put("limit", noLimit ? null : VarViews.round(limit));
             m.put("limitUse", noLimit || limit == 0 || !comparable ? null : var / limit);
             com.ash.drishti.banking.RiskLimits rl = limits.getIfAvailable();
@@ -578,6 +609,14 @@ public class VarEnginePath {
         t.put("title", svc.hierarchies().title(h));
         t.put("businessDate", date.toString());
         t.put("nodes", out);
+        Map<String, Object> ln = new LinkedHashMap<>();                 // the lens block, as the in-tree tree writes it
+        ln.put("horizon", l.horizon());
+        ln.put("method", l.methodName());
+        ln.put("label", l.label());
+        ln.put("confidence", l.confidence());
+        ln.put("esConfidence", l.esConfidence());
+        ln.put("set", l.set());
+        t.put("lens", ln);
         List<Map<String, Object>> ports = new ArrayList<>();
         svc.saved().system().portfolios(date, book.basketLimits).values().forEach(pf -> {
             Map<String, Object> x = new LinkedHashMap<>();

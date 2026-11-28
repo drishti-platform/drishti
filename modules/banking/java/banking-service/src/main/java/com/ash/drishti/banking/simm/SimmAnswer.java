@@ -272,12 +272,24 @@ final class SimmAnswer {
 
     /** The margin against the counterparty's call (mock-up C; SIMM.md section 9.4). */
     static Map<String, Object> against(SimmService.Run run, List<SimmData.Call> calls, double tolerance, boolean read) {
+        return against(run.scope(), run.version().version(), side(run.collect()), side(run.post()), calls, tolerance, read);
+    }
+
+    /** One direction's total and its risk class margins in the method's order (each product class's), what the comparison reads. */
+    record Side(double total, List<String> riskClasses, double[] ims) {}
+
+    private static Side side(Simm.Result r) {
+        return new Side(r.total(), r.classes().stream().map(Simm.ClassIm::riskClass).toList(), r.classes().stream().mapToDouble(Simm.ClassIm::im).toArray());
+    }
+
+    /** The comparison of a run's two directions (in-tree or the engine's, R2) with the counterparty's calls. */
+    static Map<String, Object> against(String scope, String version, Side collect, Side post, List<SimmData.Call> calls, double tolerance, boolean read) {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("nettingSet", run.scope());
-        m.put("version", run.version().version());
+        m.put("nettingSet", scope);
+        m.put("version", version);
         List<Map<String, Object>> rows = new ArrayList<>();
         for (String dir : List.of("COLLECT", "POST")) {
-            Simm.Result r = dir.equals("COLLECT") ? run.collect() : run.post();
+            Side r = dir.equals("COLLECT") ? collect : post;
             SimmData.Call call = calls.stream().filter(c -> c.direction().equals(dir)).findFirst().orElse(null);
             Map<String, Object> x = new LinkedHashMap<>();
             x.put("direction", dir.toLowerCase(Locale.ROOT));
@@ -290,7 +302,13 @@ final class SimmAnswer {
                     : Double.isFinite(tolerance) && Math.abs(d) <= tolerance ? "within tolerance" : "dispute");
             List<Map<String, Object>> byRc = new ArrayList<>();
             for (String rc : SimmParams.RISK_CLASSES) {
-                double ours = r.classes().stream().filter(c -> c.riskClass().equals(rc)).mapToDouble(Simm.ClassIm::im).sum();
+                java.util.stream.DoubleStream.Builder b = java.util.stream.DoubleStream.builder();
+                for (int i = 0; i < r.ims().length; i++) {
+                    if (r.riskClasses().get(i).equals(rc)) {
+                        b.add(r.ims()[i]);
+                    }
+                }
+                double ours = b.build().sum();
                 Double theirs = call == null ? null : call.byRiskClass().get(rc);
                 if (ours == 0 && theirs == null) {
                     continue;

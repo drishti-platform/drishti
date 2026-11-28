@@ -106,7 +106,7 @@ intended:
             "examples/packs/finance/sutras/credit/*",
             "examples/packs/finance/sutras/fx/*",
             "examples/packs/finance/sutras/rates/*",
-            "examples/packs/genomics/sutras/genomics-and-biology/*",
+            "examples/packs/genomics-fixture/sutras/genomics-and-biology/*",
             "examples/packs/logistics/sutras/*",
             "examples/packs/retail-banking/sutras/retail-banking/*",
             "kernel/drishti-api/src/main/java/com/ash/drishti/api/*",

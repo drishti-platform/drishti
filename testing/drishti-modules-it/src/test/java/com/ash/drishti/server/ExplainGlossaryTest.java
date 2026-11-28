@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.MockMvc;
         // the variant pages are the retired example genomics pack's (examples/packs, a fixture): the genomics module, which serves variant from its own
         // VCF reader, is switched off as a site that runs that pack would
         "drishti.modules.genomics.enabled=false",
-        "drishti.packs.enabled=market-risk,genomics,trading",
+        "drishti.packs.enabled=market-risk,genomics-fixture,trading",
         "drishti.security.enabled=true", "drishti.security.secret=test-secret-that-is-at-least-32-bytes-long",
         "drishti.security.redact=PNL,significance",
         "drishti.security.roles.masked.kinds[0]=*", "drishti.security.roles.masked.raw=false",

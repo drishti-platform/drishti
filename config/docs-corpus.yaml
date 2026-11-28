@@ -368,7 +368,7 @@ files:
   - {path: 'examples/packs/climate-risk/guides/climate-risk.md', class: delete, lane: C}
   - {path: 'examples/packs/finance/guides/getting-started.md', class: notdoc, lane: C}
   - {path: 'examples/packs/finance/guides/write-your-first-sutra.md', class: delete, lane: C}
-  - {path: 'examples/packs/genomics/guides/genomics.md', class: delete, lane: C}
+  - {path: 'examples/packs/genomics-fixture/guides/genomics.md', class: delete, lane: C}
   - {path: 'examples/packs/liquidity-risk/guides/liquidity-risk.md', class: delete, lane: C}
   - {path: 'examples/packs/logistics/guides/logistics.md', class: delete, lane: C}
   - {path: 'examples/packs/operational-risk/guides/operational-risk.md', class: delete, lane: C}

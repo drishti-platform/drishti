@@ -197,7 +197,7 @@ class RunTheGenerators(unittest.TestCase):
 
     def test_a_pack_generator_writes_jsonl_samples_and_sutra_cases(self):
         self.run_tool("tools/packgen/genomics/make.py", env={"DRISHTI_PACKS_OUT": str(self.d / "packs")})
-        pack = next(self.d.glob("packs/*/genomics"))             # written in its domain's folder, <out>/<domain>/genomics
+        pack = next(self.d.glob("packs/*/genomics-fixture"))             # written in its domain's folder, <out>/<domain>/genomics-fixture
         self.assert_jsonl(pack / "samples", 3)
         self.assertTrue((pack / "samples" / "catalog.jsonl").is_file())
         if (pack / "tests").is_dir():

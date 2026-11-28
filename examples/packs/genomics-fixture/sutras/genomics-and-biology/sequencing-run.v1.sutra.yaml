@@ -31,7 +31,7 @@ doc:
     - "SEQ SEQ-2026-0903-A"
   category: "Genomics and biology"
   tags: ["sequencing-run", "genomics-and-biology", "table"]
-  use-when: "You have one sequencing run (its id, or a link from another screen) and want to read it in full: An instrument run: yield, quality by cycle, and the samples it carried."
+  use-when: "You have one sequencing run (its id, or a link from another screen) and want to read it in full: an instrument run: yield, quality by cycle, and the samples it carried."
   avoid-when: "You want many records of this kind side by side: use the pack's list or the BI pivot; this page shows one."
   data:
     in-words: "One sequencing run record (kind sequencing-run); the page reads runId, instrument, flowcell, yieldGb, q30, clustersPf, status, qualityByCycle, samples."

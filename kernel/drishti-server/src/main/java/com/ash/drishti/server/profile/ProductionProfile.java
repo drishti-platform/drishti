@@ -122,6 +122,11 @@ public final class ProductionProfile {
         if (db.startsWith("jdbc:sqlite") && clustered(env)) {
             out.add("drishti.identity.database-url is SQLite but this server is a node of a cluster. Fix: point every node at one PostgreSQL identity database (db.identity.url)");
         }
+        String plain = plainNode(env);
+        if (plain != null && !"mesh".equals(env.getProperty("drishti.production.net-tls", "").strip().toLowerCase(Locale.ROOT))) {
+            out.add("this node advertises " + plain + " over plain HTTP: server-to-server calls and the shared net secret would travel unencrypted. Fix: advertise an https:// address "
+                    + "(advertise-url in node.yaml, with tls), or declare that a private mesh encrypts node traffic with drishti.production.net-tls=mesh (DRISHTI_PRODUCTION_NET_TLS=mesh)");
+        }
         String tls = env.getProperty("drishti.production.tls", "").strip().toLowerCase(Locale.ROOT);
         boolean ssl = bool(env, "server.ssl.enabled", false);
         if (!ssl && !tls.equals("proxy")) {
@@ -136,6 +141,26 @@ public final class ProductionProfile {
                 .append(refusals.size()).append(refusals.size() == 1 ? " setting is unsafe" : " settings are unsafe");
         refusals.forEach(r -> b.append("\n  - ").append(r));
         return b.toString();
+    }
+
+    /** The {@code http://} address a clustered node advertises (node.yaml {@code advertise-url}), or null when it is not clustered or advertises https. */
+    private static String plainNode(PropertyResolver env) {
+        String dir = env.getProperty("drishti.net.dir");
+        if (!clustered(env)) {
+            return null;
+        }
+        try {
+            for (String l : Files.readAllLines(Path.of(dir).resolve("node.yaml"))) {
+                String t = l.strip();
+                if (t.startsWith("advertise-url:")) {
+                    String v = t.substring("advertise-url:".length()).strip().replaceAll("^[\"']|[\"']$", "");
+                    return v.toLowerCase(Locale.ROOT).startsWith("http://") ? v : null;
+                }
+            }
+        } catch (java.io.IOException | RuntimeException e) {
+            return null;
+        }
+        return null;
     }
 
     private static boolean clustered(PropertyResolver env) {

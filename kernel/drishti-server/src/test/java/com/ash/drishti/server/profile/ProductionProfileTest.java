@@ -174,6 +174,19 @@ class ProductionProfileTest {
     }
 
     @Test
+    void aClusterNodeOnPlainHttpIsRefusedUnlessAMeshIsDeclared() throws IOException {
+        Path net = Files.createDirectories(dir.resolve("net"));
+        Files.writeString(net.resolve("node.yaml"), "enabled: true\nadvertise-url: http://10.0.0.5:18480\n");
+        assertOne(refusals(m -> m.put("drishti.net.dir", net.toString())), "plain HTTP");
+        assertEquals(List.of(), refusals(m -> {
+            m.put("drishti.net.dir", net.toString());
+            m.put("drishti.production.net-tls", "mesh");
+        }));
+        Files.writeString(net.resolve("node.yaml"), "enabled: true\nadvertise-url: https://node1.bank.internal:18480\n");
+        assertEquals(List.of(), refusals(m -> m.put("drishti.net.dir", net.toString())));
+    }
+
+    @Test
     void sqliteWithAClusterIsRefused() throws IOException {
         Path net = Files.createDirectories(dir.resolve("net"));
         Files.writeString(net.resolve("node.yaml"), "enabled: true\n");

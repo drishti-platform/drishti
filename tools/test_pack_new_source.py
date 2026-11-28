@@ -151,6 +151,11 @@ class ThePack(Fixture):
         self.assertEqual(m["mappings"], {"trade": "mappings/swapone-trade.yaml"})
         self.assertEqual(yaml.safe_load((pack / "dataload.yaml").read_text())["dataload"]["rules"][0],
                          {"match": "swapone-*.jsonl*", "pack": "swapone", "kind": "trade", "connector": "trade-swapone", "date-from": "name"})
+        (sec,) = m["sections"]                                           # the native-fields section of the trade page, for this system's rows
+        self.assertEqual((sec["kind"], sec["when"]), ("trade", "$.SOURCE_SYSTEM == 'SWAPONE'"))
+        doc = yaml.safe_load((pack / sec["file"]).read_text())
+        self.assertEqual(doc["match"], {"kind": "trade", "where": sec["when"]})
+        self.assertTrue(doc["panels"][0]["columns"])
         read = m["connectors"]["trade-swapone"]
         self.assertEqual(read["settings"]["where"], "SOURCE_SYSTEM = 'SWAPONE'")
         self.assertEqual(read["settings"]["set"], {"SOURCE_SYSTEM": "SWAPONE"})

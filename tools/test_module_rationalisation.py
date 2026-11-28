@@ -90,6 +90,17 @@ def test_a_source_pack_brings_its_connectors_map_rule_and_example_role(system):
     assert conn["settings"]["set"]["SOURCE_SYSTEM"] == system.upper() and conn["settings"]["map"] == "${pack.dir}/mappings/" + f"{system}-trade.yaml"
 
 
+@pytest.mark.parametrize("system", SOURCES)
+def test_a_source_pack_adds_its_native_fields_section_to_the_trade_page(system):
+    pack = ROOT / "modules" / "trading-systems" / "packs" / system
+    m = yaml.safe_load((pack / "pack.yaml").read_text(encoding="utf-8"))
+    (sec,) = m["sections"]
+    assert sec["kind"] == "trade" and sec["when"] == f"$.SOURCE_SYSTEM == '{system.upper()}'"
+    doc = yaml.safe_load((pack / sec["file"]).read_text(encoding="utf-8"))
+    assert sec["file"].endswith(".section.yaml") and doc["match"] == {"kind": "trade", "where": sec["when"]}
+    assert doc["panels"][0]["kind"] == "kv" and doc["panels"][0]["columns"]
+
+
 def test_the_distributions_name_the_new_modules_only():
     risk = yaml.safe_load((ROOT / "config" / "distributions" / "drishti.risk.yaml").read_text(encoding="utf-8"))
     ids = [m["id"] for m in risk["modules"]]

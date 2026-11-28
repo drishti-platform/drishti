@@ -2720,6 +2720,22 @@ folders with shipped names and no `replaces:`, so the shipped packs in the modul
 *not read: safe to delete* (never deleted). A site's own pack in such a folder has a name nothing ships and is read as before. A pack
 deployed over a shipped one in an earlier release is treated the same way: the shipped pack is read and the deployed one is listed.
 
+**Pack sections.** A pack may add a section to the record page of any kind, its own or another pack's: `sections:` in `pack.yaml`.
+
+```yaml
+sections:
+- kind: trade
+  when: "$.SOURCE_SYSTEM == 'ENDUR'"            # the rows it is shown for (a Rachana expression over the record)
+  file: sutras/endur-native-fields.v1.section.yaml
+```
+
+The `file` is a Rachana document in the pack's `sutras/` folder, named `<name>.v<N>.section.yaml`: the same shape as a Sutra (`match: {kind, where}`, `panels:`, and
+`use:` of fragments), whose panels are appended after the page's own, whether the page is a Sutra or inferred. Each panel is shown only for the records whose
+`match.where` holds (it is joined to the panel's own `when:`), so the layout stays one for every record of a shape; `when:` in `pack.yaml` states the same condition
+for the reader and the README. A section is not a Sutra: it is never matched to a record on its own, is not listed with the Sutras and carries no priority. It
+follows the pack's switch (Admin -> Artifacts): pack off, the section is gone from every page, with no other change. A source pack uses it for its native fields
+(`<system>-native-fields`: each native field under its own name, for that system's rows); `pack new --source-for` writes one. The pack's README lists its sections.
+
 ### 18.5 Connectors
 
 **The effective connector** is computed in memory:

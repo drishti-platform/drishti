@@ -1,0 +1,44 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The native-fields section of the SwapOne pack (docs/architecture/KERNEL_AND_MODULES.md, "Pack sections"): appended to the trade record page for
+# the rows whose SOURCE_SYSTEM is SWAPONE and for no others; the pack's switch is its switch (off: the section is gone). Each line is a native
+# field of the system (its own name) with the canonical field it feeds.
+rachana: 1.2
+sutra: swapone-native-fields
+version: 1
+description: "The SwapOne fields of a trade, under their SwapOne names."
+match: { kind: trade, where: "$.SOURCE_SYSTEM == 'SWAPONE'" }
+title: { pill: "SwapOne", id: $.TRADE_ID }
+panels:
+  - id: swapone-native-fields
+    kind: kv
+    title: "SwapOne native fields"
+    columns:
+      - { label: "SWAP_ID", bind: "nonblank($.TRADE_ID, '–')" }
+      - { label: "REVISION", bind: "nonblank($.TRADE_VERSION, '–')" }
+      - { label: "LIFECYCLE", bind: "nonblank($.TRADE_STATUS, '–')" }
+      - { label: "SWAP_FAMILY", bind: "nonblank($.PRODUCT_TYPE, '–')" }
+      - { label: "PAY_RECEIVE", bind: "nonblank($.BUY_SELL_CODE, '–')" }
+      - { label: "PAY_LEG.NOTIONAL", bind: "nonblank($.QUANTITY, '–')" }
+      - { label: "PAY_LEG.FIXED_RATE_PCT", bind: "nonblank($.PRICE, '–')" }
+      - { label: "PAY_LEG.CCY", bind: "nonblank($.CURRENCY, '–')" }
+      - { label: "COUNTERPARTY_ID", bind: "nonblank($.COUNTERPARTY, '–')" }
+      - { label: "LEGAL_ENTITY", bind: "nonblank($.LEGAL_ENTITY, '–')" }
+      - { label: "BOOK", bind: "nonblank($.PORTFOLIO, '–')" }
+      - { label: "USR", bind: "nonblank($.TRADER_ID, '–')" }
+      - { label: "TRADE_DT", bind: "nonblank($.TRADE_DATE, '–')" }
+      - { label: "EFFECTIVE_DT", bind: "nonblank($.START_DATE, '–')" }
+      - { label: "TERMINATION_DT", bind: "nonblank($.MATURITY_DATE, '–')" }
+      - { label: "UPD_TS", bind: "nonblank($.SOURCE_UPDATE_TIME, '–')" }

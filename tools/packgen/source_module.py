@@ -154,6 +154,15 @@ def base_domain(n: dict) -> str:
     return str((yaml.safe_load(f.read_text(encoding="utf-8")) or {}).get("domain") or n["pack"]) if f is not None and f.is_file() else n["pack"]
 
 
+def section_file(n: dict, m: dict) -> str:
+    """The pack's native-fields section of the kind's record page (pack.yaml sections:): each native field under its own name, shown for this system's rows only."""
+    where = f"$.SOURCE_SYSTEM == '{n['system']}'"
+    cols = "".join(f"      - {{ label: \"{r['from']}\", bind: \"nonblank($.{r['to']}, '–')\" }}\n" for r in m["fields"] if r.get("from"))
+    return (HEADER + f"rachana: 1.2\nsutra: {n['low']}-native-fields\nversion: 1\ndescription: \"The {n['system']} fields of a {n['kind']}, under their {n['system']} names.\"\n"
+            f"match: {{ kind: {n['kind']}, where: \"{where}\" }}\ntitle: {{ pill: \"{n['system']}\", id: $.{next(iter((n['contract'].get('key') or ['id'])), 'id')} }}\n"
+            f"panels:\n  - id: {n['low']}-native-fields\n    kind: kv\n    title: \"{n['system']} native fields\"\n    columns:\n{cols}")
+
+
 def write_pack(a, n: dict, m: dict, pack: pathlib.Path, say=print) -> dict:
     """The source pack, the shape of the six shipped ones (modules/trading-systems/packs/<system>/)."""
     if pack.exists():
@@ -167,9 +176,12 @@ def write_pack(a, n: dict, m: dict, pack: pathlib.Path, say=print) -> dict:
                 "description": a.description or f"{n['system']} as a source of the canonical {n['kind']}: its connector, its field map, its inbox rule",
                 "extends": [n["pack"]], "kinds": [], "connectors": conns, "dataload": "dataload.yaml",
                 "mappings": {n["kind"]: n["map"]},
+                "sections": [{"kind": n["kind"], "when": f"$.SOURCE_SYSTEM == '{n['system']}'", "file": f"sutras/{n['low']}-native-fields.v1.section.yaml"}],
                 "roles": {(f"trader-{n['low']}" if n["kind"] == "trade" else f"{n['kind']}-{n['low']}"): {"kinds": [n["kind"]], "edit": True, "rows": {n["kind"]: f"SOURCE_SYSTEM = '{n['system']}'"},
                                                        "edit-systems": [n["system"]]}}}
     write_yaml(pack / "pack.yaml", manifest)
+    (pack / "sutras").mkdir(parents=True, exist_ok=True)
+    (pack / "sutras" / f"{n['low']}-native-fields.v1.section.yaml").write_text(section_file(n, m), encoding="utf-8")
     write_yaml(pack / "config" / "about.yaml", {"about": 1, "intro": intro(a, n, m)})
     host = n.get("host")
     if host is not None and pack.resolve().parent.parent == host.resolve():

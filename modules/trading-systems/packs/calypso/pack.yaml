@@ -27,6 +27,10 @@ extends:
 - trading
 kinds: []
 sutras: sutras
+sections:                      # what the pack adds to another kind's record page (KERNEL_AND_MODULES.md, Pack sections)
+- kind: trade
+  when: "$.SOURCE_SYSTEM == 'CALYPSO'"
+  file: sutras/calypso-native-fields.v1.section.yaml
 connectors:
   trade-calypso:
     # Template of this pack (a site file of the same name in config/connectors/ is merged over it; a copy to start from: config/connectors/trade-calypso.yaml). Calypso's trades from the demo Delta lake: its own table trading.trade_calypso.

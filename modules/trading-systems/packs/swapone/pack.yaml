@@ -26,6 +26,10 @@ description: SwapOne OTC swaps, in the shared trades table (mocked data)
 extends:
 - trading
 kinds: []
+sections:                      # what the pack adds to another kind's record page (KERNEL_AND_MODULES.md, Pack sections)
+- kind: trade
+  when: "$.SOURCE_SYSTEM == 'SWAPONE'"
+  file: sutras/swapone-native-fields.v1.section.yaml
 connectors:
   trade-swapone:
     # Template of this pack (a site file of the same name in config/connectors/ is merged over it; a copy to start from: config/connectors/trade-swapone.yaml). SwapOne's trades from the demo Delta lake: its own table trading.trade_swapone (one table a trading system).

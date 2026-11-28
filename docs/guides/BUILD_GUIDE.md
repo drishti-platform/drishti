@@ -5151,9 +5151,10 @@ python3 tools/drishti.py pack new --source-for trade --system SWAPONE \
 
 ```text
 swapone/
-  pack.yaml                                extends trading; connectors: (inline), mappings:, dataload:, an example role
+  pack.yaml                                extends trading; connectors: (inline), mappings:, dataload:, sections:, an example role
   mappings/swapone-trade.yaml              the field map
   dataload.yaml                            the inbox rule
+  sutras/swapone-native-fields.v1.section.yaml   the native-fields section of the trade page (pack.yaml sections:), shown for SwapOne rows only
   config/about.yaml                        the README's intro
 ```
 
@@ -5178,6 +5179,8 @@ dataload:
       connector: source-swapone
       date-from: name
 ```
+
+The section is what a trader sees under the common trade page for a SwapOne trade: the SwapOne names (`SWAP_ID`, `PAY_LEG.NOTIONAL`, ...) next to their values; switch the pack off and it is gone. Edit the file to add panels (any Rachana panel, fragments included).
 
 Copy the `.dmod` into the server's modules folder and restart the server. You should see `source-swapone` listed as loaded on **Admin → Modules**.
 

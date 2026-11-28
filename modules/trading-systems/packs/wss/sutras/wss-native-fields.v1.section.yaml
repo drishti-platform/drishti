@@ -1,0 +1,45 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The native-fields section of the WSS pack (docs/architecture/KERNEL_AND_MODULES.md, "Pack sections"): appended to the trade record page for
+# the rows whose SOURCE_SYSTEM is WSS and for no others; the pack's switch is its switch (off: the section is gone). Each line is a native
+# field of the system (its own name) with the canonical field it feeds.
+rachana: 1.2
+sutra: wss-native-fields
+version: 1
+description: "The WSS fields of a trade, under their WSS names."
+match: { kind: trade, where: "$.SOURCE_SYSTEM == 'WSS'" }
+title: { pill: "WSS", id: $.TRADE_ID }
+panels:
+  - id: wss-native-fields
+    kind: kv
+    title: "WSS native fields"
+    columns:
+      - { label: "DEAL_REF", bind: "nonblank($.TRADE_ID, '–')" }
+      - { label: "DEAL_VERSION", bind: "nonblank($.TRADE_VERSION, '–')" }
+      - { label: "DEAL_STATE", bind: "nonblank($.TRADE_STATUS, '–')" }
+      - { label: "DEAL_TYPE", bind: "nonblank($.PRODUCT_TYPE, '–')" }
+      - { label: "FAMILY", bind: "nonblank($.PRODUCT_GROUP, '–')" }
+      - { label: "DIR", bind: "nonblank($.BUY_SELL_CODE, '–')" }
+      - { label: "BUY_AMT", bind: "nonblank($.QUANTITY, '–')" }
+      - { label: "RATE", bind: "nonblank($.PRICE, '–')" }
+      - { label: "BUY_CCY", bind: "nonblank($.CURRENCY, '–')" }
+      - { label: "CPTY.CODE", bind: "nonblank($.COUNTERPARTY, '–')" }
+      - { label: "LEGAL_ENTITY", bind: "nonblank($.LEGAL_ENTITY, '–')" }
+      - { label: "BOOK_REF", bind: "nonblank($.PORTFOLIO, '–')" }
+      - { label: "DEALER", bind: "nonblank($.TRADER_ID, '–')" }
+      - { label: "TRADED_ON", bind: "nonblank($.TRADE_DATE, '–')" }
+      - { label: "VALUE_DATE", bind: "nonblank($.START_DATE, '–')" }
+      - { label: "MATURITY_DATE", bind: "nonblank($.MATURITY_DATE, '–')" }
+      - { label: "LAST_UPD", bind: "nonblank($.SOURCE_UPDATE_TIME, '–')" }

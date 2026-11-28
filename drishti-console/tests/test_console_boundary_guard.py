@@ -61,20 +61,20 @@ ALLOWED: dict[tuple[str, str], tuple[int, str]] = {
     ("run_drishti_web.py", "up-default"): (1, "text of the pip command the console prints (the lock file's path), not a read"),
     ("core/module_parts.py", "server-path"): (4, "module.yaml of the console's OWN cache folder: the module's console part arrives from the server as a zip (GET /public/modules/console/<id>/<version>) and is unpacked there"),
     ("routes/pack_routes.py", "up-default"): (1, "builder.tools_dir: the Drishti Tools the Pack designer runs on the console host (a job in the console's own workspace; the result goes to the server by API)"),
+    ("core/lakes.py", "up-default"): (1, "builder.tools_dir: the install's tools/ the console runs for lake maintenance on its own host (the tables and figures come from the server's API)"),
+    ("core/lakes.py", "server-path"): (1, "names the tools' lake/<name>.py module the console imports to run lake maintenance, a tool of its own host, not a server folder"),
     ("routes/help_routes.py", "outside"): (1, "ROOT is the folder the Help pages' docs and the generated copies are read from (docs/ and the root READMEs the Help renders)"),
 }
 
 #: known violations: file -> what it reads and who fixes it. The list only shrinks; the lead schedules each (the lanes in flight own the files).
 PENDING: dict[str, str] = {
-    "core/lakes.py": "B4 table registry lane: reads <data>/delta lake folders (_delta_log) and the lake_roots to list tables, and writes uploads into them -> a server endpoint for the lake's tables and uploads",
-    "core/lake_maint.py": "B4 table registry lane: keeps <data>/lakes/lake-maintenance.yaml and its history in the server's data folder -> the server's maintenance API",
-    "routes/lake_routes.py": "B4 table registry lane: Admin -> Lakes table page reads <root>/_delta_log and <root>/_drishti-lake/runs/*.json of the server's lake",
+    "core/lake_maint.py": "i9: lake maintenance keeps <data>/lakes/lake-maintenance.yaml and its history in the server's data folder and runs the tools' lake maintain on the tables the server lists -> a server maintenance API (the tables, their figures, a table's page, the run logs and the upload are the server's endpoints since i8: /api/v1/admin/lakes/tables, tables/detail, runs, dataload/upload)",
 }
 
 #: settings defaults of config/application.yaml that name a folder beside the console, each fine: the docs the console renders
 YAML_UP_ALLOWED = {"help.docs_dir", "features.examples_dir", "builder.tools_dir"}
 YAML_UP_PENDING = {
-    "lakes.data_dir": "B4 table registry lane (see core/lakes.py)",
+    "lakes.data_dir": "i9: lake maintenance's own YAML and history folder (see core/lake_maint.py); goes with the server maintenance API",
     "packs.dir": "dead since the thin console: no console code reads packs.dir, installed_dir or extra_dirs (a pack's content comes from the server's answer); delete the three keys with their CONFIGURATION.md rows (B3 site-config lane owns that file)",
 }
 

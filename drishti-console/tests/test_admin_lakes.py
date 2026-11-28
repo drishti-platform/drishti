@@ -12,227 +12,119 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 
-"""Admin → Data loads → Lakes: upload (streamed to the temp folder), scan with suggestions, targets, a build through the CLI's
-engine (tools/lake/build.py, engine auto: the parallel Java loader of the exec jar, else deltalake) on a small synthetic file, then the connector bound and the load announced as the admin.
+"""Admin → Data loads → Lakes: the lakes and tables are the SERVER's answers (``/api/v1/admin/lakes/tables``, ``…/tables/detail``, ``…/runs``,
+``…/files``): the console opens no lake folder and no longer builds a lake itself (a file goes through the data inbox, Admin → Data loads →
+Upload). The console's own lake settings are lake maintenance's only.
 
     python -m pytest drishti-console/tests/test_admin_lakes.py -q
 """
-import importlib.util
-import json
-import time
 from pathlib import Path
 
 import pytest
 
-import yaml
-
-from core.lakes import Lakes, LakeSettings, connector_text
+from core.backend import BackendError
+from core.lakes import Lakes, LakeSettings, figure_of
 
 REPO = Path(__file__).resolve().parents[2]
-#: the writers lake build may choose (engine auto: java where the exec jar is, else drishti, else deltalake)
-ENGINES = ("java", "deltalake")
-needs_deltalake = pytest.mark.skipif(importlib.util.find_spec("deltalake") is None, reason="the build test needs deltalake and pyarrow")
-OCTET = {"Content-Type": "application/octet-stream"}
+
+TABLE = {"lake": "demo", "root": "/srv/lakes/demo", "name": "book.deal", "kind": "deal", "location": "/srv/lakes/demo/book/deal", "format": "delta",
+         "how": "configured", "domain": "book", "folder": "deal", "rows": 1200, "files": 6, "bytes": 3 << 20, "partitionBy": ["PRODUCT_TYPE"],
+         "partitions": 6, "dates": 2, "firstDate": "2026-10-01", "latestDate": "2026-10-02", "version": 3, "lastBuild": "2026-10-02 21:30:00Z"}
+DETAIL = {**TABLE, "partitionColumns": ["business_date", "PRODUCT_TYPE"], "idColumn": "id",
+          "byDate": [{"date": "2026-10-02", "rows": 600, "files": 3, "bytes": 1 << 20, "partitions": [["PRODUCT_TYPE=Swap", 300], ["PRODUCT_TYPE=Future", 300]]},
+                     {"date": "2026-10-01", "rows": 600, "files": 3, "bytes": 1 << 20, "partitions": []}],
+          "columns": [{"name": "id", "type": "string", "partition": False, "promoted": False}, {"name": "doc", "type": "string", "partition": False, "promoted": False},
+                      {"name": "NOTIONAL", "type": "double", "partition": False, "promoted": True},
+                      {"name": "business_date", "type": "date", "partition": True, "promoted": False}],
+          "loads": [{"run": "r1", "startedAt": "2026-10-02T21:30:00Z", "status": "done", "mode": "overwrite-dates", "dates": "2026-10-02", "rows": 600,
+                     "rejected": 0, "seconds": 2.5, "engine": "java", "error": None}]}
 
 
-def book(n=60, day=None):
-    """Deals of two trade dates (or, with ``day``, only that one's): the file of a business date is named by it (the load rules)."""
-    rows = [{"TRADE_ID": 500 + i, "TRADE_DATE": ["2026-10-01", "2026-10-02"][i % 2], "PRODUCT_TYPE": ["Swap", "Future", "Option"][(i // 2) % 3],
-             "NOTIONAL": 10.0 * i, "LEGS": [{"LEG_ID": 1, "CASH_FLOWS": [{"AMOUNT": i}]}]} for i in range(n)]
-    return [r for r in rows if day is None or r["TRADE_DATE"] == day]
+def fake(backend, monkeypatch, calls=None, tables=(TABLE,), detail=DETAIL, lake_files=None, connector=None):
+    async def admin(method, path, ident, body=None, timeout=None, headers=None, **params):
+        if calls is not None:
+            calls.append((method, path))
+        if path == "/status":
+            return {}
+        if path == "/lakes/tables":
+            return {"tables": list(tables)}
+        if path.startswith("/lakes/tables/detail"):
+            if detail is None or "name=book.deal" not in path:
+                raise BackendError(404, "DRS-1001", "no such table")
+            return detail
+        if path.startswith("/lakes/runs"):
+            return {"runs": [{"lake": "demo", "line": "2026-10-02T21:30:00Z lake-build done book/deal rows=600"}]}
+        if path == "/lakes/files":
+            return lake_files if lake_files is not None else {"dir": "/srv/config/lakes", "lakes": [
+                {"lake": "demo", "format": "delta", "root": "/srv/lakes/demo", "tables": [
+                    {"name": "book.deal", "kind": "deal", "location": "/srv/lakes/demo/book/deal", "format": "delta", "contract": "deal@1", "how": "configured",
+                     "partition-columns": ["PRODUCT_TYPE"], "promote": ["NOTIONAL"], "vectors": [], "id": "TRADE_ID", "load-mode": "replace-date"}]}]}
+        if path == "/connectors" and method == "GET":
+            return {"connectors": [{"name": "book-store", "plugin": "delta", "state": "RUNNING"}]}
+        if path == "/connectors/book-store" and method == "GET":
+            return connector or {"settings": {"lake": "demo", "lake-tables": "book.deal"}, "kinds": ["deal"]}
+        return {}
+    monkeypatch.setattr(backend, "admin", admin)
 
 
 @pytest.fixture
 def lakes(client, tmp_path):
-    lk = Lakes(LakeSettings(roots=[tmp_path / "lake"], tools_dir=REPO / "tools"))          # engine auto: the Java loader where the jar is
+    lk = Lakes(LakeSettings(roots=[], tools_dir=tmp_path / "no-tools"))          # a console without the tools: no maintenance, the pages still answer
     client.app.state.lakes = lk
     yield lk
     del client.app.state.lakes
 
 
-def fake(backend, monkeypatch, calls, connector=None):
-    async def admin(method, path, ident, body=None, timeout=None, headers=None, **params):
-        calls.append((method, path, body, headers, params))
-        if path == "/status":
-            return {}
-        if path == "/connectors" and method == "GET":
-            return {"connectors": [{"name": "book-store", "plugin": "delta", "kinds": ["deal"], "state": "RUNNING", "origin": "pack",
-                                    "usedBy": [{"pack": "synth-book", "kinds": ["deal"]}]},
-                                   {"name": "quotes", "plugin": "file", "kinds": ["quote"], "usedBy": []}]}
-        if path == "/connectors/book-store" and method == "GET":
-            return connector or {"text": None, "packDefault": "plugin: delta\nkinds: [deal]\nsettings:\n  root: x\n  domain: book\n", "etag": None}
-        return {}
-
-    async def announce_load(pack, body, ident):
-        calls.append(("ANNOUNCE", pack, body, None, {}))
-        return {"verified": "verified"}
-    monkeypatch.setattr(backend, "admin", admin)
-    monkeypatch.setattr(backend, "announce_load", announce_load, raising=False)
-
-
-def upload(client, docs, name="book.json"):
-    r = client.post(f"/admin/api/lakes/upload?name={name}", content=json.dumps(docs, indent=1).encode(), headers=OCTET)
-    assert r.status_code == 200, r.text
-    return r.json()
-
-
-def test_the_page_and_the_data_loads_link(client, backend, monkeypatch, lakes):
-    fake(backend, monkeypatch, [])
-    page = client.get("/admin/lakes").text
-    for text in ("Load a file into a lake", "drishti_admin-lakes.js", "drishti_admin-lakes.css", "data-file", "Id field", "Business date",
-                 "Replace those dates", "Bind the lake to the pack", "Recent builds", 'aria-live="polite"', str(lakes.cfg.roots[0])):
-        assert text in page, text
+def test_the_page_lists_the_servers_tables_with_their_figures_and_points_to_the_upload(client, backend, monkeypatch, lakes):
+    calls = []
+    fake(backend, monkeypatch, calls)
+    page = client.get("/admin/lakes")
+    assert page.status_code == 200
+    t = page.text
+    for text in ("book.deal", "1,200", "2026-10-02", "2026-10-02 21:30:00Z", "lake-build done book/deal", "/admin/loads/upload", "Recent builds"):
+        assert text in t, text
+    assert "/admin/lakes/table?lake=demo&amp;table=book.deal" in t                       # the table's own page, by its symbolic name
+    for gone in ("data-file", "Id field", "drishti_admin-lakes.js", "Bind the lake to the pack", "data-maint"):
+        assert gone not in t, gone                                                       # no build wizard, no maintenance without tools
+    assert {c[1] for c in calls} >= {"/lakes/tables", "/lakes/files"}
     assert 'href="/admin/lakes"' in client.get("/admin/loads").text
 
 
-def test_a_console_not_on_the_servers_machine_says_where_the_lakes_pages_run(client, backend, monkeypatch, tmp_path):
-    """No lake engine beside the console (a console that holds only its own folder, THIN_CONSOLE_DESIGN.md Q7): both pages answer, say that
-    the build, maintenance and a table's detail run on a console on the server's machine, offer no form, and still show the server's own
-    read-only answer of its lake files."""
-    calls = []
-    fake(backend, monkeypatch, calls)
-    client.app.state.lakes = Lakes(LakeSettings(roots=[tmp_path / "lake"], tools_dir=tmp_path / "no-tools"))
-    try:
-        page = client.get("/admin/lakes")
-        assert page.status_code == 200 and "data-lakes-elsewhere" in page.text and "on the server's machine" in page.text
-        assert "data-file" not in page.text and "drishti_admin-lakes.js" not in page.text and "Recent builds" not in page.text
-        assert any(c[1] == "/lakes/files" for c in calls)                                 # the server's answer, read-only
-        table = client.get("/admin/lakes/table", params={"root": str(tmp_path / "lake"), "table": "book/deal"})
-        assert table.status_code == 200 and "data-lakes-elsewhere" in table.text
-    finally:
-        del client.app.state.lakes
+def test_a_table_the_server_cannot_read_says_why_beside_its_name(client, backend, monkeypatch, lakes):
+    fake(backend, monkeypatch, tables=({**TABLE, "rows": None, "error": "the table is not on this server's local disk"},))
+    assert "not on this server" in client.get("/admin/lakes").text
 
 
-def test_upload_scan_and_targets(client, backend, monkeypatch, lakes):
-    fake(backend, monkeypatch, [])
-    u = upload(client, book())
-    assert u["size"] > 0 and u["name"] == "book.json" and u["nameDate"] is None and u["businessToday"]   # no date in the name: today
-    assert upload(client, book(4), "book.2026-10-01.json")["nameDate"] == "2026-10-01"
-    s = client.post(f"/admin/api/lakes/uploads/{u['id']}/scan").json()
-    assert s["documents"] == 60
-    assert s["suggest"]["key"][0] == "TRADE_ID" and s["suggest"]["date"][0] == "TRADE_DATE" and "PRODUCT_TYPE" in s["suggest"]["partitionBy"]
-    t = client.get("/admin/api/lakes/targets").json()
-    assert t["roots"] == [str(lakes.cfg.roots[0])] and t["tables"] == []
-    assert t["connectors"] == [{"name": "book-store", "kinds": ["deal"], "state": "RUNNING", "origin": "pack", "packs": ["synth-book"]}]
-
-
-def test_refusals(client, backend, monkeypatch, lakes):
-    fake(backend, monkeypatch, [])
-    assert client.post("/admin/api/lakes/upload?name=a.json", content=b"[]", headers={"Content-Type": "text/plain"}).status_code == 415
-    assert client.post("/admin/api/lakes/upload?name=a.csv", content=b"a,b", headers=OCTET).status_code == 415
-    assert client.post("/admin/api/lakes/upload?name=a.json", content=b"", headers=OCTET).status_code == 400
-    lakes.cfg.max_upload_mb = 0
-    assert client.post("/admin/api/lakes/upload?name=a.json", content=b"[{}]", headers=OCTET).status_code == 413
-    lakes.cfg.max_upload_mb = 10
-    u = upload(client, book(4))
-    base = {"upload": u["id"], "root": str(lakes.cfg.roots[0]), "domain": "book", "kind": "deal", "key": "TRADE_ID"}
-    for bad, why in (({"root": "/etc"}, "lake roots"), ({"domain": "../x"}, "short name"), ({"date": "TRADE_DATE"}, "never a field"),
-                     ({"asOf": "01/10/2026"}, "yyyy-MM-dd"),
-                     ({"partitionBy": ["a", "b", "c", "d", "e"]}, "at most 4"), ({"bind": True}, "pack"), ({"upload": "nope"}, "no such upload")):
-        r = client.post("/admin/api/lakes/jobs", json={**base, **bad})
-        assert r.status_code in (400, 404) and why in r.json()["detail"], (bad, r.text)
-
-
-def test_connector_text_binds_the_lake_and_keeps_the_rest():
-    text = connector_text("plugin: delta\ndescription: the book\nkinds: [trade]\nsettings:\n  root: /old\n  domain: old\n  cache-mb: 64\n",
-                          Path("/srv/lake"), "book", "deal", {"promoted": {"NOTIONAL": "double", "BOOK__NAME": "string"}})
-    d = yaml.safe_load(text)
-    assert d["kinds"] == ["trade", "deal"] and d["description"] == "the book"
-    assert d["settings"] == {"root": "/srv/lake", "domain": "book", "cache-mb": 64, "layout": {"deal": {"columns": ["NOTIONAL", "BOOK.NAME"]}}}
-
-
-@needs_deltalake
-def test_a_build_binds_the_connector_and_announces_each_date(client, backend, monkeypatch, lakes):
-    calls = []
-    fake(backend, monkeypatch, calls)
-    u = upload(client, book(day="2026-10-01") + [{"TRADE_DATE": "2026-10-01"}], "book.2026-10-01.json")    # the date from the name
-    body = {"upload": u["id"], "root": str(lakes.cfg.roots[0]), "domain": "book", "kind": "deal", "key": "TRADE_ID",
-            "partitionBy": ["PRODUCT_TYPE"], "promote": ["NOTIONAL"], "mode": "overwrite-dates", "pack": "synth-book", "connector": "book-store",
-            "bind": True, "signal": True}
-    r = client.post("/admin/api/lakes/jobs", json=body)
-    assert r.status_code == 202, r.text
-    jid = r.json()["id"]
-    deadline = time.time() + 120
-    while True:
-        j = client.get(f"/admin/api/lakes/jobs/{jid}").json()
-        if j["state"] != "running" or time.time() > deadline:
-            break
-        time.sleep(0.3)
-    assert j["state"] == "done", j
-    s = j["summary"]
-    assert (s["status"], s["accepted"], s["rejected"]) == ("partial", 30, 1) and s["engine"] in ENGINES, s
-    assert s["rows"] == {"2026-10-01": 30} and s["sampleId"] and s["kind"] == "deal"
-    assert (lakes.cfg.roots[0] / "book" / "deal" / "business_date=2026-10-01" / "PRODUCT_TYPE=Swap").is_dir()
-    put = [c for c in calls if c[0] == "PUT" and c[1] == "/connectors/book-store"]
-    assert len(put) == 1 and put[0][4] == {"confirm": "true"}
-    bound = yaml.safe_load(put[0][2]["text"])
-    assert bound["settings"]["root"] == str(lakes.cfg.roots[0]) and bound["settings"]["domain"] == "book" and bound["kinds"] == ["deal"]
-    assert bound["settings"]["layout"] == {"deal": {"columns": ["NOTIONAL"]}}
-    assert j["bind"]["ok"] and j["bind"]["created"]
-    sent = sorted(c[2]["businessDate"] for c in calls if c[0] == "ANNOUNCE")
-    assert sent == ["2026-10-01"] and all(x["ok"] for x in j["signal"])
-    # another file, its date given (as of): the name's date is overridden
-    u2 = upload(client, book(day="2026-10-02"), "book.2026-09-30.json")
-    r = client.post("/admin/api/lakes/jobs", json={**body, "upload": u2["id"], "asOf": "2026-10-02", "bind": False, "signal": False})
-    assert r.status_code == 202, r.text
-    jid, deadline = r.json()["id"], time.time() + 120
-    while (j := client.get(f"/admin/api/lakes/jobs/{jid}").json())["state"] == "running" and time.time() < deadline:
-        time.sleep(0.3)
-    assert j["summary"]["rows"] == {"2026-10-02": 30}, j
-    assert "lake-build partial" in client.get("/admin/lakes").text          # the run log is listed
-    t = client.get("/admin/api/lakes/targets").json()
-    assert t["tables"] == [{"root": str(lakes.cfg.roots[0]), "domain": "book", "kind": "deal", "partitionBy": ["PRODUCT_TYPE"], "promoted": ["NOTIONAL"]}]
-
-
-def test_a_table_opens_its_own_page_with_dates_columns_commits_loads_and_readers(client, backend, monkeypatch, lakes, tmp_path):
-    import json as _json
-    import subprocess
-    import sys as _sys
-    src = tmp_path / "deals"                                  # one file a business date, named by it (the load rules)
-    src.mkdir()
-    for day in ("2026-10-01", "2026-10-02"):
-        (src / f"deal.{day}.jsonl").write_text("\n".join(_json.dumps(d) for d in book(day=day)), encoding="utf-8")
-    root = lakes.cfg.roots[0]
-    r = subprocess.run([_sys.executable, str(REPO / "tools" / "drishti.py"), "lake", "build", "--from", str(src), "--lake", str(root),
-                        "--domain", "book", "--kind", "deal", "--key", "TRADE_ID", "--mode", "overwrite-dates", "--partition-by", "PRODUCT_TYPE",
-                        "--promote", "NOTIONAL", "-q"], capture_output=True, text=True)
-    assert r.returncode == 0, r.stdout + r.stderr
-    calls = []
-    fake(backend, monkeypatch, calls, connector={"settings": {"domain": "book", "root": "x"}, "kinds": ["deal"]})
-    lists = client.get("/admin/lakes").text
-    i = lists.find("book/deal")
-    assert "/admin/lakes/table?root=" in lists, lists[i - 400:i + 200] if i >= 0 else "no book/deal on the page"
-    assert "/admin/lakes/table?root=" in lists and "table=book/deal" in lists
-    page = client.get("/admin/lakes/table", params={"root": str(root), "table": "book/deal"})
+def test_a_table_opens_its_own_page_with_dates_columns_loads_and_readers(client, backend, monkeypatch, lakes):
+    fake(backend, monkeypatch)
+    page = client.get("/admin/lakes/table", params={"lake": "demo", "table": "book.deal"})
     assert page.status_code == 200
     t = page.text
-    assert "2026-10-01" in t and "2026-10-02" in t and "data-lt-dates" in t          # each business date, newest first
     dates = t[t.index("data-lt-dates"):]
-    assert dates.index("2026-10-02") < dates.index("2026-10-01")
-    assert ">NOTIONAL<" in t and "promoted field" in t and "the whole document" in t  # columns and their roles
-    assert "data-lt-commits" in t and ("WRITE" in t or "CREATE TABLE" in t)                                   # the log's commits
-    assert "data-lt-loads" in t and any(e in t for e in ENGINES)                     # lake build's own record of the load (its engine)
-    assert 'href="/admin/connectors/book-store"' in t                                # the connector that reads it
-    for bad in ({"root": "/etc", "table": "book/deal"}, {"root": str(root), "table": "../x"}, {"root": str(root), "table": "book/nothing"}):
-        assert client.get("/admin/lakes/table", params=bad).status_code == 404
+    assert dates.index("2026-10-02") < dates.index("2026-10-01")                         # each business date, newest first
+    assert ">NOTIONAL<" in t and "promoted field" in t and "the whole document" in t    # columns and their roles
+    assert "data-lt-loads" in t and "java" in t                                         # lake build's record of the load
+    assert 'href="/admin/connectors/book-store"' in t                                   # the connector that names this table
+    assert "/srv/lakes/demo/book/deal" in t
+    assert client.get("/admin/lakes/table", params={"lake": "demo", "table": "book.nothing"}).status_code == 404
 
 
-def test_the_lake_root_defaults_to_the_data_folder_as_the_server():
+def test_the_old_build_routes_are_gone(client, backend, monkeypatch, lakes):
+    fake(backend, monkeypatch)
+    for method, path in (("post", "/admin/api/lakes/upload"), ("get", "/admin/api/lakes/targets"), ("post", "/admin/api/lakes/jobs")):
+        assert getattr(client, method)(path).status_code in (404, 405), path
+
+
+def test_figure_of_names_the_table_by_its_folder_and_derives_the_root():
+    f = figure_of(TABLE)
+    assert (f["table"], f["root"], f["size"]) == ("book/deal", "/srv/lakes/demo", "3.0 MB")
+    assert "table" not in figure_of({**TABLE, "location": "s3://bucket/deal", "folder": None, "domain": None})      # an object store: no folder table
+
+
+def test_the_settings_are_lake_maintenances_only(tmp_path):
     s = LakeSettings.from_settings({"lakes.data_dir": "/srv/drishti-data"}, REPO / "drishti-console")
-    assert s.roots == [Path("/srv/drishti-data/delta/demo")]               # every lake's own folder, the demo lake's first
-    assert s.lakes_parent == Path("/srv/drishti-data/delta")
-    s = LakeSettings.from_settings({"lakes.data_dir": "/srv/drishti-data", "lakes.roots": "/a,/b"}, REPO / "drishti-console")
-    assert s.roots == [Path("/a"), Path("/b")]
+    assert s.roots == [] and s.lake_roots() == [] and s.data_dir == Path("/srv/drishti-data")       # nothing is found by walking a folder
+    s = LakeSettings.from_settings({"lakes.roots": "/a,/b"}, REPO / "drishti-console")
     assert s.lake_roots() == [Path("/a"), Path("/b")]
-
-
-def test_the_lakes_are_found_in_their_own_folders_at_every_ask(tmp_path):
-    s = LakeSettings.from_settings({"lakes.data_dir": str(tmp_path)}, REPO / "drishti-console")
-    delta = tmp_path / "delta"
-    (delta / "demo" / "trading" / "trade_endur" / "_delta_log").mkdir(parents=True)
-    assert s.lake_roots() == [delta / "demo"]
-    (delta / "risklake" / "risk" / "scenario-pv" / "_delta_log").mkdir(parents=True)        # a lake the data inbox made later
-    (delta / "_drishti-lake").mkdir()
-    assert s.lake_roots() == [delta / "demo", delta / "risklake"]
-    (delta / "risk-results" / "var-official" / "_delta_log").mkdir(parents=True)            # tables directly in delta/: the root too
-    assert s.lake_roots() == [delta / "demo", delta, delta / "risklake"]
+    s.seen.append(Path("/c"))
+    assert s.lake_roots() == [Path("/a"), Path("/b"), Path("/c")]

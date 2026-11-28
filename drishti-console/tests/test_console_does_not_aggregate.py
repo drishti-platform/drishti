@@ -67,7 +67,6 @@ KNOWN = {
     'core/bi_usage.py: total = sum(x["questions"] for x in models)': "OWN: BI usage counts",
     'core/bi_usage.py: cached = sum(x["cached"] for x in models)': "OWN: BI usage counts",
     'core/bi_usage.py: "total": total, "sql": sum(x["sql"] for x in models), "hitRate": round': "OWN: BI usage counts",
-    'routes/lake_routes.py: "rows": sum(rows.values()) if isinstance(rows, dict) else rows, "rejec': "OWN: rows loaded into a lake",
     'core/schemakit/plan.py: c.ann["items"] = {"min": min(lists), "max": max(lists), "avg": round(s': "OWN: list lengths in a pack's sample",
     "core/schemakit/anonymise.py: if len(counts) <= VOCAB_MAX and sum(counts.values()) >= 2 * len(counts":
         "OWN: how often a sample's words repeat (anonymising)",

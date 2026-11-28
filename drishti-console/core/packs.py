@@ -114,6 +114,8 @@ class Packs:
                                 "grants": [str(x) for x in (answer or {}).get("grants") or []],
                                 "admin-pages": [str(x) for x in (answer or {}).get("admin-pages") or []],
                                 "modules": mods if isinstance(mods, dict) else None}
+        if isinstance((answer or {}).get("packs"), list):         # the packs the server has switched ON (it lists no pack that is off), assigned to the person or not
+            self._decisions[key]["enabled-packs"] = [str(r["name"]) for r in answer["packs"] if isinstance(r, dict) and r.get("name")]
         rows = [r for r in (answer or {}).get("packs") or [] if isinstance(r, dict) and r.get("name")]
         made = [await self._pack(backend, ident, r) for r in rows]
         packs = [p for p, r in zip(made, rows) if r.get("active", True)]

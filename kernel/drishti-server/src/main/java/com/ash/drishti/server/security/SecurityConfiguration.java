@@ -119,12 +119,14 @@ public class SecurityConfiguration {
     @Bean
     public PackAccess packAccess(com.ash.drishti.packs.PackRegistry registry, com.ash.drishti.identity.UserService users,
             com.ash.drishti.identity.PreferenceStore prefs, org.springframework.core.env.Environment env,
-            com.ash.drishti.identity.PackStateStore states, com.ash.drishti.packs.SamplePolicy samples, RoleCatalog roles, SecurityProperties props) {
+            com.ash.drishti.identity.PackStateStore states, com.ash.drishti.packs.SamplePolicy samples, RoleCatalog roles, SecurityProperties props,
+            org.springframework.beans.factory.ObjectProvider<com.ash.drishti.rachana.SutraRegistry> sutras) {
         String defaults = env.getProperty("drishti.packs.default-for-users", "");
         PackAccess access = new PackAccess(registry, users, prefs, java.util.Arrays.stream(defaults.split(",")).map(String::trim)
                 .filter(s -> !s.isEmpty()).toList(), states);
         // a developer has the author or admin power; with security off everyone does
         access.samples(samples, user -> !props.enabled() || developer(user, users, roles));
+        sutras.ifAvailable(r -> r.packSwitch(access::isEnabled));       // a Sutra follows its pack's switch (docs/plans/MODULE_RATIONALISATION.md, G4)
         return access;
     }
 

@@ -23,31 +23,28 @@
 <div class="adm lt" data-lake-table-page>
   {% with tab='lakes' %}{% include "admin/_nav.html" %}{% endwith %}
   <p class="lk-crumb"><a href="{{ BASE }}/admin/loads">Data loads</a> <span aria-hidden="true">›</span> <a href="{{ BASE }}/admin/lakes">Lakes</a> <span aria-hidden="true">›</span> <span class="mono">{{ table }}</span></p>
-  {% if elsewhere %}
-  <h1 class="ws-h mono">{{ table or 'Lakes' }}</h1>
-  {% include "admin/_lakes_elsewhere.html" %}
-  {% elif not t %}
+  {% if not t %}
   <h1 class="ws-h mono">{{ table }}</h1>
-  <p class="hl-err" role="alert">No Delta table <span class="mono">{{ table }}</span> under the lake root <span class="mono">{{ root }}</span>.
+  <p class="hl-err" role="alert">The server has no table <span class="mono">{{ table }}</span> in lake <span class="mono">{{ lake }}</span> (its lake file in <span class="mono">config/lakes/</span>).
     <a href="{{ BASE }}/admin/lakes">Back to the lakes</a>.</p>
   {% elif t.error %}
-  <h1 class="ws-h mono">{{ t.table }}</h1>
+  <h1 class="ws-h mono">{{ t.name }}</h1>
   <p class="hl-err" role="alert">This table cannot be read: {{ t.error }}</p>
   {% else %}
-  <h1 class="ws-h mono">{{ t.table }}</h1>
-  <p class="text-muted-d mono lt-path">{{ t.path }}</p>
+  <h1 class="ws-h mono">{{ t.name }}</h1>
+  <p class="text-muted-d mono lt-path">{{ t.location }} · lake {{ t.lake }} · {{ t.format }} · {{ t.how }}</p>
   <div class="lt-stats">
     <div><b class="mono">{{ '{:,}'.format(t.rows or 0) }}</b><span>rows</span></div>
     <div><b class="mono">{{ t.dates }}</b><span>business dates{% if t.firstDate %}, {{ t.firstDate }} to {{ t.latestDate }}{% endif %}</span></div>
     <div><b class="mono">{{ '{:,}'.format(t.files or 0) }}</b><span>files, {{ t.size }}</span></div>
     <div><b class="mono">{{ t.version }}</b><span>table version, last commit {{ t.lastBuild }}</span></div>
-    <div><b class="mono">{{ t.partitionColumns | join(', ') or 'none' }}</b><span>partitioned by</span></div>
+    <div><b class="mono">{{ (t.partitionColumns or []) | join(', ') or 'none' }}</b><span>partitioned by</span></div>
   </div>
 
   <h2 class="ws-h">Read by</h2>
   {% if readers %}<ul class="lt-readers">{% for r in readers %}<li><a class="mono" href="{{ BASE }}/admin/connectors/{{ r.name | urlencode }}">{{ r.name }}</a>
     <span class="text-muted-d">kind <span class="mono">{{ r.kind }}</span> · {{ r.state }}{% if r.health %} · {{ r.health }}{% endif %}</span></li>{% endfor %}</ul>
-  {% else %}<p class="text-muted-d">No Delta connector reads this table (none has domain <span class="mono">{{ t.domain }}</span> and a kind whose table is <span class="mono">{{ t.kind }}</span>).</p>{% endif %}
+  {% else %}<p class="text-muted-d">No Delta connector reads this table (none names lake <span class="mono">{{ t.lake }}</span> or this table's folder).</p>{% endif %}
 
   <h2 class="ws-h">Business dates <small class="text-muted-d">({{ t.byDate | length }}, newest first)</small></h2>
   {% set maxr = (t.byDate | map(attribute='rows') | max) or 1 %}
@@ -67,16 +64,7 @@
   <div class="tbl-wrap"><table class="tbl" data-lt-columns>
     <thead><tr><th scope="col">Column</th><th scope="col">Type</th><th scope="col">Role</th></tr></thead>
     <tbody>{% for c in t.columns %}<tr><td class="mono">{{ c.name }}</td><td class="mono">{{ c.type }}</td>
-      <td>{% if c.partition %}partition{% elif c.name == 'doc' %}the whole document{% elif c.name == 'id' %}the entity's id{% else %}promoted field{% endif %}{% if not c.nullable %} · always set{% endif %}</td></tr>{% endfor %}</tbody>
-  </table></div>
-
-  <h2 class="ws-h">Commits <small class="text-muted-d">(newest {{ t.history | length }})</small></h2>
-  <div class="tbl-wrap"><table class="tbl" data-lt-commits>
-    <thead><tr><th scope="col" class="num">Version</th><th scope="col">When</th><th scope="col">Operation</th><th scope="col">Parameters</th><th scope="col">Metrics</th><th scope="col">Writer</th></tr></thead>
-    <tbody>{% for h in t.history %}<tr><td class="num mono">{{ h.version }}</td><td class="mono">{{ h.when }}</td><td>{{ h.operation or '' }}</td>
-      <td class="mono lt-kv">{% for k, v in h.parameters.items() %}{{ k }}={{ v | string | truncate(80) }}{{ '; ' if not loop.last }}{% endfor %}</td>
-      <td class="mono lt-kv">{% for k, v in h.metrics.items() if v not in (0, '0', None) %}{{ k }}={{ v }}{{ '; ' if not loop.last }}{% endfor %}</td>
-      <td class="mono">{{ h.engine or '' }}</td></tr>{% endfor %}</tbody>
+      <td>{% if c.partition %}partition{% elif c.name == 'doc' %}the whole document{% elif c.name == 'id' %}the entity's id{% else %}promoted field{% endif %}</td></tr>{% endfor %}</tbody>
   </table></div>
 
   <h2 class="ws-h">Loads <small class="text-muted-d">(by lake build, newest first)</small></h2>
@@ -99,10 +87,9 @@
 
   <h2 class="ws-h">Table</h2>
   <dl class="lt-dl">
-    <dt>Table id</dt><dd class="mono">{{ t.tableId or '' }}</dd>
-    <dt>Created</dt><dd class="mono">{{ t.created or '' }}</dd>
-    <dt>Protocol</dt><dd class="mono">reader {{ t.protocol.minReaderVersion }}, writer {{ t.protocol.minWriterVersion }}</dd>
-    {% for k, v in t.properties.items() %}<dt class="mono">{{ k }}</dt><dd class="mono lt-kv">{{ v }}</dd>{% endfor %}
+    <dt>Symbolic name</dt><dd class="mono">{{ t.name }}</dd>
+    <dt>Id column</dt><dd class="mono">{{ t.idColumn or '' }}</dd>
+    <dt>Resolved by</dt><dd class="mono">{{ t.how }}</dd>
   </dl>
   {% endif %}
 </div>

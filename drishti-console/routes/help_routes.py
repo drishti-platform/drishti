@@ -70,7 +70,16 @@ def visible(request, guide) -> bool:
     (help.yaml; ``roles: [admin]`` for an internal page such as the competitive analysis) and its engine runs in the cluster (help.yaml
     ``engine:``). Help is documentation, not data: a running engine's pages are open to anyone who can open Help, whatever the Engines
     menu's ``opens:`` say. A guide they may not see is not listed, not found by search and not reached by its address (404)."""
-    return guide.permits(_me(request)) and shown(_edition(request), guide) and _engine_on(guide) and _module_on(guide)
+    return guide.permits(_me(request)) and shown(_edition(request), guide) and _engine_on(guide) and _module_on(guide) and _packs_on(request, guide)
+
+
+def _packs_on(request, guide) -> bool:
+    """A page that names its pack (help.yaml ``pack:``) follows that pack's switch: it is shown only while the pack is on on the server
+    (Admin → Artifacts; the server's answer to the person lists no pack that is off). Before the server has answered, nothing is hidden."""
+    if not guide.pack:
+        return True
+    on = (getattr(request.state, "person", None) or {}).get("enabled-packs")
+    return on is None or guide.pack in on
 
 
 def _module_on(guide) -> bool:

@@ -572,6 +572,10 @@ def render_pack(pack_dir: Path, generator: str | None = None, files: dict | None
         out += ["Examples:", ""] + _table(["Type", "Shows"], [[f"`{e[0]}`", e[1] if len(e) > 1 else ""] for e in ex if e])
     if sutras:
         out += ["Screens (Sutras):", ""] + _table(["Sutra", "Kind", "What it shows"], [[f"`{s['sutra']}`", f"`{s['kind']}`", _first_sentence(s["description"])] for s in sutras])
+    secs = [x for x in (m.get("sections") or []) if isinstance(x, dict)]
+    if secs:                                               # what the pack adds to another kind's record page (pack.yaml sections:)
+        out += ["Sections it adds to other pages (shown only for the rows named, and only while the pack is on):", ""] + _table(
+            ["Kind", "Shown when", "Section"], [[f"`{x.get('kind')}`", f"`{x.get('when', 'always')}`", f"`{x.get('file')}`"] for x in secs])
     # -- sources
     out += ["## Data sources and licences", ""]
     if isec.get("Data sources and licences"):

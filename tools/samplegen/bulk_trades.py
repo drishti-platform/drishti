@@ -31,7 +31,7 @@ python3 tools/packgen/banking/make_data.py --lake data/delta/demo (needs deltala
 writes loader rows instead ({"domain", "kind", "id", "date", "doc", "columns"}: the document and the fields the trading
 pack promotes, by path), for python tools/drishti.py data load --store aerospike and the other stores' loaders.
 
-The trades are the system's sample trades (modules/banking/packs/trading/samples/trade.jsonl, written by make_data.py, in the common
+The trades are the system's sample trades (modules/trading-systems/packs/trading/samples/trade.jsonl, written by make_data.py, in the common
 schema of tools/packgen/trades/schema.py), kept as they are, and clones of them. A clone continues the system's numbering
 from a higher range than the samples (MX-30000000 ..., CLY-4000000 ..., tools/packgen/banking/booking.py), so ids never
 collide, keeps its template's product, portfolio, counterparty and legal entity (so every link still opens) and scales its

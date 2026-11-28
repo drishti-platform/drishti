@@ -41,16 +41,55 @@ public final class LayoutMerger {
     private final LiveCompiler el;
     private final Formats formats;
 
+    /** The page sections packs contribute to a kind ({@link SutraRegistry#sectionsFor}); none until the server wires them. */
+    private volatile java.util.function.Function<String, List<Sutra>> sections = k -> List.of();
+
     public LayoutMerger(InferenceEngine engine, LiveCompiler el, Formats formats) {
         this.engine = engine;
         this.el = el;
         this.formats = formats;
     }
 
+    /** Wires the sections source: the registry's {@code sectionsFor} (only packs that are on contribute). */
+    public LayoutMerger sections(java.util.function.Function<String, List<Sutra>> source) {
+        this.sections = source == null ? k -> List.of() : source;
+        return this;
+    }
+
+    /** The ids of the sections of {@code kind} now offered: part of a layout's cache key, so a pack switch or a changed section rebuilds it. */
+    public List<String> sectionIds(String kind) {
+        return sections.apply(kind).stream().map(Sutra::id).toList();
+    }
+
+    /**
+     * The section panels of a kind, each shown only where its section's {@code match.where} holds: the condition is joined to the panel's own
+     * {@code when} (a panel option read per record), so the layout stays the same for every record of one shape.
+     */
+    private List<Panel> sectionPanels(String kind) {
+        List<Panel> out = new ArrayList<>();
+        for (Sutra sec : sections.apply(kind)) {
+            String where = sec.match().where();
+            for (Panel p : sec.panels()) {
+                String own = p.option(Panel.WHEN).orElse(null);
+                String when = where == null || where.isBlank() ? own : own == null ? where : "(" + where + ") && (" + own + ")";
+                if (when == null || when.equals(own)) {
+                    out.add(p);
+                    continue;
+                }
+                Map<String, Object> options = new LinkedHashMap<>(p.options());
+                options.put(Panel.WHEN, when);
+                out.add(new Panel(p.id(), p.kind(), p.title(), p.key(), p.code(), p.area(), p.infer(), p.columns(), p.body(), options, p.location(), p.parts(), p.wiring()));
+            }
+        }
+        return out;
+    }
+
     public EffectiveLayout merge(Optional<Sutra> sutra, DataNode doc, String kind) {
         if (sutra.isEmpty()) {
             InferredLayout inf = engine.infer(doc, kind);
-            Sutra s = new Sutra("inferred-" + kind, 0, "inferred", new Match(kind, null, 0), inf.title(), inf.strip(), inf.panels(),
+            List<Panel> all = new ArrayList<>(inf.panels());
+            all.addAll(sectionPanels(kind));
+            Sutra s = new Sutra("inferred-" + kind, 0, "inferred", new Match(kind, null, 0), inf.title(), inf.strip(), all,
                     Map.of("F9", "raw"), Rules.INFERRED);
             return new EffectiveLayout(s, "inference only", true, inf.explanations());
         }
@@ -58,6 +97,9 @@ public final class LayoutMerger {
         Map<String, String> why = new LinkedHashMap<>();
         List<Panel> panels = new ArrayList<>();
         for (Panel p : s.panels()) {
+            panels.add(labelled(fill(p, doc, why)));
+        }
+        for (Panel p : sectionPanels(kind)) {                          // what the packs that are on add to this kind's page
             panels.add(labelled(fill(p, doc, why)));
         }
         List<StripItem> strip = s.strip().stream().map(i -> i.label() != null ? i

@@ -32,7 +32,10 @@ public class InferenceConfiguration {
     }
 
     @Bean
-    public LayoutMerger layoutMerger(InferenceEngine engine, LiveCompiler elCompiler, Formats formats) {
-        return new LayoutMerger(engine, elCompiler, formats);
+    public LayoutMerger layoutMerger(InferenceEngine engine, LiveCompiler elCompiler, Formats formats,
+            org.springframework.beans.factory.ObjectProvider<com.ash.drishti.rachana.SutraRegistry> registry) {
+        LayoutMerger m = new LayoutMerger(engine, elCompiler, formats);
+        registry.ifAvailable(r -> m.sections(r::sectionsFor));                       // packs' page sections (pack.yaml sections:)
+        return m;
     }
 }

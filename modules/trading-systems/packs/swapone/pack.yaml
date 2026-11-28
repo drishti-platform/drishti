@@ -1,0 +1,95 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The SwapOne source pack (docs/plans/MODULE_RATIONALISATION.md, S3): one trading system feeding the one canonical `trade` kind
+# (SOURCE_SYSTEM = SWAPONE). It owns no kind: it extends `trading` and brings what is the system's own, in this folder: its connector
+# templates (connectors: below), the mapping of its native fields to the canonical ones (mappings:), its inbox routing rule (dataload:)
+# and its deal screens (sutras/). The pack is the switch (Admin -> Artifacts): off, the system's trades leave the trade kind, its
+# connectors stop, its screens and Help page are not offered and nothing else changes. Who sees its trades is a row rule on SOURCE_SYSTEM.
+pack: swapone
+domain: banking
+version: 1.0.0
+code: SWPO
+title: SwapOne
+description: SwapOne OTC swaps, in the shared trades table (mocked data)
+extends:
+- trading
+kinds: []
+sections:                      # what the pack adds to another kind's record page (KERNEL_AND_MODULES.md, Pack sections)
+- kind: trade
+  when: "$.SOURCE_SYSTEM == 'SWAPONE'"
+  file: sutras/swapone-native-fields.v1.section.yaml
+connectors:
+  trade-swapone:
+    # Template of this pack (a site file of the same name in config/connectors/ is merged over it; a copy to start from: config/connectors/trade-swapone.yaml). SwapOne's trades from the demo Delta lake: its own table trading.trade_swapone (one table a trading system).
+    # map:, where: and set: are the trade kind's source options (docs/guides/BANK_DATA_GUIDE.md, "Source systems").
+    plugin: delta
+    enabled: ${DRISHTI_LAKE_ENABLED:true}
+    kinds:
+    - trade
+    description: SwapOne trades read from its own table trading.trade_swapone in the Delta lake
+    settings:
+      lake: demo
+      lake-tables: trading.trade_swapone
+      union: true
+      source-name: trade-swapone
+      set:
+        SOURCE_SYSTEM: SWAPONE
+      map: ${pack.dir}/mappings/swapone-trade.yaml
+  trade-swapone-live:
+    # The template of trade-swapone-live (a pack that is on brings it; KERNEL_AND_MODULES.md section 18.5): off until DRISHTI_STREAM_<SYSTEM>=true or a site override (config/connectors/trade-swapone-live.yaml: enabled: true) switches it on.
+    # SwapOne's live trades from Kafka, and the write-back (the writes: form of config/connectors.examples/other/trade-blotter-kafka.yaml): an amended
+    # trade goes back to the same topic as the whole record at its next version, so the stream brings it back and the row ticks. Writes are off
+    # until an administrator switches them on (Admin -> Edits).
+    plugin: kafka
+    enabled: ${DRISHTI_STREAM_SWAPONE:false}
+    kinds:
+    - trade
+    description: SwapOne's live trades, and the trade blotter's amendments written back to them
+    settings:
+      broker: default
+      topics:
+      - ${DRISHTI_SWAPONE_TOPIC:drishti.trading.swapone.trades}
+      kind: trade
+      id-field: SWAP_ID
+      stale-after: ${DRISHTI_STREAM_STALE_AFTER:15m}
+      source-name: trade-swapone-live
+      where: SOURCE_SYSTEM = 'SWAPONE'
+      set:
+        SOURCE_SYSTEM: SWAPONE
+      map: ${pack.dir}/mappings/swapone-trade.yaml
+    writes:
+      amend-trade:                          # the trade blotter's command (modules/trading-systems/blotters/trade.live.yaml): one name, each system's own connector
+        kind: trade
+        kafka:
+          topic: ${DRISHTI_SWAPONE_TOPIC:drishti.trading.swapone.trades}
+          shape: document
+          version-field: REVISION
+          changed-by: UPDATED_BY
+          changed-at: UPD_TS
+          change-id-field: DRISHTI_CHANGE_ID
+        confirm: reply
+dataload: dataload.yaml
+mappings:
+  trade: mappings/swapone-trade.yaml
+
+roles:                         # an example role of this system: who sees its trades is a row rule on SOURCE_SYSTEM (KERNEL_AND_MODULES.md section 19.10)
+  trader-swapone:
+    kinds:
+    - trade
+    edit: true
+    rows:
+      trade: "SOURCE_SYSTEM = 'SWAPONE'"
+    edit-systems:
+    - SWAPONE

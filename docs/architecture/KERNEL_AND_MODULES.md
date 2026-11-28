@@ -506,6 +506,35 @@ Representative stub files with real-looking content:
 | `docs/help/var-in-five-minutes.md` | a Help page stub |
 | [console/plugin.yaml](kernel-and-modules/examples/banking/console/plugin.yaml) | the console plugin as packaged (today's file, paths made module-relative) |
 
+### 3.4 The first-party modules by data family, and the upgrade from the old ids
+
+A module is the delivery and licensing unit; a **pack is the switch** (Admin → Artifacts). The first-party modules are the data families, and
+no lake folder or table is renamed or moved by any of this: tables are known by their symbolic names, a pack declares the tables it reads.
+
+| Module (id) | Packs | Requires |
+|---|---|---|
+| `trading-systems` | `trading` (the one `trade` kind, its four derived kinds, the live blotter, the Trading landings' server part); one pack a source system, each off by default: `endur`, `calypso`, `murex`, `wss`, `swapone`, `ici` | `reference-data`, `market-data` |
+| `market-data` | `market-data` | `reference-data` |
+| `reference-data` | `core`, `gleif` | kernel only |
+| `external-data` | `world-economy`, `world-development`, `national-statistics`, `oecd`, `central-banks`, `funds`, `us-equities` | kernel only |
+| `news-and-events` | `official-news`, `gdelt-events`, `news-and-markets` | kernel only |
+| `banking`, titled **Risk** (the id stays: settings, paths and packages are unchanged) | `market-risk`, `counterparty-risk` | `trading-systems`, `market-data`, `reference-data` |
+| `genomics` | `genomics`, `genomics-showcase`, `protein-engineering` | kernel only |
+
+A source pack owns no kind: it extends `trading` and brings what is the system's own, in its folder: `connectors/` (the templates, read from the
+pack's folder, so a `map:` is relative to the pack), `mappings/<system>-trade.yaml` (native fields to the canonical ones), `dataload.yaml` (its inbox
+rule, which names its pack: a rule of a pack that is off is not matched) and `sutras/` (the system's deal screens). The system is the pack of its
+lower-case name: switched off, its connectors serve nothing, its rows leave every read, its live feed stops, and the files of its rule wait in the
+inbox. Who sees which system's trades is a row rule on `SOURCE_SYSTEM` (section 19.10); each pack ships an example role `trader-<system>` with
+`rows:` and `edit-systems:`. A system of its own is added the same way: `pack new --source-for KIND --system SYS` writes a source pack of the kind's module (`modules/trading-systems/packs/<system>/`, listed in the module's `packs.list` and off by default), checks it and bundles it (`dist/<system>-<version>.tar.gz`, deployable in Admin → Packs); no module is made.
+
+**Upgrade.** The module ids `trading`, `source-endur`, `source-calypso`, `source-murex`, `source-wss`, `source-swapone` and `source-ici` are
+retired, as `economy` and `capitalmarkets` were: a site that holds `config/modules/<id>.yaml` or `drishti.modules.<id>.enabled` for one stops at
+start with a message naming the module and pack to switch instead (`source-murex` becomes the pack `murex` of `trading-systems`). No alias is read
+and no file is rewritten: delete the old file, then switch the pack in Admin → Artifacts or list it in `drishti.packs.enabled`. A site that ran a
+source module needs the matching pack on (the demo profile has `endur`, `calypso` and `murex` on). Pack names, kinds, words, connector names
+and lake tables are unchanged; the `.dmod` of `trading` is now `trading-systems-1.0.0.dmod`, and the six `source-*` packages are gone.
+
 ## 4. Loading
 
 ![Loading a module: discover, verify, resolve dependencies, ask the registry, bind data, class loader and context, contribute, console plugin; refused means absent, unbound required data degrades](kernel-and-modules/diagrams/load-sequence.svg)
@@ -2691,6 +2720,22 @@ folders with shipped names and no `replaces:`, so the shipped packs in the modul
 *not read: safe to delete* (never deleted). A site's own pack in such a folder has a name nothing ships and is read as before. A pack
 deployed over a shipped one in an earlier release is treated the same way: the shipped pack is read and the deployed one is listed.
 
+**Pack sections.** A pack may add a section to the record page of any kind, its own or another pack's: `sections:` in `pack.yaml`.
+
+```yaml
+sections:
+- kind: trade
+  when: "$.SOURCE_SYSTEM == 'ENDUR'"            # the rows it is shown for (a Rachana expression over the record)
+  file: sutras/endur-native-fields.v1.section.yaml
+```
+
+The `file` is a Rachana document in the pack's `sutras/` folder, named `<name>.v<N>.section.yaml`: the same shape as a Sutra (`match: {kind, where}`, `panels:`, and
+`use:` of fragments), whose panels are appended after the page's own, whether the page is a Sutra or inferred. Each panel is shown only for the records whose
+`match.where` holds (it is joined to the panel's own `when:`), so the layout stays one for every record of a shape; `when:` in `pack.yaml` states the same condition
+for the reader and the README. A section is not a Sutra: it is never matched to a record on its own, is not listed with the Sutras and carries no priority. It
+follows the pack's switch (Admin -> Artifacts): pack off, the section is gone from every page, with no other change. A source pack uses it for its native fields
+(`<system>-native-fields`: each native field under its own name, for that system's rows); `pack new --source-for` writes one. The pack's README lists its sections.
+
 ### 18.5 Connectors
 
 **The effective connector** is computed in memory:
@@ -2733,7 +2778,7 @@ the earlier release has already folded, and a start that writes files from an in
    and reported; the rest serve. If none is left the next step decides.
 2. **What is shipped and declared**: every effective connector whose template or plugin names the kind (`kinds:` in a template, a
    pack's `routes:`), in the order: the pack's route first, then by name; `union: true` when the templates say so. This is how a
-   source module enters: `source-endur` on brings `trade-endur` with `kinds: [trade]`, and `trade` reads it; off, it leaves. No site
+   source system enters: the pack `endur` of the module `trading-systems`, on, brings `trade-endur` with `kinds: [trade]`, and `trade` reads it; off, it leaves. No site
    file lists the source systems.
 3. **Demo samples** (state DEMO): for a kind the site binds with `demo: true`, and, while the demo is on, for a kind nothing above
    offers and every module that needs it allows demo data. With the demo off (`drishti.demo.enabled: false`) no kind is DEMO: one the
@@ -2812,15 +2857,15 @@ Each names the thing, both places, and what to do.
 |---|---|---|
 | DRS-1040 | the kernel's packs are missing (start refused) | *The kernel's pack 'core' is not in config/packs/core (drishti.kernel.packs-dir). The server cannot start without it.* |
 | DRS-1041 | a pack is not found | *No pack 'trding'. Looked in the site's packs (config/packs, data/packs/installed), the modules that are on (banking, market-data, economy) and the kernel's packs (config/packs/core). Did you mean 'trading' (module banking)?* |
-| DRS-1042 | one name in two places | *Pack 'trading' is in config/packs/banking/trading and in module banking (modules/banking/packs/trading). The module's is read. To use yours instead, add `replaces: trading` to its pack.yaml; otherwise the folder is safe to delete.* |
+| DRS-1042 | one name in two places | *Pack 'trading' is in config/packs/banking/trading and in module banking (modules/trading-systems/packs/trading). The module's is read. To use yours instead, add `replaces: trading` to its pack.yaml; otherwise the folder is safe to delete.* |
 | DRS-1043 | a pack's module is off | *Pack 'market-risk' belongs to module banking, which is off (switched off in config/modules/banking.yaml). Switch it on in Admin → Modules.* |
 | DRS-1044 | a module in two places | *Module market-data is in modules/market-data (1.0.0) and installed as data/modules/installed/market-data/1.1.0. The folder is read. Remove one.* |
-| DRS-1045 | two templates of one name | *Connector 'trade-endur' is declared by pack trading and by module source-endur. Neither is used. Remove one declaration.* |
-| DRS-1046 | a site connector file is not used | *config/connectors/trade-murex.yaml overrides the template of module source-murex, which is off (not in distribution drishti.risk). It is not used.* |
+| DRS-1045 | two templates of one name | *Connector 'trade-endur' is declared by pack trading and by pack endur. Neither is used. Remove one declaration.* |
+| DRS-1046 | a site connector file is not used | *config/connectors/trade-murex.yaml overrides the template of pack murex, which is off (not in distribution drishti.risk). It is not used.* |
 | DRS-1047 | a setting names the wrong folder, or two names disagree (start refused) | *drishti.packs.site-dir is config/packs and drishti.packs.dir is site/packs: they name the same thing; keep one.* |
-| DRS-1048 | rules or bindings cannot be read | *The inbox rules of module source-endur (modules/source-endur/dataload.yaml) cannot be read: line 12, … Its files will not be matched.* |
+| DRS-1048 | rules or bindings cannot be read | *The inbox rules of module trading-systems (modules/trading-systems/packs/endur/dataload.yaml) cannot be read: line 12, … Its files will not be matched.* |
 | DRS-1049 | two answers differ | *This console resolves pack 'trading' 2.9.10 from /opt/console/modules/…; the server serves 2.9.11 from /opt/drishti/modules/…* |
-| DRS-9308 | no write path | *Kind 'trade' (source ENDUR) has no write path: no connector that serves it offers writes. Module source-endur has an example, connectors/examples/kafka.yaml; or bind one in Admin → Data bindings (write).* |
+| DRS-9308 | no write path | *Kind 'trade' (source ENDUR) has no write path: no connector that serves it offers writes. Pack endur has an example, connectors/examples/kafka.yaml; or bind one in Admin → Data bindings (write).* |
 | DRS-9309 | more than one write path | *Kind 'trade' has two write paths, trade-endur-kafka and trade-murex-kafka, and the record names no source system. Name one in Admin → Data bindings (write).* |
 
 ### 18.10 Site overrides of module files
@@ -2841,11 +2886,11 @@ the folder name `capital-markets/…` (refused, naming the id to use). One rule,
 | **When** | at start: change an override, restart the server (and the console). Removing the file and restarting restores the module's |
 
 **Example: change one Sutra and try it from outside.** The trading pack's Endur cash Sutra ships at
-`modules/banking/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml`. To try a change without touching the module:
+`modules/trading-systems/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml`. To try a change without touching the module:
 
 ```bash
 mkdir -p /home/me/drishti-overrides/banking/packs/trading/sutras/endur
-cp modules/banking/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml /home/me/drishti-overrides/banking/packs/trading/sutras/endur/
+cp modules/trading-systems/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml /home/me/drishti-overrides/banking/packs/trading/sutras/endur/
 # edit the copy (a title, a section, a field), then name the folder in your settings file:
 #   drishti.overrides.dir=/home/me/drishti-overrides
 python tools/drishti.py --settings /home/me/dev.ini stop server

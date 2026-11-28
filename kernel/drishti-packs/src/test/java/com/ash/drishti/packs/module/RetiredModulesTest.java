@@ -43,4 +43,14 @@ class RetiredModulesTest {
         assertThat(RetiredModules.lines(dir, k -> null)).isEmpty();
         assertThat(RetiredModules.lines(null, k -> null)).isEmpty();
     }
+
+    @Test
+    void theTradingModuleAndTheSixSourceModulesAreRetiredForTheModuleAndPacksOfTradingSystems(@TempDir Path dir) throws Exception {
+        for (String id : java.util.List.of("trading", "source-endur", "source-ici")) {
+            Files.writeString(dir.resolve(id + ".yaml"), "enabled: true\n");
+        }
+        var lines = RetiredModules.lines(dir, k -> null);
+        assertThat(lines).hasSize(3);
+        assertThat(String.join("\n", lines)).contains("trading-systems").contains("the pack endur").contains("the pack ici");
+    }
 }

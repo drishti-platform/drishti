@@ -27,4 +27,4 @@
 # table                  kind         pack                       connector    landing                     date            partition
 risk/pnl-vector          pnl-vector   modules/banking/packs/market-risk   risk-store   {date}/risk/pnl-vector/     BUSINESS_DATE   -
 risk/scenario-pv         scenario-pv  modules/banking/packs/market-risk   risk-store   {date}/risk/scenario-pv/    BUSINESS_DATE   -
-trading/trade_calypso    trade        modules/banking/packs/trading       trade-calypso {date}/calypso/            -               PRODUCT_TYPE
+trading/trade_calypso    trade        modules/trading-systems/packs/trading       trade-calypso {date}/calypso/            -               PRODUCT_TYPE

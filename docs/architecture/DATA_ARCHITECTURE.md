@@ -806,7 +806,7 @@ never streams.
 
 #### Worked example: making trades live from Kafka
 
-The trading pack declares the connector in `modules/banking/packs/trading/pack.yaml`:
+The trading pack declares the connector in `modules/trading-systems/packs/trading/pack.yaml`:
 
 ```yaml
 connectors:
@@ -1825,7 +1825,7 @@ than 10,000 trades, deletes its folder at the end and exits 1 on a missed target
 | a row cap and a timeout | also `parallel-days` and `max-concurrent` | the existing series fires every day's read at once with no bound |
 | market kinds from daily documents | also an embedded `series:` | the shipped market samples keep their history inside today's document (`HISTORY: [{DATE, CLOSE}]`) |
 | Cassandra: `entity_days` gives the days | it gives the days; the documents still need one point read per day | `business_date` is part of the data table's partition key |
-| default columns: top-level scalars | key columns first, empty columns hidden | a trade has about 45 top-level scalars (`modules/banking/packs/trading/samples/trade.jsonl`) |
+| default columns: top-level scalars | key columns first, empty columns hidden | a trade has about 45 top-level scalars (`modules/trading-systems/packs/trading/samples/trade.jsonl`) |
 | *Implementation (H1):* `HistoryRequest(ref, from, to, fields, knownAt, lastDays, budget)` | `HistoryRequest(ref, from, to, dates, fields, knownAt, lastDays, budget, parallelDays)` | a plugin has no calendar, so the business dates travel in the request (`dates`, empty means every calendar day); the default loop's parallelism is the server's `parallel-days`, so it travels too |
 | *Implementation (H5):* Delta: `days()`, a promoted-column row read, and `versions` from the log | `days()` only | the demo came first; with `days()` a history reads only the dates that hold the entity. The column-only read (no `doc` decode) and the per-day version count are still to build, so Delta's `versions` is `null` |
 | *Implementation (H3):* effective kinds: every business day a row, carried days marked | the change days only | a source's history leaves out a date answered by an earlier date's document, so the rows of an effective kind are its change dates; `carried` is always false. Filling the days between is a later step |

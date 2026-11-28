@@ -91,7 +91,7 @@ helpdesk/
     └── client.jsonl
 ```
 
-The largest shipped pack, `modules/banking/packs/trading/`, uses the same parts:
+The largest shipped pack, `modules/trading-systems/packs/trading/`, uses the same parts:
 
 ```text
 trading/
@@ -1041,7 +1041,7 @@ from the day before marked. `history:` only shapes it, per kind:
 
 ```yaml
 history:
-  trade:                                    # modules/banking/packs/trading/pack.yaml
+  trade:                                    # modules/trading-systems/packs/trading/pack.yaml
     exclude: [_meta]                        # never shown
     ignore-changes: [SOURCE_UPDATE_TIME, INPUT_DATE]   # shown, but a change here is not "a change"
     parts: [LEGS, EVENTS]                   # top-level lists shown as counts (default: every list or object)
@@ -2382,17 +2382,15 @@ Data, **Map**, **Layout**, Finalize and Deploy.
 - **Layout.** *Its own table* (`trading.trade_<system>`): one table a trading system, always, as every shipped source module does; *a shared
   table + where* only reads a table a site already lands several systems in (`where: SOURCE_SYSTEM = '<SYS>'`); optionally a Kafka
   listener, off until the site sets its servers.
-- **Finalize.** The module `source-<system>` is written and checked: `module.yaml`, the connector, the map (`mappings/`), the inbox rule
-  (`dataload.yaml`: `<system>-*.jsonl*`, the date from the name) and the module's **section** of the kind's page (`sections:`). **Install** is
+- **Finalize.** The pack `<system>` is written, checked and bundled: `pack.yaml` (the connectors, `mappings:`, `dataload:`), the map (`mappings/`) and the inbox rule
+  (`dataload.yaml`: `<system>-*.jsonl*`, the date from the name). **Install** is
   step 6: the download.
 
-The module's `sections:` entry names a fragment (`sutras/trade-swapone.v1.fragment.yaml`) and the kind it joins. While the module runs, the
-fragment's panels are appended to every Sutra of that kind and shown when their own `when:` holds (here `$.SOURCE_SYSTEM == 'SWAPONE'`: the
-native fields with no canonical field); when the module is switched off or removed they leave the page. One implementation serves every module
-(`SutraBlocks.contribute`).
+The native fields no canonical field takes stay in the stored row, as the system sent them: Raw JSON shows them, and a Sutra added to the source pack can show them
+(a source pack has no page section of its own).
 
 The same on the command line: `drishti.py pack new --source-for trade --system SWAPONE <file>` (its own table, `trading.trade_swapone`) prints
-the map, `--map-edits` fixes it, `--deploy` installs the module. The whole path, from the file to the blotter and a row rule, is
+the map, `--map-edits` fixes it, `--deploy` copies the pack to the site's packs folder. The whole path, from the file to the blotter and a row rule, is
 [the source system tutorial](BUILD_GUIDE.md).
 
 ## 9. A deep trading JSON, from one file to a deployed pack
@@ -3229,7 +3227,7 @@ when it is not true the panel is left out, with no empty box. The shipped `endur
 Without `layout:` panels flow (main column, `area: right` column, `span` and `height`); to place them yourself draw the screen as named areas, or group panels in folding sections, and give each heavy panel a phone tier: [Rachana, Writing Sutras, 9. Layout: placing panels](https://github.com/drishti-platform/drishti-rachana/blob/v1.1.1/docs/WRITING_SUTRAS.md#9-layout-placing-panels). `sutra lint` checks it (`DRS-2059`); the Drishti side is in [RACHANA_REFERENCE.md](RACHANA_REFERENCE.md#layout-the-grid-areas-split-tabs-sections) and [section 32](#32-designing-for-phones).
 
 Put the blocks of 14.2 to 14.6 under one `panels:` and you have a complete trade view. The [reference's annotated example](RACHANA_REFERENCE.md#a-complete-example-annotated)
-is the same layout with every line commented, and `modules/banking/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` is the one the server uses,
+is the same layout with every line commented, and `modules/trading-systems/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` is the one the server uses,
 built from shared blocks.
 
 ## 15. Matching several Sutras
@@ -3331,7 +3329,7 @@ directory is read recursively and Drishti infers nothing from a folder name ([Fo
 trading pack keeps:
 
 ```text
-modules/banking/packs/trading/sutras/
+modules/trading-systems/packs/trading/sutras/
   common/      deal-ticket, legs, flow-schedule, events, payments, deal-footer  (*.v1.block.yaml, shared panels)
   endur/       one Sutra per Endur product type (5): endur-comswap matches "$.SOURCE_SYSTEM == 'ENDUR' && $.PRODUCT_TYPE == 'ComSwap'"
   calypso/     one Sutra per Calypso product type (51): govt-bond, repo, fx-forward, cds-single …
@@ -3504,7 +3502,7 @@ the plain name, even for a pack's own); `since`.
 - **Generated Sutras use fragments.** The pack generators turn a panel into a kit fragment use only when the fragment draws it exactly (a plain line →
   `series-line@1`, plain bars → `ranked-bars@1`, a key/value list over an object → `field-list@1`, a curve's pillars → `curve-table@1`, provenance and
   links → `data-provenance@1` / `linked-entities@1`, the source and licence last → `source-footer@1`); anything else stays written in place. Lint a pack
-  (`sutra lint modules/banking/packs/trading`) or the whole root (`sutra lint config/packs`): each pack folder loads its fragments under its own
+  (`sutra lint modules/trading-systems/packs/trading`) or the whole root (`sutra lint config/packs`): each pack folder loads its fragments under its own
   namespace either way, and a pack may use another pack's fragment by its qualified name when both are linted together.
 - **Changing a fragment.** Never change what a released version draws: write `name.v2.fragment.yaml` and move Sutras one at a time; to prove a move
   changes nothing, compare the view models before and after for a full and a masked reader.
@@ -3604,7 +3602,7 @@ Previewed on `MX-20000001`, you should see four tabs, `NS-MERIDIAN-RE-FRA` to `N
 
 Pack screens are written with fragments that talk to each other through events
 ([Sutra Next](RACHANA_REFERENCE.md#sutra-next-fragments-events-children-sources-layout-and-forms)). The trading pack's book desk
-(`modules/banking/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`; open `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk`) shows all of it, shortened:
+(`modules/trading-systems/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`; open `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk`) shows all of it, shortened:
 
 ```yaml
 panels:
@@ -3969,7 +3967,7 @@ Edits and switching write-back on are in [ADMIN_GUIDE.md › 28 Write-back and a
 
 ### 28.1 A form beside the table
 
-The book desk's trades (`modules/banking/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`) carry this form. Open
+The book desk's trades (`modules/trading-systems/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`) carry this form. Open
 `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk` and click a trade.
 
 ![The form beside the book desk's trades: the counterparty locked, a warning under the notional and the Draft · not saved badge](img/designer/form-beside.jpg)
@@ -4468,8 +4466,8 @@ The banking and world-economy generators build documents with short internal nam
 
 **Never edit a generated file by hand.** A hand edit is lost the next time the generator runs, and before that it fails the build: every generator runs in
 check mode (`python3 tools/packgen/banking/make_packs.py --check` prints `5 pack manifests up to date (71 Calc snippets)`; `make_sutras.py --check`
-`186 Sutras up to date`). After a hand edit to `modules/banking/packs/trading/pack.yaml` the first stops with `pack manifests out of date; run
-make_packs.py: ['modules/banking/packs/trading/pack.yaml']`; the packbuild generators also refuse files they did not write
+`186 Sutras up to date`). After a hand edit to `modules/trading-systems/packs/trading/pack.yaml` the first stops with `pack manifests out of date; run
+make_packs.py: ['modules/trading-systems/packs/trading/pack.yaml']`; the packbuild generators also refuse files they did not write
 (`<pack> pack out of date; run tools/packgen/<area>/make.py. stale=[] extra=[…]`). A top-level section of a banking pack's manifest the taxonomy does not
 say (the `history:` sections, the trading pack's `ingest:`) is kept in `tools/packgen/banking/kept/<pack>.yaml` and appended as written.
 
@@ -4478,7 +4476,7 @@ say (the `history:` sections, the trading pack's `ingest:`) is kept in `tools/pa
 1. Find the generator named in the file's comment: `tools/packgen/banking/make_packs.py`.
 2. Change its input: add `"TRADER_ID"` after `"COUNTERPARTY"` in the trade columns of the `COLUMNS` table.
 3. Run the generator without `--check`: `python3 tools/packgen/banking/make_packs.py`.
-4. `git diff modules/banking/packs/trading/pack.yaml` shows `- TRADER_ID` added under `columns: trade:`.
+4. `git diff modules/trading-systems/packs/trading/pack.yaml` shows `- TRADER_ID` added under `columns: trade:`.
 5. Wait for the reload, type `TRD MX-200000`: the pick list has a *Trader ID* column (`•••` for a role without `raw`: the shipped setting masks it).
 6. Commit the generator **and** the files it wrote, together.
 
@@ -4764,7 +4762,7 @@ this table is the map. Seven packs are on by default; the others are turned on b
 |---|---|---|---|---|---|
 | `core` | `CORE` | — | `CPTY` `GRP` `ISS` `CCP` `LE` `BOOK` `DESK` `TRDR` `CAL` `CLR` | `CPTY CP-NORTHBRIDGE`, `LE LE-NY` | [core](../../modules/reference-data/packs/core/README.md) |
 | `market-data` | `MKT` | `core` | `CRV` `REPO` `FX` `FXF` `FXV` `IRV` `CPV` `EQ` `EQX` `DIV` `EQV` `CDS` `INF` `INFC` `CMD` `CMDC` `CMDV` `FIX` `BND` `CORR` | `CRV CRV-USD-OIS`, `FXV FXV-EURUSD` | [market-data](../../modules/market-data/packs/market-data/README.md) |
-| `trading` | `TRDS` | `core`, `market-data` | `TRD` (three source systems) · `CTRD` `PTRD` `LTRD` `ITRD` (derived) | `TRD MX-20000001`, `TRD 1000001`, `CTRD CP-ALDERSHOT` | [trading](../../modules/banking/packs/trading/README.md) |
+| `trading` | `TRDS` | `core`, `market-data` | `TRD` (three source systems) · `CTRD` `PTRD` `LTRD` `ITRD` (derived) | `TRD MX-20000001`, `TRD 1000001`, `CTRD CP-ALDERSHOT` | [trading](../../modules/trading-systems/packs/trading/README.md) |
 | `counterparty-risk` | `CCR` | `trading` | `AGR` `CSA` `NSET` `LIM` `EXP` `CVA` `SACCR` `COLL` `MC` `SIMM` | `AGR AGR-NORTHBRIDGE-ISDA`, `NSET NS-SUMMIT-NY` | [counterparty-risk](../../modules/banking/packs/counterparty-risk/README.md) |
 | `market-risk` | `MRSK` | `market-data`, `trading` | `VAR` `SCN` `STR` `FRTB` `PNL` `TVAL` | `VAR VAR-RATES`, `TVAL TVAL-MX-20000001` | [market-risk](../../modules/banking/packs/market-risk/README.md) |
 | `world-economy` | `WRLD` | — | `ECON` `MACRO` `FCST` `LABR` `FISC` `ECG` `REGE` `JUR` `PARTY` `OFFC` `ELEC` `REGN` `SOCI` (real public data; the IMF part is for internal demonstrations only) | `ECON ECON-IND` | [world-economy](../../modules/external-data/packs/world-economy/README.md) |
@@ -5146,18 +5144,18 @@ ICI). The page shows the connector it will write. **Finalize** makes the module 
 
 ```bash
 python3 tools/drishti.py pack new --source-for trade --system SWAPONE \
-    --lake-name swaplake --out modules/source-swapone --deploy --modules-dir modules drop/swapone-2026-07-08.jsonl.gz
+    --lake-name swaplake --deploy drop/swapone-2026-07-08.jsonl.gz
 ```
 
-**The YAML.** The module's parts, under one set of manifest keys:
+**The YAML.** The pack's parts, in one folder (a pack of the module `trading-systems`, as the six shipped systems are):
 
 ```text
-source-swapone/
-  module.yaml                              connectors, mappings, dataload, sections
-  connectors/source-swapone.yaml           the connector
+swapone/
+  pack.yaml                                extends trading; connectors: (inline), mappings:, dataload:, sections:, an example role
   mappings/swapone-trade.yaml              the field map
   dataload.yaml                            the inbox rule
-  sutras/trade-swapone.v1.fragment.yaml    its section of the trade page
+  sutras/swapone-native-fields.v1.section.yaml   the native-fields section of the trade page (pack.yaml sections:), shown for SwapOne rows only
+  config/about.yaml                        the README's intro
 ```
 
 ```yaml
@@ -5181,6 +5179,8 @@ dataload:
       connector: source-swapone
       date-from: name
 ```
+
+The section is what a trader sees under the common trade page for a SwapOne trade: the SwapOne names (`SWAP_ID`, `PAY_LEG.NOTIONAL`, ...) next to their values; switch the pack off and it is gone. Edit the file to add panels (any Rachana panel, fragments included).
 
 Copy the `.dmod` into the server's modules folder and restart the server. You should see `source-swapone` listed as loaded on **Admin → Modules**.
 
@@ -5270,13 +5270,12 @@ You should see, signed in as that person, only `SW1-…` ids in `TRD`, and *not 
 
 ### Step 8 · Switch it off and on
 
-**In the UI.** **Admin → Modules**, `source-swapone`, **Disable**. The trades of SwapOne leave the trade kind, the section leaves the page, and nothing
-else changes. **Enable** brings them back.
+**In the UI.** **Admin → Artifacts**, the pack `swapone`, switch off. The trades of SwapOne leave the trade kind, its connectors, screens and inbox rule go with them, and nothing
+else changes. Switch on brings them back.
 
-**On the command line.** The switch is the file below and the server's API: `POST /api/v1/admin/modules` with `{"module": "source-swapone", "enabled": false, "reason": "..."}`
-writes it (an administrator; audited). A change takes effect at the next start.
+**On the command line.** The switch is the server's API: `PUT /api/v1/admin/packs/swapone` (an administrator; audited, kept in the identity database). A change takes effect at once, no restart.
 
-**The YAML.** `config/modules/source-swapone.yaml` holds `enabled: false` while it is off.
+**The YAML.** None: the pack's state is kept in the identity database; `drishti.packs.enabled` lists the packs on at start.
 
 You should see, while it is off, no `SW1-…` trade in `TRD` and no **SWAPONE fields** section; after **Enable**, both back.
 

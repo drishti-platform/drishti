@@ -36,8 +36,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * A source module as a real package: {@code source-swapone} packed by the one packer (ModulePack), dropped into a modules folder,
- * booted by {@link ModuleBoot} (its inbox rules and its connector templates), then taken out again and gone.
+ * A site's own source module as a real package (the shipped systems are packs of trading-systems; a site adds a system as a module, as
+ * {@code pack new --source-for} writes it): here a module made of the files of the pack {@code swapone}, packed by the one packer
+ * (ModulePack), dropped into a modules folder, booted by {@link ModuleBoot} (its inbox rules and its connector templates), then taken out
+ * again and gone.
  */
 class SourceModuleInstallTest {
 
@@ -46,7 +48,7 @@ class SourceModuleInstallTest {
 
     private static Path repo() {
         Path p = Path.of(TestRoots.module());
-        while (p != null && !Files.isDirectory(p.resolve("modules/source-swapone"))) {
+        while (p != null && !Files.isDirectory(p.resolve("modules/trading-systems/packs/swapone"))) {
             p = p.getParent();
         }
         return p;
@@ -95,7 +97,20 @@ class SourceModuleInstallTest {
     @Test
     void aPackedSourceModuleIsDroppedInSeenAndTakenOutAgain() throws Exception {
         Path folder = tmp.resolve("source-swapone");
-        copy(repo().resolve("modules/source-swapone"), folder);
+        Path pack = repo().resolve("modules/trading-systems/packs/swapone");
+        copy(pack.resolve("connectors"), folder.resolve("connectors"));
+        copy(pack.resolve("mappings"), folder.resolve("mappings"));
+        Files.copy(pack.resolve("dataload.yaml"), folder.resolve("dataload.yaml"));
+        Files.createDirectories(folder.resolve("data"));
+        Files.createDirectories(folder.resolve("docs"));
+        Files.writeString(folder.resolve("data/needs.yaml"), "needs:\n- kind: trade\n  contract: '>=1.0 <2'\n  required: false\n");
+        Files.writeString(folder.resolve("docs/README.md"), "---\nmodule: source-swapone\ntitle: Source SwapOne\ndomain: trading\nsummary: SwapOne trades\nkinds: [trade]\n---\n# Source SwapOne\n");
+        Files.writeString(folder.resolve("module.yaml"), String.join("\n", "format: 1", "id: source-swapone", "version: 1.0.0", "title: Source SwapOne",
+                "about: 'SwapOne OTC swaps (a site module made of the swapone pack files)'", "domain: trading", "origin: first-party",
+                "publisher:", "  id: drishti", "  name: Ashutosh Sinha", "licence:", "  feature: trading", "kernel: '>=0.2 <1.0'", "rachana: '>=1.0'",
+                "contracts: '>=1.0'", "plugin-api: '>=2.0'", "elements: '>=3.3 <4'", "requires:", "  trading-systems: '>=1.0 <2'", "data:",
+                "  needs: data/needs.yaml", "dataload: dataload.yaml", "connectors:", "  folder: connectors", "mappings:",
+                "  trade: mappings/swapone-trade.yaml", "docs:", "  readme: docs/README.md", "resources:", "  memory-mb: 16", ""));
         Path out = tmp.resolve("dmod");
         Path dmod = ModuleFixtures.pack(folder, List.of(), out);
         assertThat(dmod.getFileName().toString()).isEqualTo(Dmod.fileName("source-swapone", "1.0.0"));

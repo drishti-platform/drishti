@@ -12,7 +12,7 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 
-"""The trading pack's Sutra tests (modules/banking/packs/trading/tests/<sutra>/cases.jsonl, one {case, document} a line): one sample trade per
+"""The trading pack's Sutra tests (modules/trading-systems/packs/trading/tests/<sutra>/cases.jsonl, one {case, document} a line): one sample trade per
 deal Sutra (per PRODUCT_TYPE, from every source system), each with an expect.yaml (no errors, the legs panel filled, the about text
 renders) and the help-coverage ratchet."""
 from __future__ import annotations

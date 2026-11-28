@@ -41,7 +41,7 @@ The file goes first and its `.ready` marker last: the marker says the file is co
 
 ```text
 Linux     cd /opt/drishti && python3.13 tools/drishti.py lake build --engine java --from /landing/endur-2026-11-27.jsonl.gz --as-of 2026-11-27 \
-              --lake demo --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID
+              --lake demo --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID
 Windows   cd C:\drishti && py -3.13 tools\drishti.py lake build --engine java --from C:\landing\endur-2026-11-27.jsonl.gz --as-of 2026-11-27 ^
               --lake demo --pack modules\banking\packs\trading --kind trade --connector trade-endur --key TRADE_ID
 ```
@@ -74,7 +74,7 @@ Schedule the job **after your extract lands** (the load does not wait for a file
 
 ```text
 SHELL=/bin/bash
-30 19 * * 1-5 cd /opt/drishti && d=$(date +\%F) && python3.13 tools/drishti.py lake build --engine java --from /landing/endur-$d.jsonl.gz --as-of $d --lake demo --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID --signal http://localhost:18480 --token-file $HOME/.drishti-token >> $HOME/drishti-trades.log 2>&1
+30 19 * * 1-5 cd /opt/drishti && d=$(date +\%F) && python3.13 tools/drishti.py lake build --engine java --from /landing/endur-$d.jsonl.gz --as-of $d --lake demo --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID --signal http://localhost:18480 --token-file $HOME/.drishti-token >> $HOME/drishti-trades.log 2>&1
 ```
 
 Cron starts with an empty environment: put the working folder (`cd /opt/drishti`) and any variable in the line or the crontab, as above. For the inbox way (A) schedule the copy, the `touch` and `dataload run --wait` in one script the same way.
@@ -108,7 +108,7 @@ The task's *Last Run Result* is the script's exit code. By hand: Task Scheduler 
   ```bash
   for d in 2026-11-24 2026-11-25 2026-11-26; do
     python3.13 tools/drishti.py lake build --engine java --from /landing/endur-$d.jsonl.gz --as-of $d --lake demo \
-      --pack modules/banking/packs/trading --kind trade --connector trade-endur --key TRADE_ID || break
+      --pack modules/trading-systems/packs/trading --kind trade --connector trade-endur --key TRADE_ID || break
   done
   ```
 
@@ -124,7 +124,7 @@ The task's *Last Run Result* is the script's exit code. By hand: Task Scheduler 
 - **Run it again** (a failed or interrupted load): the same command. Each load replaces its business date **whole** in the table and leaves the other dates alone, so a repeat never doubles rows.
 - **Take a date out:** `python3.13 tools/drishti.py lake delete --lake demo --table trading/trade_endur --date 2026-11-24 --dry-run`, then without `--dry-run` (asks to confirm; `--yes` for a script). **Undo one load** by its id (the `run=` in its closing line): `python3.13 tools/drishti.py lake undo --lake demo --dry-run RUN_ID`, then `--yes`.
 - **A file that was refused** in the inbox goes to `failed/` with the reason in words: fix it, then `python3.13 tools/drishti.py dataload retry endur-2026-11-27.jsonl.gz`.
-- **A system's module is off:** its trades leave the pages and its inbox rule goes with it. Switch it on in Admin → Modules (`config/modules/source-<system>.yaml`, `enabled: true`).
+- **A system's pack is off:** its trades leave the pages and its inbox rule goes with it (the file stays in the inbox, the reason in words). Switch the pack `<system>` on in Admin → Artifacts.
 - A scheduler reads the exit code: **0** done, **1** refused or failed (one line says why), **2** loaded with rejected rows, **3** another load holds the lake's lock (wait and repeat).
 
 ## Check it loaded

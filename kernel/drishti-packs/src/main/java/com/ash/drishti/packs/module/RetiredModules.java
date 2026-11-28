@@ -37,7 +37,14 @@ public final class RetiredModules {
             "economy", "the modules external-data (packs world-economy, world-development, national-statistics, oecd, central-banks) and news-and-events "
                     + "(packs official-news, gdelt-events, news-and-markets); switch the one you meant",
             "capitalmarkets", "the module external-data (packs funds, us-equities)",
-            "capital-markets", "the module external-data (packs funds, us-equities)");
+            "capital-markets", "the module external-data (packs funds, us-equities)",
+            "trading", "the module trading-systems (the pack trading is in it)",
+            "source-endur", "the pack endur of the module trading-systems (switch the pack in Admin -> Artifacts)",
+            "source-calypso", "the pack calypso of the module trading-systems (switch the pack in Admin -> Artifacts)",
+            "source-murex", "the pack murex of the module trading-systems (switch the pack in Admin -> Artifacts)",
+            "source-wss", "the pack wss of the module trading-systems (switch the pack in Admin -> Artifacts)",
+            "source-swapone", "the pack swapone of the module trading-systems (switch the pack in Admin -> Artifacts)",
+            "source-ici", "the pack ici of the module trading-systems (switch the pack in Admin -> Artifacts)");
 
     /**
      * The refusal lines for the retired module ids a site still names.

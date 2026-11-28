@@ -3,7 +3,7 @@
 # Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>. All rights reserved.
 # PROPRIETARY AND CONFIDENTIAL. See the LICENSE file in the root of this repository for the full terms.
 module: banking
-title: Banking and risk
+title: Risk
 domain: banking
 summary: VaR and ES (historical, parametric, regulatory), exposure and CCR, FRTB-SA, ISDA SIMM, sensitivities, the MR cube and the official risk results.
 packs: [trading, market-risk, counterparty-risk]

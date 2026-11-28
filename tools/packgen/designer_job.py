@@ -175,22 +175,22 @@ def map_(wd: pathlib.Path, st: Status) -> None:
 
 
 def source(wd: pathlib.Path, st: Status) -> None:
-    """The source module (`pack new --source-for`): written, packed and checked; no binding (its connector comes with it)."""
+    """The source pack (`pack new --source-for`): written, checked and bundled; no binding (its connectors come with it)."""
     import drishti as cli
     import module_from_jsonl as MFJ
     req = json.loads((wd / "request.json").read_text(encoding="utf-8"))
     edits = wd / "map-edits.json"
     edits.write_text(json.dumps(req.get("mapEdits") or {}), encoding="utf-8")
     argv = [str(wd / "in"), "--source-for", req["sourceFor"], "--system", req["system"], "--name", req["name"], "--version", req.get("version") or "1.0.0",
-            "--out", str(wd / "module"), "--dist", str(wd / "dist"), "--force", "--publisher", req.get("publisher") or "local", "--map-edits", str(edits)]
+            "--out", str(wd / "pack" / req["name"]), "--dist", str(wd / "dist"), "--force", "--publisher", req.get("publisher") or "local", "--map-edits", str(edits)]
     for flag, key in (("--title", "title"), ("--description", "description"), ("--shared-table", "sharedTable"), ("--own-table", "ownTable")):
         if req.get(key):
             argv += [flag, str(req[key])]
     argv += ["--live"] * bool(req.get("live")) + ["--write-back"] * bool(req.get("live") and req.get("writeBack"))
     a = MFJ.build_parser().parse_args(argv)
     if MFJ.run(a, cli, st.say):
-        raise RuntimeError("the module was not made: see the log")
-    dmod = wd / "dist" / f"{a.name}-{a.version}.dmod"
+        raise RuntimeError("the pack was not made: see the log")
+    dmod = wd / "dist" / f"{a.name}-{a.version}.tar.gz"          # the pack's bundle (the key keeps its name for the page: the one downloadable result)
     out = {"dmod": dmod.name, "bytes": dmod.stat().st_size, "name": a.name, "version": a.version, "mode": "source", "kind": req["sourceFor"],
            "system": req["system"]}
     (wd / "result.json").write_text(json.dumps(out), encoding="utf-8")

@@ -287,6 +287,20 @@ public final class PackAccess {
         if (l != null) {
             l.follow(pack, on, actor);
         }
+        switchListeners.forEach(r -> {
+            try {
+                r.run();
+            } catch (RuntimeException e) {
+                org.slf4j.LoggerFactory.getLogger(PackAccess.class).warn("a pack switch listener failed: {}", e.toString());
+            }
+        });
+    }
+
+    private final java.util.List<Runnable> switchListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Told after every pack switch (a source system follows its pack: SourceSystemsWiring). */
+    public void onSwitch(Runnable r) {
+        switchListeners.add(r);
     }
 
     private Set<String> closure(String pack) {

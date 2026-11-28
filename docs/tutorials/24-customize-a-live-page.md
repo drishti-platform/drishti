@@ -265,7 +265,7 @@ panels:
 ```
 
 The trading pack ships a screen written this way, by hand: the book desk, `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk`
-(`modules/banking/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`).
+(`modules/trading-systems/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`).
 
 **Command line.** As in step 5: `design list` shows *My screen · Trades of book BOOK-RATES-2*, and `design get <id> --yaml` prints it.
 

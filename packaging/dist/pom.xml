@@ -29,7 +29,7 @@
   <name>drishti-modules</name>
   <description>The product's first-party modules as packages (docs/architecture/KERNEL_AND_MODULES.md section 3.3, KERNEL_AND_MODULES.md): all twelve
     modules (banking with its code and its kernel-internals allowance, stamped with the kernel build of this build; market-data, trading and
-    genomics with their jars; external-data, news-and-events and the six source-system modules from their folders), each packed by the one packer
+    genomics with their jars; external-data, news-and-events from their folders), each packed by the one packer
     (ModuleCli module pack, Java) into target/dmod/ID-VERSION.dmod, and first-party.yaml (their ids and hash-list hashes).
     Banking, market-data, trading and genomics (the modules with a server part) go through the fourteen conformance checks (ModuleCli verify) as part of the build.
     Nothing here goes into the server jar: at package the packages are installed into the modules folder (drishti.home.modules, default
@@ -109,12 +109,12 @@
             </configuration>
           </execution>
           <execution>
-            <id>pack-trading</id>
+            <id>pack-trading-systems</id>
             <phase>process-classes</phase>
             <goals><goal>java</goal></goals>
             <configuration>
               <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/trading</argument><argument>--jar</argument><argument>${drishti.jars}/drishti-trading.jar</argument>
+                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/trading-systems</argument><argument>--jar</argument><argument>${drishti.jars}/drishti-trading.jar</argument>
                 <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
               </arguments>
             </configuration>
@@ -164,72 +164,6 @@
             </configuration>
           </execution>
           <execution>
-            <id>pack-source-calypso</id>
-            <phase>process-classes</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/source-calypso</argument>
-                <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>pack-source-endur</id>
-            <phase>process-classes</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/source-endur</argument>
-                <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>pack-source-ici</id>
-            <phase>process-classes</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/source-ici</argument>
-                <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>pack-source-murex</id>
-            <phase>process-classes</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/source-murex</argument>
-                <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>pack-source-swapone</id>
-            <phase>process-classes</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/source-swapone</argument>
-                <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>pack-source-wss</id>
-            <phase>process-classes</phase>
-            <goals><goal>java</goal></goals>
-            <configuration>
-              <arguments>
-                <argument>module</argument><argument>pack</argument><argument>${drishti.repo}/modules/source-wss</argument>
-                <argument>--out</argument><argument>${drishti.dmods}</argument><argument>--kernel-jar</argument><argument>${drishti.kernel.jar}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
             <id>first-party</id>
             <phase>process-classes</phase>
             <goals><goal>java</goal></goals>
@@ -267,13 +201,13 @@
             </configuration>
           </execution>
           <execution>
-            <id>check-trading</id>
+            <id>check-trading-systems</id>
             <phase>test</phase>
             <goals><goal>java</goal></goals>
             <configuration>
               <skip>${skipTests}</skip>
               <arguments>
-                <argument>module</argument><argument>verify</argument><argument>${drishti.dmods}/trading-1.0.0.dmod</argument><argument>--conformance</argument>
+                <argument>module</argument><argument>verify</argument><argument>${drishti.dmods}/trading-systems-1.0.0.dmod</argument><argument>--conformance</argument>
                 <argument>--first-party</argument><argument>${drishti.dmods}/first-party.yaml</argument>
               </arguments>
             </configuration>

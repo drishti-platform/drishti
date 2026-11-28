@@ -224,7 +224,7 @@ Abbreviated:
 ```
 
 Reading it: the router found the trade in the `demo` plugin (whose sample's `_meta` names the source system
-`murex-rates`); `SutraMatcher` chose `irs-fixfloat v1` from `modules/banking/packs/trading/sutras/murex/`; inference added what the
+`murex-rates`); `SutraMatcher` chose `irs-fixfloat v1` from `modules/trading-systems/packs/trading/sutras/murex/`; inference added what the
 Sutra did not say ("+ inference"); the counterparty, netting set, book and trader were fetched as links and given
 badges from the pack's `badges:` expressions. The console renders the panels with the Jinja macros in
 `web/templates/_macros/panels.html`, main-area panels on the left and `area: right` panels on the right.
@@ -445,7 +445,7 @@ it; the commands use the quick-start port 18480.
 
 ### Example 1: Sutra → ViewModel → HTML
 
-**The Sutra.** `TRD MX-20000001` matches `modules/banking/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` (generated
+**The Sutra.** `TRD MX-20000001` matches `modules/trading-systems/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` (generated
 by `tools/packgen/banking/make_sutras.py`). One strip cell, and the first panel, which it takes from a fragment:
 
 ```yaml
@@ -456,7 +456,7 @@ panels:
   - { use: trading/deal-ticket@1, with: { rate-fmt: pct4, product: "Interest rate swap (fixed/float)" } }
 ```
 
-The fragment (`modules/banking/packs/trading/sutras/common/deal-ticket.v1.fragment.yaml`) is a `kv` panel, still only YAML:
+The fragment (`modules/trading-systems/packs/trading/sutras/common/deal-ticket.v1.fragment.yaml`) is a `kv` panel, still only YAML:
 
 ```yaml
 panels:
@@ -593,7 +593,7 @@ strip:
 
 ### Example 3: query by form
 
-**The YAML.** A pack lists the fields people search a kind by; from `modules/banking/packs/trading/pack.yaml`:
+**The YAML.** A pack lists the fields people search a kind by; from `modules/trading-systems/packs/trading/pack.yaml`:
 
 ```yaml
 form:

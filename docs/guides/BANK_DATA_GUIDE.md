@@ -889,7 +889,7 @@ python3 tools/loaders/mrloader/pvf_fx_scenario.py  --date 2026-11-18 --fx tools/
 
 ## Trading pack
 
-The pack's commands, connectors, kinds, roles and data contracts are generated into [its README](../../modules/banking/packs/trading/README.md) and its [contract page](../contracts/packs/trading.md); nothing is copied here: [data contracts](../../modules/banking/packs/trading/README.md#data-contracts), [data retrieval](../../modules/banking/packs/trading/README.md#data-retrieval). The next section lists its products.
+The pack's commands, connectors, kinds, roles and data contracts are generated into [its README](../../modules/trading-systems/packs/trading/README.md) and its [contract page](../contracts/packs/trading.md); nothing is copied here: [data contracts](../../modules/trading-systems/packs/trading/README.md#data-contracts), [data retrieval](../../modules/trading-systems/packs/trading/README.md#data-retrieval). The next section lists its products.
 
 ## Trading products
 
@@ -1412,11 +1412,12 @@ The same guard runs again when the change is applied at the source (the *Live re
 ### 8.4 Source systems
 
 The `trade` kind is one canonical kind (the trading pack's `trade` contract; every row carries `SOURCE_SYSTEM`). Each trading system that
-feeds it is a **source module of its own**, `modules/source-<system>/`, which requires this module and switches on and off alone
-(`config/modules/source-<system>.yaml`, `enabled: false`; off, the system's trades leave the kind and nothing else changes). Six ship:
-`source-endur`, `source-calypso`, `source-murex` (their data is already in the canonical schema) and `source-wss` (treasury, FX and
-money markets), `source-swapone` (OTC swaps) and `source-ici` (a generic cross-asset booking system; its asset class was not stated, so it
-is mocked as one). The data of the last three is **mocked** (`tools/samplegen/src_*.py`; each in its own native field style; no
+feeds it is a **pack of its own** in the module `trading-systems` (`modules/trading-systems/packs/<system>/`), which extends the `trading` pack
+and is switched on and off alone (Admin → Artifacts, the pack is the switch; off, the system's trades leave the kind and nothing else changes).
+Six ship, all off until the site switches one on (the demo profile has the first three on): `endur`, `calypso`, `murex` (their data is already in
+the canonical schema) and `wss` (treasury, FX and money markets), `swapone` (OTC swaps) and `ici` (a generic cross-asset booking system; its
+asset class was not stated, so it is mocked as one). Who sees which system's trades is a row rule on `SOURCE_SYSTEM`: each pack ships an example
+role, `trader-<system>` (`rows: trade: "SOURCE_SYSTEM = 'MUREX'"`, `edit-systems: [MUREX]`). The data of the last three is **mocked** (`tools/samplegen/src_*.py`; each in its own native field style; no
 positions and no scenario P&L, so the VaR does not move).
 
 A module's manifest names its parts with one set of keys: `connectors` (the folder of connector templates), `mappings` (kind to map file),

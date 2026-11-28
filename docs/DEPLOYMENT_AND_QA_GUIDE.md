@@ -548,7 +548,7 @@ came from.
 | **Modules** | `config/modules/<module>.yaml` (`enabled: true/false`), or `DRISHTI_MODULES_<MODULE>_ENABLED` | banking, capitalmarkets, economy, market-data and the six trading-system modules (source-endur, -calypso, -murex, -wss, -swapone, -ici) on; the core and trading are always loaded |
 | **Lenses** | `config/lenses/<module>/<lens>.yaml`; the lenses each person may open: `drishti.lenses` (`DRISHTI_LENSES`) | `default`: every lens of the modules that are on: risk, trading, market (banking), world (economy), research (genomics). A lens named that cannot be offered is left out with an ERROR in the log and a red line on Admin → Health; the server still starts |
 | **Engines** | `config/engines/<engine>.yaml`, **Admin → Engines** | VaR, exposure, sensitivities, FRTB-SA, SIMM, pivot and the MR cube on; the data inbox, Arrow Flight, the in-memory lake and OpenBLAS off |
-| **Connectors** | the modules' templates (a source module's `connectors/` folder, `modules/source-endur/connectors/`, or a pack's `connectors:` section): read only, never written by the server. A site changes one with an override file in `config/connectors/<name>.yaml` (`template: <name>` and only the keys it changes), or a `[connector.<name>]` section of the settings file | every connector of every module that is on, as its template says; none in `config/connectors/` |
+| **Connectors** | the modules' templates (a source module's `connectors/` folder, `modules/trading-systems/packs/endur/connectors/`, or a pack's `connectors:` section): read only, never written by the server. A site changes one with an override file in `config/connectors/<name>.yaml` (`template: <name>` and only the keys it changes), or a `[connector.<name>]` section of the settings file | every connector of every module that is on, as its template says; none in `config/connectors/` |
 | **Brokers** (Kafka, ActiveMQ, RabbitMQ) | `[broker.<name>]` sections of the settings file | **none needed**. A stream connector whose broker does not answer shows *waiting for broker* in Admin, its health says `WAITING`, overall health stays `UP`, and pages serve the lake with a *live updates paused* banner |
 | **Your jars** (JDBC drivers, connector plugins) | the site's lib folder, `drishti.lib.path` / `DRISHTI_LIB_PATH` (one place, [1.4](#14-drishtis-jars-and-your-jars); jars found in an older place are moved into it once, listed in the moved list, and Health says so) | `<drishti>/lib/ext` |
 | **Secrets** | the environment only, never a file in `config/` | none: set them ([below](#secrets)) |
@@ -621,7 +621,7 @@ drishti.overrides.dir=C:/Users/you/drishti-overrides
 
 ```text
 C:/Users/you/drishti-overrides/banking/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml     (your edited copy of
-modules/banking/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml)
+modules/trading-systems/packs/trading/sutras/endur/endur-cash.v1.sutra.yaml)
 ```
 
 Restart the server (`stop server`, then `start server`; the console too). The log names each overridden file with its source, and

@@ -63,7 +63,7 @@ public final class SutraRegistry implements AutoCloseable {
 
     /** An immutable view of the registry at one moment. */
     private record Snapshot(Map<String, NavigableMap<Integer, Sutra>> byName, Map<String, List<SutraProblem>> problems,
-            Map<String, String> sources, Map<String, Path> fileOf) {}
+            Map<String, String> sources, Map<String, Path> fileOf, Map<String, Sutra> sections, Map<String, Path> sectionFiles) {}
 
     private final SutraParser parser = com.ash.drishti.rachana.DrishtiRachana.parser();
     private volatile RachanaProperties props;
@@ -74,7 +74,7 @@ public final class SutraRegistry implements AutoCloseable {
     private final java.util.concurrent.locks.ReentrantLock writeLock = new java.util.concurrent.locks.ReentrantLock();
     private final List<Consumer<Set<String>>> listeners = new CopyOnWriteArrayList<>();
     /** Everything readers see, published in one write: a reader never pairs new Sutras with old sources. */
-    private volatile Snapshot snapshot = new Snapshot(Map.of(), Map.of(), Map.of(), Map.of());
+    private volatile Snapshot snapshot = new Snapshot(Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
     private final java.util.concurrent.BlockingQueue<Boolean> signal = new java.util.concurrent.ArrayBlockingQueue<>(1);
     private final List<SharedWatchService.Registration> registrations = new CopyOnWriteArrayList<>();
     private Thread watchThread;
@@ -144,6 +144,19 @@ public final class SutraRegistry implements AutoCloseable {
                 .filter(s -> s.match().kind().equals(kind) && offered(s))
                 .sorted(Comparator.comparingInt((Sutra s) -> -s.match().priority()).thenComparing(Sutra::name))
                 .toList();
+    }
+
+    /**
+     * The page sections packs contribute to a kind's record page ({@code *.section.yaml} in a pack's Sutra folder: the same Rachana
+     * document as a Sutra, whose {@code match.kind} names the kind and {@code match.where} the rows it is shown for, and whose panels are
+     * appended to the page). Only packs that are on contribute: a section follows its pack's switch.
+     */
+    public List<Sutra> sectionsFor(String kind) {
+        Snapshot sn = snapshot;
+        return sn.sections().entrySet().stream()
+                .filter(e -> e.getValue().match().kind().equals(kind)
+                        && Optional.ofNullable(sn.sectionFiles().get(e.getKey())).flatMap(this::packOf).map(packOn::test).orElse(true))
+                .sorted(Map.Entry.comparingByKey()).map(Map.Entry::getValue).toList();
     }
 
     public List<Integer> versions(String name) {
@@ -302,6 +315,8 @@ public final class SutraRegistry implements AutoCloseable {
         Map<String, List<SutraProblem>> problems = new LinkedHashMap<>();
         Map<String, Path> origin = new HashMap<>();
         Map<String, String> texts = new HashMap<>();
+        Map<String, Sutra> sections = new TreeMap<>();
+        Map<String, Path> sectionFiles = new HashMap<>();
         List<Path> files = files();
         lastGood.keySet().retainAll(files);
         // the shared panel blocks first (<name>.v<N>.block.yaml): a Sutra's { use: <block> } reads them while it is parsed
@@ -318,6 +333,26 @@ public final class SutraRegistry implements AutoCloseable {
             String fname = f.getFileName().toString();
             if (com.ash.rachana.parse.SutraBlocks.isBlockFile(f)) {
                 continue;                                              // a block, read above
+            }
+            if (fname.endsWith(".section.yaml")) {                     // a pack's section of a kind's page, not a Sutra
+                try {
+                    Sutra sec = parser.parse(Files.readString(f, StandardCharsets.UTF_8), fname, f.getParent() == null ? "" : f.getParent().getFileName().toString());
+                    List<SutraProblem> exprProblems = expressions.get().check(sec);
+                    if (!exprProblems.isEmpty()) {
+                        throw new SutraException(DrishtiRachana.drs(exprProblems));
+                    }
+                    lastGood.put(f, sec);
+                } catch (SutraException e) {
+                    problems.put(f.toString(), DrishtiRachana.drs(e.problems()));
+                } catch (IOException | RuntimeException e) {
+                    problems.put(f.toString(), List.of(new SutraProblem("DRS-2032", "the section could not be loaded: " + describe(e), new SourceLocation(f.toString(), 1, 1))));
+                }
+                Sutra sec = lastGood.get(f);
+                if (sec != null) {
+                    sections.put(sec.id(), sec);
+                    sectionFiles.put(sec.id(), f);
+                }
+                continue;
             }
             if (!fname.endsWith(".sutra.yaml")) {                     // a file in a Sutra folder that is not a Sutra file
                 problems.put(f.toString(), List.of(new SutraProblem("DRS-2004", fname.endsWith(".sutra.md")
@@ -374,7 +409,7 @@ public final class SutraRegistry implements AutoCloseable {
         }
         Map<String, NavigableMap<Integer, Sutra>> frozen = new TreeMap<>();
         byName.forEach((k, v) -> frozen.put(k, Collections.unmodifiableNavigableMap(v)));
-        snapshot = new Snapshot(Collections.unmodifiableMap(frozen), Collections.unmodifiableMap(problems), Map.copyOf(texts), Map.copyOf(origin));
+        snapshot = new Snapshot(Collections.unmodifiableMap(frozen), Collections.unmodifiableMap(problems), Map.copyOf(texts), Map.copyOf(origin), Map.copyOf(sections), Map.copyOf(sectionFiles));
         problems.forEach((f, ps) -> ps.forEach(p -> LOG.warn("sutra problem {}", p)));
         Set<String> changed = changedIds(before, snapshot);
         LOG.info("sutras loaded: {} names, {} problem file(s), {} changed", frozen.size(), problems.size(), changed.size());
@@ -404,6 +439,7 @@ public final class SutraRegistry implements AutoCloseable {
     private static Map<String, Sutra> flatten(Snapshot s) {
         Map<String, Sutra> out = new HashMap<>();
         s.byName().values().forEach(v -> v.values().forEach(x -> out.put(x.id(), x)));
+        out.putAll(s.sections());                                    // a changed section drops the cached layouts too
         return out;
     }
 

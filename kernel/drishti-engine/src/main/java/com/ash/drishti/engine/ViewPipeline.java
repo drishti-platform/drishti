@@ -86,7 +86,7 @@ import java.util.function.UnaryOperator;
 public final class ViewPipeline implements com.ash.drishti.common.LiveSettings {
 
     /** Cache key for effective layouts. */
-    record LayoutKey(Object sutra, String kind, Fingerprint fingerprint) {}
+    record LayoutKey(Object sutra, String kind, Fingerprint fingerprint, java.util.List<String> sections) {}
 
     /**
      * A Sutra compared by identity: each (re)load parses a new object, so a layout computed from an older parse can
@@ -365,7 +365,7 @@ public final class ViewPipeline implements com.ash.drishti.common.LiveSettings {
         Optional<Sutra> sutra = matcher.match(ref.kind(), doc.data());
         Fingerprint fp = fingerprints.get(new GenKey(ref, doc.provenance().generation(), doc.provenance().businessDate(), router.partition()),
                 k -> fingerprinter.fingerprint(doc.data()));
-        EffectiveLayout layout = layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp),
+        EffectiveLayout layout = layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp, merger.sectionIds(ref.kind())),
                 k -> merger.merge(sutra, doc.data(), ref.kind()));
         Panel panel = layout.sutra().panels().stream().filter(p -> p.id().equals(panelId) && p.pivot().isPresent()).findFirst()
                 .orElseThrow(() -> new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "the view of " + ref.id() + " has no panel '" + panelId
@@ -410,7 +410,7 @@ public final class ViewPipeline implements com.ash.drishti.common.LiveSettings {
         Optional<Sutra> sutra = chosen.isPresent() ? chosen : matcher.match(ref.kind(), doc.data());
         Fingerprint fp = fingerprints.get(new GenKey(ref, doc.provenance().generation(), doc.provenance().businessDate(), router.partition()),
                 k -> fingerprinter.fingerprint(doc.data()));
-        EffectiveLayout layout = layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp),
+        EffectiveLayout layout = layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp, merger.sectionIds(ref.kind())),
                 k -> merger.merge(sutra, doc.data(), ref.kind()));
         EntityDocument seen = seen(doc, redact);
         ControlResolver.Resolved resolved = bound.get().controls().resolve(layout.sutra(), EvalContext.of(seen.data(), formats), values, Hosted.asOf(asOf), mayOpen);
@@ -462,7 +462,7 @@ public final class ViewPipeline implements com.ash.drishti.common.LiveSettings {
         Optional<Sutra> sutra = matcher.match(ref.kind(), doc.data());
         Fingerprint fp = fingerprints.get(new GenKey(ref, doc.provenance().generation(), doc.provenance().businessDate(), router.partition()),
                 k -> fingerprinter.fingerprint(doc.data()));
-        EffectiveLayout layout = layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp),
+        EffectiveLayout layout = layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp, merger.sectionIds(ref.kind())),
                 k -> merger.merge(sutra, doc.data(), ref.kind()));
         return title(layout.sutra(), EvalContext.of(redact.apply(doc.data()), formats), ref);
     }
@@ -487,7 +487,7 @@ public final class ViewPipeline implements com.ash.drishti.common.LiveSettings {
         Fingerprint fp = fingerprints.get(new GenKey(ref, doc.provenance().generation(), doc.provenance().businessDate(), router.partition()),
                 k -> fingerprinter.fingerprint(doc.data()));
         EffectiveLayout layout = cached
-                ? layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp), k -> merger.merge(sutra, doc.data(), ref.kind()))
+                ? layouts.get(new LayoutKey(sutra.<Object>map(SutraIdentity::new).orElse("-"), ref.kind(), fp, merger.sectionIds(ref.kind())), k -> merger.merge(sutra, doc.data(), ref.kind()))
                 : merger.merge(sutra, doc.data(), ref.kind());
         long tLayout = System.nanoTime();
 

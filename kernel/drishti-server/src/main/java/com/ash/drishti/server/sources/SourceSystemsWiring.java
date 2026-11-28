@@ -54,6 +54,28 @@ public class SourceSystemsWiring {
         this.access = access;
     }
 
+    /**
+     * The pack switch (Admin -> Artifacts): a source system is the pack of its name ({@code murex} for MUREX) of the trading-systems module; the
+     * pack off, the system is off (its connectors serve nothing, its rows leave every read, its live feed stops). A system with no pack of its name
+     * (a site's own source module) follows its module's switch as before.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void packs(com.ash.drishti.server.security.PackAccess packs) {
+        if (packs != null) {
+            packs.onSwitch(this::refresh);
+            this.packExists = packs.installed()::contains;
+            this.packEnabled = packs::isEnabled;
+        }
+    }
+
+    private volatile java.util.function.Predicate<String> packExists = p -> false;
+    private volatile java.util.function.Predicate<String> packEnabled = p -> true;
+
+    /** The pack a system is: its lower-case name when a pack of that name is installed here. */
+    static String packName(String system) {
+        return system.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-");
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void ready() {
         AccessRegistry a = access.getIfAvailable();
@@ -70,13 +92,18 @@ public class SourceSystemsWiring {
             return;
         }
         try {
-            r.registry().systems().installed(systems(r, access.getIfAvailable()));
+            r.registry().systems().installed(systems(r, access.getIfAvailable(), packExists, packEnabled));
         } catch (RuntimeException e) {
             LOG.warn("source systems: not worked out: {}", e.toString());
         }
     }
 
     static List<SourceSystems.System> systems(SourceRouter r, AccessRegistry a) {
+        return systems(r, a, p -> false, p -> true);
+    }
+
+    static List<SourceSystems.System> systems(SourceRouter r, AccessRegistry a, java.util.function.Predicate<String> packExists,
+            java.util.function.Predicate<String> packEnabled) {
         Map<String, List<String>> bySystem = r.registry().connectorsBySystem();
         Map<String, List<String>> bound = r.bound();
         List<SourceSystems.System> out = new ArrayList<>();
@@ -88,11 +115,25 @@ public class SourceSystemsWiring {
                 }
             });
             connectors.forEach(c -> r.registry().plugin(c).ifPresent(p -> kinds.addAll(p.manifest().kinds())));
+            String pack = packName(system);
             String module = module(a, system, connectors).orElse("");
-            boolean on = module.isEmpty() || a == null || a.module(module).map(ModuleState::on).orElse(true);
+            boolean on;
+            if (packExists.test(pack)) {                       // a source pack: the pack is the switch
+                on = packEnabled.test(pack);
+                module = moduleOfPack(pack).orElse(module);
+            } else {
+                on = module.isEmpty() || a == null || a.module(module).map(ModuleState::on).orElse(true);
+            }
             out.add(new SourceSystems.System(system, module, kinds, on));
         });
         return out;
+    }
+
+    /** The module whose folder holds a pack (the resolution's answer), or empty. */
+    static Optional<String> moduleOfPack(String pack) {
+        com.ash.drishti.api.resolution.ConfigResolution res = com.ash.drishti.api.resolution.ConfigResolution.current();
+        com.ash.drishti.api.resolution.PackResolver.Located l = res == null ? null : res.packs().packs().get(pack);
+        return l == null || l.module() == null ? Optional.empty() : Optional.of(l.module());
     }
 
     /** The module a system's connectors belong to: the one that owns a connector, else {@code source-<system>} when installed. */
@@ -124,6 +165,7 @@ public class SourceSystemsWiring {
             m.put("on", s.on());
             m.put("kinds", s.kinds());
             m.put("connectors", bySystem.getOrDefault(s.id(), List.of()));
+            m.put("pack", packExists.test(packName(s.id())) ? packName(s.id()) : "");
             m.put("says", "source " + s.id() + (s.on() ? " on" : " off"));
             out.add(m);
         });

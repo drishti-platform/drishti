@@ -54,7 +54,7 @@ def test_switching_a_system_writes_a_partial_override_and_back_to_delta_removes_
     assert "now reads iceberg, was delta" in stores.switch(folder, "calypso", "iceberg", lake, ice, data, dry=False)
     doc = yaml.safe_load((folder / "trade-calypso.yaml").read_text(encoding="utf-8"))
     # a partial override (KERNEL_AND_MODULES.md 18.5): only the keys that differ from the source module's template, which it names
-    assert doc == {"template": "module source-calypso", "plugin": "iceberg", "settings": {"lake": stores.ICEBERG_LAKE}}
+    assert doc == {"template": "pack calypso", "plugin": "iceberg", "settings": {"lake": stores.ICEBERG_LAKE}}
     s = R.repository(connectors=folder).connectors.find("trade-calypso").settings     # as the Java resolver merges them
     # the lake form (docs/guides/DATA_LAKE_GUIDE.md): the connector names the lake demo-iceberg; its file, beside the connector folder, holds
     # the table (the pack's entry, the partition field kept as a promoted column) and the root

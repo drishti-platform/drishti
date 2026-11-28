@@ -557,7 +557,7 @@ The mock-ups follow [the mock-up rules](#mock-ups). The scenario matrix (on in T
 **Code:** [`trading_landing.html`](../../drishti-console/plugins/banking/templates/home/trading_landing.html),
 [`drishti_trading-landing.js`](../../drishti-console/plugins/banking/static/js/drishti_trading-landing.js),
 [`drishti_trading-landing.css`](../../drishti-console/plugins/banking/static/css/drishti_trading-landing.css),
-[`TradingLanding.java`](../../modules/trading/java/trading-service/src/main/java/com/ash/drishti/trading/TradingLanding.java),
+[`TradingLanding.java`](../../modules/trading-systems/java/trading-service/src/main/java/com/ash/drishti/trading/TradingLanding.java),
 [`trading_routes.py`](../../drishti-console/plugins/banking/routes/trading_routes.py). Names are the demo's; figures illustrative.
 
 **Interactions.** Every trade id opens `TRD <id>`, every trader `TRDR`, every chip and quick card its command; *Check a new trade*

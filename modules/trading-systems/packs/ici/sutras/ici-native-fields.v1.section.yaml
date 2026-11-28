@@ -1,0 +1,45 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The native-fields section of the ICI pack (docs/architecture/KERNEL_AND_MODULES.md, "Pack sections"): appended to the trade record page for
+# the rows whose SOURCE_SYSTEM is ICI and for no others; the pack's switch is its switch (off: the section is gone). Each line is a native
+# field of the system (its own name) with the canonical field it feeds.
+rachana: 1.2
+sutra: ici-native-fields
+version: 1
+description: "The ICI fields of a trade, under their ICI names."
+match: { kind: trade, where: "$.SOURCE_SYSTEM == 'ICI'" }
+title: { pill: "ICI", id: $.TRADE_ID }
+panels:
+  - id: ici-native-fields
+    kind: kv
+    title: "ICI native fields"
+    columns:
+      - { label: "TICKET_NO", bind: "nonblank($.TRADE_ID, '–')" }
+      - { label: "HEADER.REV", bind: "nonblank($.TRADE_VERSION, '–')" }
+      - { label: "HEADER.STATE", bind: "nonblank($.TRADE_STATUS, '–')" }
+      - { label: "INSTRUMENT.ASSET_CLASS", bind: "nonblank($.PRODUCT_GROUP, '–')" }
+      - { label: "INSTRUMENT.KIND", bind: "nonblank($.PRODUCT_TYPE, '–')" }
+      - { label: "INSTRUMENT.SIDE", bind: "nonblank($.BUY_SELL_CODE, '–')" }
+      - { label: "INSTRUMENT.UNITS", bind: "nonblank($.QUANTITY, '–')" }
+      - { label: "INSTRUMENT.PX", bind: "nonblank($.PRICE, '–')" }
+      - { label: "INSTRUMENT.CCY", bind: "nonblank($.CURRENCY, '–')" }
+      - { label: "PARTIES.CPTY", bind: "nonblank($.COUNTERPARTY, '–')" }
+      - { label: "PARTIES.ENTITY", bind: "nonblank($.LEGAL_ENTITY, '–')" }
+      - { label: "PARTIES.BOOK", bind: "nonblank($.PORTFOLIO, '–')" }
+      - { label: "HEADER.ENTERED_BY", bind: "nonblank($.TRADER_ID, '–')" }
+      - { label: "DATES.TRADE", bind: "nonblank($.TRADE_DATE, '–')" }
+      - { label: "DATES.START", bind: "nonblank($.START_DATE, '–')" }
+      - { label: "DATES.END", bind: "nonblank($.MATURITY_DATE, '–')" }
+      - { label: "HEADER.LAST_CHANGE", bind: "nonblank($.SOURCE_UPDATE_TIME, '–')" }

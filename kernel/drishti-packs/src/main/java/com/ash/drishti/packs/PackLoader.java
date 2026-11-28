@@ -361,6 +361,14 @@ public final class PackLoader {
                         props.put("drishti.security.roles." + e.getKey() + "." + flag, r.get(flag));
                     }
                 }
+                for (Map.Entry<String, Object> row : map(r.get("rows")).entrySet()) {                // a row rule by kind (KERNEL_AND_MODULES.md section 19.10)
+                    props.put("drishti.security.roles." + e.getKey() + ".rows." + row.getKey(), row.getValue());
+                }
+                if (r.get("edit-systems") instanceof List<?> systems) {                              // the source systems whose records the role may write back to
+                    for (int i = 0; i < systems.size(); i++) {
+                        props.put("drishti.security.roles." + e.getKey() + ".edit-systems[" + i + "]", systems.get(i));
+                    }
+                }
                 offer(claims, overrides, lineage, "role " + e.getKey(), pack.name(), props);
             }
             // connectors: the pack names site connectors. What it defines inline (and what its source modules bring) is the template

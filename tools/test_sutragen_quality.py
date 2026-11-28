@@ -18,7 +18,7 @@
 Synthetic Endur-, Calypso- and Murex-like nested trades (written here, under data/tmp, never committed: legs with cash flows and
 resets, events, a nested settlement record, a list of reporting regimes) go through `pack new`'s generator
 (tools/packgen/pack_from_jsonl.py, the server's auto-designer); each generated Sutra is compared with the hand-built Sutra of the
-same product (modules/banking/packs/trading/sutras/<system>/<product>.v1.sutra.yaml, its fragments expanded) on structure:
+same product (modules/trading-systems/packs/trading/sutras/<system>/<product>.v1.sutra.yaml, its fragments expanded) on structure:
 
   title     the id and the counterparty link
   kinds     every panel kind the hand-built screen uses (kv, tabs, table, line, hbar, timeline, provenance, links)

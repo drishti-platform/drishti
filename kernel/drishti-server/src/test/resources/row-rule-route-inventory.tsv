@@ -154,5 +154,5 @@ gated	modules/banking/java/banking-service/src/main/java/com/ash/drishti/banking
 gated	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/GenomicsController.java	
 gated	modules/genomics/java/genomics/src/main/java/org/helixlab/genomics/ShowcaseController.java	
 none	modules/market-data/java/market-data-service/src/main/java/com/ash/drishti/marketdata/MarketLandingController.java	landing page
-none	modules/trading/java/trading-service/src/main/java/com/ash/drishti/trading/TradingLandingController.java	landing page
+none	modules/trading-systems/java/trading-service/src/main/java/com/ash/drishti/trading/TradingLandingController.java	landing page
 gated	kernel/drishti-server/src/main/java/com/ash/drishti/server/memlake/LakeTablesController.java	

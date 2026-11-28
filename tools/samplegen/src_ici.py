@@ -14,7 +14,7 @@
 
 """ICI: a mocked generic cross-asset booking system, in its own native style (UPPER_SNAKE names, sections HEADER, INSTRUMENT, PARTIES, DATES; a
 numeric ``REV``; dates as YYYYMMDD text; one ticket a document). What ICI trades is not stated by its owner, so it is mocked as a generic
-cross-asset booking system: rates, FX, equity, credit and commodity tickets from one blotter (modules/source-ici/README.md says so). A
+cross-asset booking system: rates, FX, equity, credit and commodity tickets from one blotter (modules/trading-systems/packs/ici/README.md says so). A
 synthetic look-alike: no real system's layout, bank or counterparty. See src_common.py."""
 from __future__ import annotations
 

@@ -35,7 +35,7 @@ router = APIRouter(include_in_schema=False)
 NAME = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,127}$")
 SUB = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 LIMIT = 256 * 1024
-LIVE_MODULE = "trading"                 # the module whose blotters are the shipped live tables (modules/trading/blotters)
+LIVE_MODULE = "trading-systems"                 # the module whose blotters are the shipped live tables (modules/trading-systems/blotters)
 
 
 def _problem(e: BackendError) -> JSONResponse:

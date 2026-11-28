@@ -15,7 +15,7 @@
 # The module's Help section.
 sections:
 - id: banking
-  title: Banking and risk
+  title: Risk
   pages:
   - title: Trading and bank data
     file: ../guides/BANK_DATA_GUIDE.md

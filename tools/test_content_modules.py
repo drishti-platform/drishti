@@ -36,7 +36,7 @@ import modulesbuild  # noqa: E402
 from procs import LaunchError  # noqa: E402
 
 MODULES = ROOT / "modules"
-CONTENT = ["external-data", "news-and-events", "reference-data", "source-calypso", "source-endur", "source-ici", "source-murex", "source-swapone", "source-wss"]
+CONTENT = ["external-data", "news-and-events", "reference-data"]
 
 # a module with a java: block that packaging/dist does NOT pack: the reason (none today: every one is shipped)
 NOT_SHIPPED: dict[str, str] = {}
@@ -142,7 +142,7 @@ def test_a_content_module_carries_its_content_and_no_code(mid, tmp_path):
         assert not [n for n, t in shipped_text.items() if re.search(r"imf|weo", t, re.I)], "a shipped sample names the IMF"
 
 
-@pytest.mark.parametrize("mid", ["market-data", "trading", "banking", "genomics"])
+@pytest.mark.parametrize("mid", ["market-data", "trading-systems", "banking", "genomics"])
 def test_a_module_with_a_server_part_is_not_packed_without_its_jar(mid, tmp_path):
     assert manifest(mid).get("java") is not None
     with pytest.raises(LaunchError, match="neither in the folder nor given"):
@@ -169,7 +169,7 @@ def test_every_module_with_a_java_block_is_shipped_or_listed_as_not_shipped_with
     assert not missing, f"{missing}: has a java: block but packaging/dist does not pack it (add pack-<module> there, or list it in NOT_SHIPPED with the reason)"
     assert all(NOT_SHIPPED[m].strip() for m in NOT_SHIPPED)
     assert not (set(NOT_SHIPPED) & shipped), "listed as not shipped, but packaged"
-    assert {"banking", "market-data", "trading", "genomics"} <= shipped
+    assert {"banking", "market-data", "trading-systems", "genomics"} <= shipped
 
 
 def test_packaging_dist_packs_every_module_folder():
@@ -179,6 +179,6 @@ def test_packaging_dist_packs_every_module_folder():
 
 def test_dist_pom_has_a_check_for_every_module_with_a_server_part():
     pom = (ROOT / "packaging/dist/pom.xml").read_text(encoding="utf-8")
-    for mid in ("banking", "market-data", "trading", "genomics"):
+    for mid in ("banking", "market-data", "trading-systems", "genomics"):
         assert f"<id>check-{mid}</id>" in pom, mid
     assert "ModuleTool" not in pom and "drishti-module-tool" not in pom

@@ -46,7 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * A source system end to end, on the real files of the module {@code modules/source-swapone} and the trading pack: a mocked
+ * A source system end to end, on the real files of the module {@code modules/trading-systems/packs/swapone} and the trading pack: a mocked
  * {@code swapone-<date>.jsonl.gz} with its {@code .ready} in the inbox is matched by the module's inbox rule, loaded through the module's
  * connector into its own table {@code trading.trade_swapone} (one table a trading system) with {@code SOURCE_SYSTEM = SWAPONE} stamped, and the trade kind (what TRD lists) shows it
  * through the module's field map; switching the system off removes it, on brings it back, without a restart.
@@ -60,7 +60,7 @@ class SourceModuleEndToEndTest {
 
     private static Path repo() {
         Path p = Path.of(TestRoots.module());
-        while (p != null && !Files.isDirectory(p.resolve("modules/source-swapone"))) {
+        while (p != null && !Files.isDirectory(p.resolve("modules/trading-systems/packs/swapone"))) {
             p = p.getParent();
         }
         assertThat(p).as("the repository root").isNotNull();
@@ -70,11 +70,11 @@ class SourceModuleEndToEndTest {
     @Test
     void aSwapOneFileInTheInboxIsListedAndTheSwitchTakesItAwayAndBack() throws Exception {
         Path root = repo();
-        Path pack = Files.createDirectories(tmp.resolve("modules/banking/packs/trading"));
-        Files.copy(root.resolve("modules/banking/packs/trading/pack.yaml"), pack.resolve("pack.yaml"));
+        Path pack = Files.createDirectories(tmp.resolve("modules/trading-systems/packs/trading"));
+        Files.copy(root.resolve("modules/trading-systems/packs/trading/pack.yaml"), pack.resolve("pack.yaml"));
         // the module's package, booted as the launch boots it (the loader below resolves through it)
-        java.util.Map<String, String> booted = BootedPackages.boot(tmp.resolve("site"), "source-swapone");
-        Path module = BootedPackages.dir(booted, "source-swapone");
+        java.util.Map<String, String> booted = BootedPackages.boot(tmp.resolve("site"), "reference-data", "market-data", "trading-systems");
+        Path module = BootedPackages.dir(booted, "trading-systems").resolve("packs/swapone");   // the source system's pack folder
         YAMLMapper yaml = new YAMLMapper();
         // the inbox: the file and its .ready
         Path inbox = Files.createDirectories(tmp.resolve("data/inbox"));
@@ -90,7 +90,7 @@ class SourceModuleEndToEndTest {
         JsonNode rule = yaml.readTree(Files.readString(module.resolve("dataload.yaml"))).path("dataload").path("rules").get(0);
         String glob = rule.path("match").asText();
         assertThat(file.getFileName().toString()).matches(glob.replace(".", "\\.").replace("*", ".*"));
-        assertThat(rule.path("pack").asText()).isEqualTo("trading");
+        assertThat(rule.path("pack").asText()).isEqualTo("swapone");
         assertThat(rule.path("kind").asText()).isEqualTo("trade");
         java.util.regex.Matcher dated = java.util.regex.Pattern.compile(rule.path("date-pattern").asText()).matcher(file.getFileName().toString());
         assertThat(dated.find()).as("the rule's date-pattern finds the date in the name").isTrue();
@@ -101,7 +101,7 @@ class SourceModuleEndToEndTest {
         // the load, through the module's connector: its own table, the system stamped
         Path lake = tmp.resolve("lake");
         Path cfg = tmp.resolve("load.yaml");
-        Files.writeString(cfg, "source:\n  files: '" + file + "'\n  as-of: " + DAY + "\n  id: " + rule.path("key").asText() + "\n  pack: '" + pack + "'\n  connector: "
+        Files.writeString(cfg, "source:\n  files: '" + file + "'\n  as-of: " + DAY + "\n  id: " + rule.path("key").asText() + "\n  pack: '" + module + "'\n  connector: "
                 + connector + "\ntarget:\n  format: delta\n  path: '" + lake + "/trading/trade_swapone'\n  domain: trading\n  kind: trade\n");
         // the loader's resolution: this site's modules folder (drishti.modules.home), every module on (KERNEL_AND_MODULES.md section 18)
         com.ash.drishti.api.resolution.ConfigResolution.install(com.ash.drishti.api.resolution.ConfigResolution.offline(
@@ -114,7 +114,7 @@ class SourceModuleEndToEndTest {
         assertThat(lake.resolve("trading/trades_shared")).as("no shared table").doesNotExist();
 
         // the connector of the module's template, on the lake the load wrote
-        JsonNode template = yaml.readTree(Files.readString(module.resolve("connectors/trade-swapone.yaml")));
+        JsonNode template = yaml.readTree(Files.readString(module.resolve("pack.yaml"))).path("connectors").path("trade-swapone");
         Map<String, String> settings = new LinkedHashMap<>();
         template.path("settings").fields().forEachRemaining(e -> {
             if (e.getValue().isValueNode()) {
@@ -129,14 +129,14 @@ class SourceModuleEndToEndTest {
         settings.put("domain", "trading");
         settings.put("table.trade", "trade_swapone");
         settings.put("engine", "native");
-        settings.put("module-dir", module.toString());               // how the server finds the module's map file
+        settings.replaceAll((k, v) -> v.replace("${pack.dir}", module.toString()));   // the pack's own folder anchors its map file
         settings.put("id-map-disk.dir", tmp.resolve("cache/idmaps").toString());
         settings.put("doc-disk-cache.dir", tmp.resolve("cache/docs").toString());
         var cfgs = new LinkedHashMap<String, SourcesProperties.ConnectorSettings>();
         cfgs.put(connector, new SourcesProperties.ConnectorSettings("delta", true, List.of("trade"), settings));
         var props = new SourcesProperties(Map.of(), null, Map.of(), Duration.ofSeconds(5), null, cfgs, tmp.toString(), null, null, null);
         SourceRegistry registry = new SourceRegistry(List.of(new DeltaSourcePlugin()), props, new JsonCodec());
-        registry.systems().installed(List.of(new SourceSystems.System("SWAPONE", "source-swapone", java.util.Set.of("trade"), true)));
+        registry.systems().installed(List.of(new SourceSystems.System("SWAPONE", "trading-systems", java.util.Set.of("trade"), true)));
         SourceRouter router = new SourceRouter(registry, props, Executors.newVirtualThreadPerTaskExecutor());
         router.bind(Map.of("trade", List.of(connector)));
 

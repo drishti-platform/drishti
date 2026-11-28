@@ -520,7 +520,7 @@ the title and strip only.
   and `{'name': 'counterparty', … 'domain': 'counterparty-and-legal', 'kind': 'counterparty', 'where': None, 'priority': 10}`.
 - `GET /api/v1/sutras/{name}/{version}/source` returns the file's YAML (`text/yaml`), comments included, exactly as loaded (a
   product Sutra's `use:` entries as written; `sutra lint` and a preview see them expanded).
-- The **domain** defaults to the name of the folder holding the file (`modules/banking/packs/trading/sutras/murex/…` → `murex`). It is a label
+- The **domain** defaults to the name of the folder holding the file (`modules/trading-systems/packs/trading/sutras/murex/…` → `murex`). It is a label
   only (the catalog groups by it; the workbench saves back there): it never decides what the Sutra matches
   ([Folders mean nothing](#folders-mean-nothing)).
 
@@ -3241,10 +3241,10 @@ wrote, comments included; then it reloads. A `name@version` already defined by a
 
 | File | Open it with | Shows |
 |---|---|---|
-| `modules/banking/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` | `TRD MX-20000001` | a product Sutra made of shared blocks, two controls on its events table |
-| `modules/banking/packs/trading/sutras/endur/endur-comswap.v1.sutra.yaml` | `TRD 1000001`, `TRD 1000003` | sub types as `when:` panels (`fixed-float`, `basis`) |
-| `modules/banking/packs/trading/sutras/common/*.v1.block.yaml` | (used by every trade Sutra) | blocks with parameters; tabs holding panels; a tree of cash flows and resets; timeline; payment ladder |
-| `modules/banking/packs/trading/sutras/pages/counterparty-trades.v1.sutra.yaml` | `/v/counterparty-trades/CP-NORTHPLAINS` | metric tiles, a donut, ladders over many trades |
+| `modules/trading-systems/packs/trading/sutras/murex/irs-fixfloat.v1.sutra.yaml` | `TRD MX-20000001` | a product Sutra made of shared blocks, two controls on its events table |
+| `modules/trading-systems/packs/trading/sutras/endur/endur-comswap.v1.sutra.yaml` | `TRD 1000001`, `TRD 1000003` | sub types as `when:` panels (`fixed-float`, `basis`) |
+| `modules/trading-systems/packs/trading/sutras/common/*.v1.block.yaml` | (used by every trade Sutra) | blocks with parameters; tabs holding panels; a tree of cash flows and resets; timeline; payment ladder |
+| `modules/trading-systems/packs/trading/sutras/pages/counterparty-trades.v1.sutra.yaml` | `/v/counterparty-trades/CP-NORTHPLAINS` | metric tiles, a donut, ladders over many trades |
 | `modules/reference-data/packs/core/sutras/counterparty-and-legal/counterparty.v1.sutra.yaml` | `CPTY CP-MERIDIAN-RE` | table with totals, kv, graph |
 | `modules/banking/packs/counterparty-risk/sutras/exposure-and-capital/netting-set.v1.sutra.yaml` | `NSET NS-MERIDIAN-RE-NY` | area with a limit, four controls, `on-select`, Pivot, automatic id links |
 | `modules/market-data/packs/market-data/sutras/market-data/equity-vol-surface.v1.sutra.yaml` | `EQV EQV-CSCA` | surface, table, line |
@@ -4575,7 +4575,7 @@ panels:
   keys move between them). Below 700 px a pane opens as a full-width sheet with a Back button. Theme tokens only, so every theme
   draws them.
 
-**The worked screen: the book desk** (`modules/banking/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`, opened as
+**The worked screen: the book desk** (`modules/trading-systems/packs/trading/sutras/pages/book-desk.v1.sutra.yaml`, opened as
 `/v/portfolio-trades/BOOK-RATES-2?sutra=book-desk`): the book's trades (`row-picker@1`, `open` with the trade id and the
 counterparty); a click opens the trade's cash flows under the row (`cashflow-ladder@1` over the `trade` kind, trading pack) and fills
 the right column: the counterparty (core pack, by id) and its credit limit with utilisation by tenor (`ranked-bars@1`, counterparty-risk
@@ -8148,7 +8148,7 @@ them is one file in the lowest pack that owns the kind, and it reaches `market-r
 vocabulary has about 190 terms, one per product field, and the `trade` entry the page-specific ones):
 
 ```yaml
-# modules/banking/packs/trading/config/about.yaml
+# modules/trading-systems/packs/trading/config/about.yaml
 about: 1
 vocabulary:                        # a word defined once, reused by every kind and every pack that extends trading
   fixedRate:
@@ -8219,7 +8219,7 @@ source.
 
 | | Trade (A) | Variant (B) |
 |---|---|---|
-| About file | `modules/banking/packs/trading/config/about.yaml`, `kinds.trade` | `examples/packs/genomics/config/about.yaml`, `kinds.variant` |
+| About file | `modules/trading-systems/packs/trading/config/about.yaml`, `kinds.trade` | `examples/packs/genomics/config/about.yaml`, `kinds.variant` |
 | Candidates in the `MatchTrace` | 124 other Sutras of kind `trade` | none |
 | Source and health | `murex-rates`, `up` | `reference-genome`, `up` |
 | **Unchanged** | `ExplainController`, `ExplainService`, `PageContext`, the drawer and its keys | the same |

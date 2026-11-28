@@ -1,0 +1,39 @@
+# Project Drishti · Any data. Any domain. One grammar.
+#
+# Copyright (c) 2026 Ashutosh Sinha <ajsinha@gmail.com>.
+# All rights reserved.
+#
+# PROPRIETARY AND CONFIDENTIAL.
+#
+# This file is the confidential and proprietary property of Ashutosh Sinha.
+# Unauthorised copying, use, modification, distribution or disclosure of this
+# file, via any medium, is strictly prohibited except with the express prior
+# written permission of the copyright holder.
+#
+# See the LICENSE file in the root of this repository for the full terms.
+
+# The module's Help section: the trade kind, its source systems (Endur, Calypso, Murex, WSS, SwapOne, ICI) and the live blotter.
+sections:
+- id: trading-systems
+  title: Trading systems
+  pages:
+  - title: Trading systems and the live blotter
+    file: ../guides/BANK_DATA_GUIDE.md
+  - title: Endur
+    file: ../packs/endur/README.md
+    pack: endur                    # the page follows the pack's switch: shown only while the pack is on
+  - title: Calypso
+    file: ../packs/calypso/README.md
+    pack: calypso                    # the page follows the pack's switch: shown only while the pack is on
+  - title: Murex
+    file: ../packs/murex/README.md
+    pack: murex                    # the page follows the pack's switch: shown only while the pack is on
+  - title: WSS
+    file: ../packs/wss/README.md
+    pack: wss                    # the page follows the pack's switch: shown only while the pack is on
+  - title: SwapOne
+    file: ../packs/swapone/README.md
+    pack: swapone                    # the page follows the pack's switch: shown only while the pack is on
+  - title: ICI
+    file: ../packs/ici/README.md
+    pack: ici                    # the page follows the pack's switch: shown only while the pack is on

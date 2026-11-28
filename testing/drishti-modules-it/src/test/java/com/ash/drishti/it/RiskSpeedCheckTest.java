@@ -130,7 +130,7 @@ class RiskSpeedCheckTest {
         List<String> nodes = new ArrayList<>();
         List<String> leaves = new ArrayList<>();
         for (JsonNode n : server.get("/api/v1/risk/var/tree?hierarchy=MGMT&asOf=" + DATE + "&path=in-tree").path("nodes")) {
-            (n.path("expandable").asBoolean(true) ? nodes : leaves).add(n.path("id").asText());
+            (n.path("level").asText().equals("book") ? leaves : nodes).add(n.path("id").asText());   // books expand into positions: the leaves
         }
         out.put("nodes", nodes.size());
         out.put("leaves", leaves.size());

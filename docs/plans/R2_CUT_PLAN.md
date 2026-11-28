@@ -366,20 +366,33 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
    on the capture). `GET /compare?b=now&path=engine` reads now from the engine. A lens other than the offered one and a scope whose
    parts are positions or terms are refused in words on the engine path (captured in-tree).
 
-### Status, R2 lane B (2026-11-28 0x:xx, branch `r2/consumers-speed`; drishti-risk `r2/consumers-speed`)
+### Status, R2 lane B (2026-11-28 07:1x, branch `r2/consumers-speed`; drishti-risk `r2/consumers-speed`)
 
 - **(3) Consumers, done**: the system-basket and position pages behind `var.consumers.route` (Appendix A row; new host class
   `VarEngineParts`). `ConsumersSideBySideTest`: 59 answers (2 report runs, 10 desks, 4 entities, 28 system baskets, 15 positions; 22,868
-  page items), **0 differences on the mapped tier, on the heap tier, and on the mapped tier with zero copy on** (STATUS_ZC). The parts'
+  page items), **0 differences on the mapped tier and on the heap tier** (and on the mapped tier with `-Dsbs.zero-copy=on` before the bridge fix, so with the engine's own rows: the zero-copy page proof is still to run). `VarResultEngine` (VRES) figures from the engine are built behind the same switch (`fd54365b0`) and read by the test on both servers; **that run is still to do** (not proven). The parts'
   labels, sizes and the `max-parts` cut are the host's (read from the in-tree book of the date, as lane G's `hostPositions`: no vector
   is read for them, but the date is loaded: at removal they come from the engine's index, `EngineScopeBook.positionValue`).
-  **Not done (in-tree only, gate brief below)**: `VarResultEngine`, the pivot and MR cube readers, `VarFlightForm`, the explain readers.
-- **(4) Zero copy, done behind `var.zero-copy` (off)**: Appendix A row. drishti-risk `VarHotFileTest` 8/8 (the new case: the hot file's
-  own matrices swapped in equal the built rows to the bit; another book's ids refused). The engine takes the host's rows only when the
+  **Not done (in-tree only, gate brief below)**: the pivot and MR cube readers, `VarFlightForm`, the explain readers; VRES awaits its proof run.
+- **(4) Zero copy, built behind `var.zero-copy` (off)**: Appendix A row. drishti-risk `VarHotFileTest` 8/8 (the new case: the hot file's
+  own matrices swapped in equal the built rows to the bit; another book's ids refused). **Not yet seen end to end**: the first server
+  runs never reached the banking module's `VarVectorViews` (a module bean is not a kernel bean: fixed by the module bridge, `528217414`,
+  with the kernel API surface regenerated); the next speed run with `-Dspeed.zero-copy=on` must show "served to the engine in place" in
+  the server log and equal figures. The engine takes the host's rows only when the
   host holds the date open before the engine's session reads it (the speed check opens it in-tree first); otherwise it builds them, as
   before, and the host logs why it did not serve them.
-- **Speed check (100,000 positions)**: SPEED_SUMMARY. Full figures: BENCHMARK.md section 23.
-- **Regression at this stop**: REGRESSION.
+- **Speed check (100,000 positions, mapped tier, engine building its own rows)**: figures equal (bank, desk, book: exact doubles), but
+  **the engine path is slower**: warm headline of the bank 1.5 to 2.1 s against 0.3 to 0.4 s in-tree, a desk 0.7 to 2.2 s against under
+  0.03 s, a book (leaf) 1.2 to 1.6 s against about 0.01 s, the tree 4.3 to 5.2 s against 0.4 s; resident memory 5.9 GB with both paths
+  open (heap in use 2.1 GB). Cause (thread dump): `node-var` computes every node's VaR on each ask (no per-session table), and the leaf
+  headline adds `scope-contributions` over its positions. The scripted run (p50/p99, zero copy on/off, heap tier) did not finish in the
+  time box; BENCHMARK.md section 23 has the figures and what is still to measure. **Gate input**: the engine must cache the date's
+  node table in its session before any default flips.
+- **Regression at this stop**: `ConsumersSideBySideTest` green, mapped (twice) and heap (59 answers, 0 differences); drishti-risk
+  `VarHotFileTest` 8/8. Not rerun by this lane after its changes: `PackagedVarGoldenTest`, `RiskSideBySideTest`, `HomesSideBySideTest`,
+  `ExposureSideBySideTest`, `ExposureHomesSideBySideTest`, `MarketRecordedIT` (this lane's changes leave their paths untouched with the
+  defaults: `var.zero-copy` off, the engine option `zero-copy` off; `VarEnginePath` only widened to package visibility; the kernel's
+  `vectorView` answers only the new view name). They must run before the gate. No tolerance loosened.
 - **Infrastructure**: from 05:4x this lane builds into its own Maven repository (`~/drishti-bench-scratch/i8-m2-r2b`, the lead's
   instruction after this lane's kernel SNAPSHOTs replaced lane A's in the shared `i8-m2`).
 
@@ -406,16 +419,16 @@ float32 position rows) and heap (`-Dsbs.tier=heap`, float64).
 | VaR headline, tree, contributions (nodes, leaf positions), P&L path, horizons and stress set, other confidences, overrides, every scope kind, what-if (nodes and any scope), history (replay and official), statistics, backtesting, captures and compare, parametric (within relative 1e-12, owner 6.6 (4)), reporting currency (CAD) | `RiskSideBySideTest` 14/14 + overrides, `RiskSideBySideCadTest`, `RiskMaxPartsSideBySideTest` (lane A) | headline 1,572 answers, 3,918/3,918 raw bits; tree 786 rows; contributions 1,572; path 786 (1,572 raw bits); scope kinds 300; what-ifs 393 + 39; history 864; statistics 2,144 (15,946 numbers); backtesting 402 (14,187 numbers); captures 786 pairs; parametric 2,023,570 numbers within 1e-12 | both |
 | VaR goldens | `PackagedVarGoldenTest` | BANK VaR 167,372,692, ES 210,131,972; 12 cases, > 1,500 scopes; 9 EUR answers re-recorded by owner decision 6.6 (2) | mapped |
 | VaR consumers: role Homes, Home backtest | `HomesSideBySideTest` | 12 tables, 1,054 rows | mapped |
-| VaR consumers: report runs, desk and legal-entity pages, **system-basket and position pages (lane B)** | `ConsumersSideBySideTest` | 59 answers, 0 differences (2 report runs, 10 desks, 4 entities, 28 system baskets, 15 positions; 22,868 page items) | see status |
+| VaR consumers: report runs, desk and legal-entity pages, **system-basket and position pages (lane B)** | `ConsumersSideBySideTest` | 59 answers, 0 differences (2 report runs, 10 desks, 4 entities, 28 system baskets, 15 positions; 22,868 page items) | both |
 | Exposure: scope, profile, collateral, uncollateralised, counterparty grain, pre-deal (exact, proxy, supplied MtM), contributions, tree, page figures, audit line, distribution, what-if, GROUP: scopes, official record, captures and compare; exposure Home panels and pages | `ExposureSideBySideTest` 12/12, `ExposureHomesSideBySideTest`; drishti-risk `CcrRecordedIT` | 204 + 408 answers (560 recorder raw bits on heap), 46 counterparty rows, 762 contribution answers (2,380 rows), tree 5,448 values, 100 pages, 408 distributions (54,672 values), 163 what-ifs, 230 group answers, 69 proxy checks | both |
 | SIMM | `SimmSideBySideTest` (lane A) | 230 answers | mapped |
-| Zero copy (lane B) | `VarHotFileTest.theHostsOwnRowsSwappedInAreTheBuiltRowsToTheBit` (drishti-risk); the speed check's figure comparison with `zero-copy: on`; `ConsumersSideBySideTest -Dsbs.zero-copy=on` | see status | mapped |
+| Zero copy (lane B) | `VarHotFileTest.theHostsOwnRowsSwappedInAreTheBuiltRowsToTheBit` (drishti-risk) green; end to end (speed check and `ConsumersSideBySideTest` with zero copy on) **still to run** after the bridge fix | unit: every position, trade, node and 30 random sets to the bit | mapped |
 
 **What stays in-tree only** (a reader of VaR figures with no engine path yet; each keeps working on in-tree):
 
 | Reader | Why not yet | What the engine path needs |
 |---|---|---|
-| `VarResultEngine` (`var-result`, VRES: FORM results, blotters, AI tools) | the record carries the headline's words (kind, label, scenarios, horizon, method, set, provenance, backtest block) and the raw vector beside the figures; the engine headline answers the figures only | a host-only "words" function (no in-tree vector), the figures from `node-var`/`scope-var`, `scope-path` (k, ES count, worst, raw PNL), the children from `scope-contributions` (VarEngineParts for trades and positions), `scope-backtest`; a side by side over `/api/v1/entities/var-result/<id>` |
+| `VarResultEngine` (`var-result`, VRES: FORM results, blotters, AI tools); **figures from the engine built (lane B, `fd54365b0`), proof run pending** | the record carries the headline's words (kind, label, scenarios, horizon, method, set, provenance, backtest block) and the raw vector beside the figures; the engine headline answers the figures only | a host-only "words" function (no in-tree vector), the figures from `node-var`/`scope-var`, `scope-path` (k, ES count, worst, raw PNL), the children from `scope-contributions` (VarEngineParts for trades and positions), `scope-backtest`; a side by side over `/api/v1/entities/var-result/<id>` |
 | `VarPivotProvider`, `VarPivotLens`, `VarPivotCodes`, `MrCubeExtras` (BI pivot, MR cube) | a VaR per pivot cell (any grouping of rows) at pivot scale: one `scope-var` per cell is one ask per cell | a batched row-set output (many row sets, one ask: `scope-var` over `parts` without the contributions), then the pivot side by side |
 | `VarFlightForm` (`var.scenarios`, `var.parts`; live stream) | the engine gives no vectors out except a scope's P&L in `scope-path`; parts' vectors are one ask each; the stream follows the in-tree intraday stamp | `var.scenarios` from `scope-path` (PNL, VaR, ES) is direct; `var.parts` needs a parts-vectors output (or the zero-copy views read out through Flight, 3a.2); a Java Flight client in `drishti-modules-it` for the side by side |
 | `VarNumberExplainer`, `VarWhyPanels`, `VarExplain` ("?" and the explain routes) | they read the scope's internals (k, the tail scenarios, the parts) from the in-tree scoped answer | the same outputs as VRES (`scope-path`, `scope-contributions`) and the explain book over them; side by side of the explain answers |

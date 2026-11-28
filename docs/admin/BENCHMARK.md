@@ -54,6 +54,7 @@ work is in the [VaR guide](../guides/VAR_GUIDE.md) and the [exposure guide](../g
 20. [Drishti Elements: the grid engine at 1,000,000 rows](#20-drishti-elements-the-grid-engine-at-1000000-rows)
 21. [Measuring one installation](#21-measuring-one-installation)
 22. [Code volume by release](#22-code-volume-by-release)
+23. [Drishti Risk's engine path against in-tree (R2, 100,000 positions)](#23-drishti-risks-engine-path-against-in-tree-r2-100000-positions)
 
 ## 1. What is measured, and why
 
@@ -2121,3 +2122,52 @@ Lines of code at each release and now, **measured** from git by `python3 tools/c
 | v2.9.11.g | 2026-11-08 | 431,422 | 164,993 | 46,531 | 119,031 |
 | current | 2026-11-09 | 436,337 | 167,731 | 46,788 | 122,291 |
 <!-- code-volume:end -->
+
+## 23. Drishti Risk's engine path against in-tree (R2, 100,000 positions)
+
+The R2 speed check (`docs/plans/R2_CUT_PLAN.md` step 4a; the owner: 100,000 positions are enough): the same VaR answers asked of the
+in-tree VaR service and of Drishti Risk's `market-risk` engine through the host, on one packaged server, both paths warm, their figures
+compared. Measured 2026-11-28 on the workstation of section 3 while other lanes' builds and tests ran on it (wall times are an upper bound
+for a quiet machine; the two paths of one run share the same load, so their ratio is the reading).
+
+**Data.** `vargen.py`: 100,000 positions (one OTC trade each), one date (2026-09-30), 509 scenarios (the configured window: the newest
+250), 300 rule portfolios, the management, legal-entity and limit-letter hierarchies, limits; loaded with the Java loader.
+
+**Method** (`RiskSpeedCheckTest`, `testing/drishti-modules-it`): one server (`-Xmx6g`; the engine's books may use 3,000 MB,
+`DRISHTI_MARKET_RISK_MEMORY_MB`). The bank's headline first in-tree (the date's first open), then on the engine (its session's first
+read of the date), the resident memory after each; every inner node of the management hierarchy warm (a warm-up round on each path, then
+two rounds, p50 and p99 per path); the first 200 leaf nodes (books: their parts are positions, so the headline asks the engine for every
+position's contribution: the leaf-headline cost noted in lane G part 6); the tree of the hierarchy three times on each path (first and
+p50). VaR, ES and trades of every node asked, and every row of the tree, compared between the paths (none may differ). Three runs: the
+mapped tier with zero copy on (the host's hot-file float32 rows handed to the engine in place) and off (the engine builds its own float32
+rows), and the heap tier (float64 rows on both paths).
+
+```bash
+./mvnw -o verify -pl testing/drishti-modules-it -Dtest=RiskSpeedCheckTest -Dspeed.positions=100000 -Dsbs.xmx=6g \
+  -Ddrishti.risk.jars=<folder of the two Risk JARs> -Dspeed.python=<python with the lake tools> [-Dspeed.zero-copy=on] [-Dsbs.tier=heap]
+```
+
+**What was measured** (the scripted run, mapped tier, did not finish within the lane's time box: at 100,000 positions every engine
+headline took one to two seconds, and two warm rounds of the 1,106 nodes on both paths outlast it; the figures below were then read by
+hand from that run's server, warm, 3 asks each, while the scripted rounds still ran against it):
+
+| Ask (2026-09-30, USD, 250 scenarios) | In-tree (s) | Engine (s) |
+|---|---:|---:|
+| Headline, the bank (100,000 trades) | 0.30, 0.37, 0.44 | 2.06, 2.10, 1.53 |
+| Headline, a desk (1,000 trades) | 0.74 (first), 0.028, 0.008 | 2.19, 1.38, 0.73 |
+| Headline, a book: a leaf, its parts 100 positions | 0.012, 0.011, 0.008 | 1.56, 1.18, 1.17 |
+| The tree of the management hierarchy (1,106 rows) | 0.37, 0.40 | 4.34, 5.22 |
+
+- **Figures**: VaR, ES (exact doubles) and trades of the bank, the desk and the book equal between the paths (12,644,043 /
+  12,514,952.23...; 1,371,985 / 1,320,897.85...; 493,074 / 501,739.31...).
+- **Memory**: the server's resident memory with both paths open on the date was 5.9 GB at `-Xmx6g` (heap in use 2.1 GB: the in-tree date
+  and the engine's books and session; the rest is the hot file's mapped pages, metaspace and native).
+- **Where the engine's time goes** (a thread dump during the rounds): `market-risk` answers `node-var` by computing the VaR of every
+  node of the date on each ask (`MarketTables.nodeVar` → `VarCalc.measures` → `VarMath.exactOrder`, every hierarchy's nodes), so one node's
+  headline costs the whole table; and a leaf's headline adds `scope-contributions` over its positions (lane G part 6). In-tree keeps
+  the node measures of an open date and answers a node from them. **The engine path is not yet within the plan's bound** (3a.4: p50
+  within 5 %, p99 within 10 %): the next engine change is to keep the date's `node-var` table in the session (it depends only on the
+  session's book and window) and to answer a leaf's parts block from cached standalone sums, then measure again.
+- **Not measured in this lane**: zero copy on (the first run asked for it but the host's view was not reached: the banking bean was not
+  bridged to the engine host; fixed in `528217414`, not re-measured), the heap tier, p50/p99 over the scripted rounds. Command above;
+  the test now treats books as the leaves (the tree marks them expandable: they open into positions).

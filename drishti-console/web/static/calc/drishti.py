@@ -25,7 +25,9 @@ the same reads as the screen, with your roles and the same redaction. Nothing he
     history(kind, id, field, days)   one field over the last business days as a DataFrame
     show(x, title=None)     a table (paged like Drishti's), a figure, or text
     chart(df, kind="line", x=None, y=None)   a line, bar, scatter or hist chart, drawn by the page in its theme
-    quant                   pricing and risk maths: Black-Scholes, curves, bonds, VaR, CVA, ... (``from drishti import quant``)
+    stats(name, **args)     a risk statistic the SERVER computes: kupiec-pof, max-drawdown, sharpe, hhi, frtb-bucket-charge,
+                            frtb-across-buckets (``await drishti.stats_async("hhi", amounts=[...])``)
+    quant                   the snippets' pricing maths: Black-Scholes, curves, bonds, CVA, ... (``from drishti import quant``)
 """
 from __future__ import annotations
 
@@ -41,7 +43,7 @@ import traceback
 from _drishti_bridge import emit as _emit, request as _request   # registered by drishti_calc-worker.js
 
 __all__ = ["view", "get", "search", "columns", "history", "show", "chart", "get_async", "search_async", "columns_async",
-           "history_async", "help", "DrishtiError", "LIMITS"]
+           "history_async", "stats", "stats_async", "help", "DrishtiError", "LIMITS"]
 
 # drishti is also a package: its submodules (drishti_quant.py, the snippets' pricing maths) are written here by drishti_calc-worker.js the
 # first time a cell names them, so `from drishti import quant`, `import drishti.quant` and `drishti.quant` all work.
@@ -184,6 +186,34 @@ def history(kind: str, id: str, field: str, days: int = 30):
     """One field of an entity over the last ``days`` business days (2-260), oldest first, indexed by date."""
     return _history_frame(_sync("history", _args("history", kind=kind, id=id, path=field, days=int(days)),
                                 _call(kind, id, field, days)), field)
+
+
+def _plain(v):
+    """Numbers, lists and numpy / pandas values as plain JSON for the server."""
+    if hasattr(v, "tolist"):
+        return v.tolist()
+    if isinstance(v, (list, tuple)):
+        return [_plain(x) for x in v]
+    return v
+
+
+def _stat(data: dict):
+    """A statistic's answer: the number when it is one (the server writes NaN as the text "NaN"), else the dict."""
+    if list(data) == ["value"]:
+        return float(data["value"])
+    return data
+
+
+def stats(name: str, **args):
+    """A risk statistic, computed by the server (never in the browser): ``stats("hhi", amounts=[..])``, ``"sharpe"``
+    (pnl, periods), ``"max-drawdown"`` (values), ``"kupiec-pof"`` (exceptions, n, confidence), ``"frtb-bucket-charge"``
+    (ws, rho) and ``"frtb-across-buckets"`` (kb, sb, gamma)."""
+    return _stat(_sync("stats", {"fn": name, "body": {k: _plain(v) for k, v in args.items()}}, _call(name, **args)))
+
+
+async def stats_async(name: str, **args):
+    """``stats``, for browsers without JavaScript Promise Integration: ``await drishti.stats_async("hhi", amounts=[...])``."""
+    return _stat(await _async("stats", {"fn": name, "body": {k: _plain(v) for k, v in args.items()}}))
 
 
 async def get_async(kind: str, id: str, as_of=None) -> dict:

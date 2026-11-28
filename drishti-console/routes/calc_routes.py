@@ -107,3 +107,14 @@ async def columns(request: Request, kind: str, paths: str = "", limit: int = 0):
         return await request.app.state.backend.columns(kind, paths, limit if limit > 0 else None, ident(request))
     except BackendError as e:
         return _problem(e)
+
+
+@router.post("/stats/{fn}")
+async def stats(request: Request, fn: str):
+    """drishti.stats(): a risk statistic over the numbers in the body, computed by the server (never in the browser)."""
+    if (refused := await _refused(request)) is not None:
+        return refused
+    try:
+        return await request.app.state.backend.calc_stats(fn, await json_body(request), ident(request))
+    except BackendError as e:
+        return _problem(e)

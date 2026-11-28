@@ -12,7 +12,7 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 
-"""``drishti.quant``: the pricing and risk maths Calc's snippets share (docs/guides/USER_GUIDE.md › Calc: Python on any view, section 17).
+"""``drishti.quant``: the pricing maths Calc's snippets share (docs/guides/USER_GUIDE.md › Calc: Python on any view, section 17).
 
 Pure Python and numpy, so it loads in a blink (no scipy): ``from drishti import quant as q``. Calc fetches this file
 from the console the first time a cell names ``quant``; outside Calc it is an ordinary module (its tests run in plain
@@ -25,7 +25,8 @@ CPython). Conventions, unless a function says otherwise:
 Contents: tenors and day counts · root finding · the normal distribution · curves (interpolation, forwards, par swap
 rates, annuities, bumps, bootstrap) · bonds (price, yield, duration, convexity, Z-spread) · options (Black-Scholes,
 Black-76, Garman-Kohlhagen, Bachelier, Greeks, implied vol, FX delta strikes and smiles, SVI) · realised volatility ·
-risk (VaR, ES, Kupiec, drawdown, Sharpe, HHI) · credit (hazard rates, survival, CVA) · FRTB-style aggregation.
+credit (hazard rates, survival, CVA). It holds pricing only: every risk number (VaR, ES, Kupiec, drawdown, Sharpe, HHI, FRTB
+aggregation) is computed by the server (``drishti.stats``); a guard test allows no risk function here.
 """
 from __future__ import annotations
 
@@ -44,9 +45,7 @@ __all__ = [
     "black_scholes", "bs_greeks", "black76", "black76_greeks", "garman_kohlhagen", "gk_greeks", "bachelier",
     "implied_vol", "fx_strike_from_delta", "smile_from_rr_bf", "svi_total_variance",
     "close_to_close_vol", "parkinson_vol", "garman_klass_vol",
-    "historical_var", "expected_shortfall", "parametric_var", "kupiec_pof", "max_drawdown", "sharpe", "hhi",
     "hazard_from_spread", "forward_hazards", "survival", "cva_from_profile",
-    "frtb_bucket_charge", "frtb_across_buckets",
 ]
 
 # ---- tenors and day counts ----------------------------------------------------------------------------------------------
@@ -641,74 +640,6 @@ def garman_klass_vol(open_, high, low, close, periods: int = 252) -> float:
     return float(math.sqrt(max(np.mean(v), 0.0) * periods))
 
 
-# ---- risk --------------------------------------------------------------------------------------------------------------
-
-def historical_var(pnl, confidence: float = 0.99) -> float:
-    """Historical-simulation VaR as a positive loss: the negative of the ``1 - confidence`` quantile of the P&Ls, taken
-    as the k-th worst scenario with ``k = floor(n (1 - confidence))`` (the 5th worst of 500 at 99%)."""
-    x = np.sort(np.asarray(pnl, dtype=float))
-    k = max(int(math.floor(len(x) * (1 - confidence) + 1e-9)), 1)
-    return float(-x[k - 1])
-
-
-def expected_shortfall(pnl, confidence: float = 0.975) -> float:
-    """Expected shortfall as a positive loss: the mean of the worst ``ceil(n (1 - confidence))`` P&Ls."""
-    x = np.sort(np.asarray(pnl, dtype=float))
-    k = max(int(math.ceil(len(x) * (1 - confidence) - 1e-9)), 1)
-    return float(-x[:k].mean())
-
-
-def parametric_var(sigma: float, confidence: float = 0.99, mu: float = 0.0, horizon_days: float = 1.0) -> float:
-    """Normal (delta-normal) VaR as a positive loss: ``z sigma sqrt(h) - mu h`` for a daily P&L standard deviation
-    ``sigma`` and mean ``mu``. Assumes normal P&L: it understates fat tails."""
-    return float(norm_ppf(confidence) * sigma * math.sqrt(horizon_days) - mu * horizon_days)
-
-
-def kupiec_pof(exceptions: int, n: int, confidence: float = 0.99) -> dict:
-    """Kupiec's proportion-of-failures test of a VaR model: the likelihood ratio of ``exceptions`` breaches in ``n``
-    days against the expected rate ``1 - confidence``, its p-value (chi-squared, one degree of freedom) and the Basel
-    traffic light for 250 days at 99% (green up to 4, amber 5-9, red 10 or more)."""
-    p = 1 - confidence
-    x = int(exceptions)
-    phat = x / n if n else 0.0
-
-    def ll(prob):
-        prob = min(max(prob, 1e-15), 1 - 1e-15)
-        return (n - x) * math.log(1 - prob) + x * math.log(prob)
-
-    lr = max(-2 * (ll(p) - ll(phat)), 0.0)
-    pvalue = math.erfc(math.sqrt(lr / 2))                         # chi2(1) survival
-    scaled = x * 250 / n if n else 0
-    light = "green" if scaled <= 4 else "amber" if scaled <= 9 else "red"
-    return {"exceptions": x, "days": n, "expected": p * n, "lr": lr, "pvalue": pvalue, "light": light}
-
-
-def max_drawdown(values) -> dict:
-    """The largest peak-to-trough fall of a cumulative series (a price, or cumulative P&L): ``drawdown`` (a negative
-    amount), ``peak`` and ``trough`` positions, and the drawdown series itself."""
-    v = np.asarray(values, dtype=float)
-    peak = np.maximum.accumulate(v)
-    dd = v - peak
-    trough = int(np.argmin(dd))
-    start = int(np.argmax(v[: trough + 1])) if trough > 0 else 0
-    return {"drawdown": float(dd[trough]), "peak": start, "trough": trough, "series": dd}
-
-
-def sharpe(pnl, periods: int = 252) -> float:
-    """Annualised Sharpe ratio of a P&L or return series (no risk-free deduction): ``mean / std x sqrt(periods)``."""
-    x = np.asarray(pnl, dtype=float)
-    s = x.std(ddof=1)
-    return float(x.mean() / s * math.sqrt(periods)) if s > 0 else float("nan")
-
-
-def hhi(amounts) -> float:
-    """The Herfindahl-Hirschman index of concentration: the sum of squared shares of the absolute amounts (1: all in
-    one name; 1/n: spread evenly)."""
-    a = np.abs(np.asarray(amounts, dtype=float))
-    s = a.sum()
-    return float(np.sum((a / s) ** 2)) if s > 0 else float("nan")
-
-
 # ---- credit ------------------------------------------------------------------------------------------------------------
 
 def hazard_from_spread(spread_bp, recovery: float = 0.4):
@@ -754,29 +685,3 @@ def cva_from_profile(times, ee, hazard_times, hazards, recovery: float = 0.4, di
     df = discount.df(t) if discount is not None else np.exp(-rate * t)
     contrib = (1 - recovery) * e * df * pd_marg
     return {"cva": float(contrib.sum()), "contrib": contrib, "survival": s, "pd": pd_marg, "df": df}
-
-
-# ---- FRTB standardised (simplified) ------------------------------------------------------------------------------------
-
-def frtb_bucket_charge(ws, rho) -> float:
-    """Within one bucket: ``K_b = sqrt(max(0, sum WS_k^2 + sum_{k != l} rho_kl WS_k WS_l))`` for weighted sensitivities
-    ``ws`` and a correlation (a number for every pair, or a matrix). The FRTB sensitivities-based method's formula;
-    risk weights, the three correlation scenarios and curvature are left to the caller."""
-    w = np.asarray(ws, dtype=float)
-    r = np.full((len(w), len(w)), float(rho)) if np.ndim(rho) == 0 else np.asarray(rho, dtype=float)
-    np.fill_diagonal(r, 1.0)
-    return float(math.sqrt(max(0.0, float(w @ r @ w))))
-
-
-def frtb_across_buckets(kb, sb, gamma) -> float:
-    """Across buckets: ``sqrt(sum K_b^2 + sum_{b != c} gamma_bc S_b S_c)``, with ``S_b`` the bucket's net sensitivity
-    (``sum WS_k``), or, when the sum under the root is negative, the alternative ``S_b`` capped at +-K_b."""
-    k = np.asarray(kb, dtype=float)
-    s = np.asarray(sb, dtype=float)
-    g = np.full((len(k), len(k)), float(gamma)) if np.ndim(gamma) == 0 else np.asarray(gamma, dtype=float)
-    np.fill_diagonal(g, 0.0)
-    total = float(np.sum(k ** 2) + s @ g @ s)
-    if total < 0:                                   # the alternative: each S_b capped at +-K_b
-        s = np.clip(s, -k, k)
-        total = float(np.sum(k ** 2) + s @ g @ s)
-    return float(math.sqrt(max(total, 0.0)))

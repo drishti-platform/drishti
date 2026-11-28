@@ -102,7 +102,8 @@ def test_every_calc_route_is_refused_without_a_role_with_calc(client, backend, c
     _deny(client, backend)
     for method, url, body in [("GET", "/api/calc/snippets?kind=trade", None), ("PUT", "/api/calc/snippets/x", {"code": "1"}),
                               ("DELETE", "/api/calc/snippets/x", None), ("GET", "/api/calc/search?q=TRD", None),
-                              ("GET", "/api/calc/columns/TRD?paths=mtm", None)]:
+                              ("GET", "/api/calc/columns/TRD?paths=mtm", None),
+                              ("POST", "/api/calc/stats/hhi", {"amounts": [1, 2]})]:
         r = client.request(method, url, json=body)
         assert r.status_code == 403 and r.json()["code"] == "DRS-5002", url
         assert "role with calc" in r.json()["detail"]
@@ -122,6 +123,37 @@ def test_search_and_columns_answer_json_through_the_users_own_identity(client, b
     r = client.get("/api/calc/columns/TRD", params={"paths": "mtm,book", "limit": 5})
     assert r.json()["values"] == {"mtm": [1, 2], "book": [1, 2]} and ("columns", "TRD", "mtm,book", 5) in backend.calls
     assert client.get("/api/calc/columns/TRD").json()["available"] == ["book", "mtm"]
+
+
+def test_risk_statistics_are_computed_by_the_server_through_the_users_identity(client, backend, calc_on, monkeypatch):
+    seen = []
+
+    async def calc_stats(fn, body, ident=None):
+        seen.append((fn, body, ident.user))
+        return {"value": 0.5}
+
+    monkeypatch.setattr(backend, "calc_stats", calc_stats, raising=False)
+    r = client.post("/api/calc/stats/hhi", json={"amounts": [5, -5]})
+    assert r.status_code == 200 and r.json() == {"value": 0.5} and seen == [("hhi", {"amounts": [5, -5]}, "ash")]
+
+
+def test_the_backend_client_posts_a_statistic_to_the_server():
+    import asyncio
+
+    import httpx
+
+    from core.backend import BackendClient
+
+    seen = []
+
+    def handler(request):
+        seen.append((request.method, request.url.path, request.content))
+        return httpx.Response(200, json={"value": 1.0})
+
+    client = BackendClient("http://server")
+    client._client = httpx.AsyncClient(base_url="http://server", transport=httpx.MockTransport(handler), timeout=5.0)
+    assert asyncio.run(client.calc_stats("hhi", {"amounts": [1]})) == {"value": 1.0}
+    assert seen[0][:2] == ("POST", "/api/v1/calc/stats/hhi") and b"amounts" in seen[0][2]
 
 
 def test_calc_is_switched_off_on_the_console(client, calc_on):

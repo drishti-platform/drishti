@@ -21,6 +21,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+import re
 from pathlib import Path
 
 import pytest
@@ -312,39 +313,6 @@ def test_vol_estimators_on_a_simulated_path():
     assert close(q.parkinson_vol([2.0], [1.0], 1), math.log(2) / math.sqrt(4 * math.log(2)), 1e-12)
 
 
-# ---- risk ---------------------------------------------------------------------------------------------------------------
-
-def test_var_and_es_reproduce_the_engine_on_the_sample():
-    doc = json.loads((ROOT / "modules/banking/packs/market-risk/samples/pnl-vector.jsonl").read_text().splitlines()[0])   # a trade's vector
-    pnl = doc["PNL"]
-    assert len(pnl) == 509
-    assert q.historical_var(pnl[:500], 0.99) == -sorted(pnl[:500])[4]           # the 5th worst of 500: the engine's ceil(N (1 - a)) there
-    assert close(q.expected_shortfall(pnl, 0.975), -sum(sorted(pnl)[:13]) / 13, 1e-9)   # the mean of the 13 worst of 509, as the engine's
-    pnl = np.arange(1, 101) - 50.0
-    assert q.historical_var(pnl, 0.95) == 45 and q.expected_shortfall(pnl, 0.95) == 47.0
-    assert close(q.parametric_var(1e6, 0.99), 2326347.874, 1e-9)
-    assert close(q.parametric_var(1e6, 0.99, horizon_days=10), 2326347.874 * math.sqrt(10), 1e-9)
-
-
-def test_kupiec_against_the_chi_squared_distribution():
-    k = q.kupiec_pof(0, 250, 0.99)
-    assert close(k["lr"], -2 * 250 * math.log(0.99), 1e-12) and k["light"] == "green"
-    k = q.kupiec_pof(8, 250, 0.99)
-    p, x, n = 0.01, 8, 250
-    lr = -2 * ((n - x) * math.log(1 - p) + x * math.log(p) - (n - x) * math.log(1 - x / n) - x * math.log(x / n))
-    assert close(k["lr"], lr, 1e-12) and k["light"] == "amber"
-    if _stats is not None:
-        assert close(k["pvalue"], _stats.chi2.sf(lr, 1), 1e-10)
-    assert q.kupiec_pof(12, 250)["light"] == "red"
-
-
-def test_drawdown_sharpe_and_concentration():
-    dd = q.max_drawdown([100, 120, 90, 95, 130, 70, 80])
-    assert dd["drawdown"] == -60 and dd["peak"] == 4 and dd["trough"] == 5
-    assert close(q.sharpe([1, -1, 1, -1, 2], 1), 0.4 / np.std([1, -1, 1, -1, 2], ddof=1))
-    assert q.hhi([5, -5]) == 0.5 and q.hhi([1, 0, 0]) == 1.0
-
-
 # ---- credit and FRTB ----------------------------------------------------------------------------------------------------
 
 def test_hazard_survival_and_cva():
@@ -362,9 +330,32 @@ def test_hazard_survival_and_cva():
     assert close(out["cva"], want, 1e-12)
 
 
-def test_frtb_aggregation_formulas():
-    assert close(q.frtb_bucket_charge([3, 4], 0.0), 5.0)
-    assert close(q.frtb_bucket_charge([3, 4], 0.5), math.sqrt(9 + 16 + 2 * 0.5 * 12))
-    assert close(q.frtb_bucket_charge([3, -4], 1.0), 1.0)
-    assert close(q.frtb_across_buckets([5, 5], [5, -5], 0.5), math.sqrt(50 - 2 * 0.5 * 25))
-    assert q.frtb_across_buckets([1, 1], [1, -1], 1.0) == 0.0
+# ---- no risk maths in the browser ---------------------------------------------------------------------------------------
+
+PRICING = {
+    "tenor_years", "month_code_years", "year_fraction", "brent", "newton", "norm_cdf", "norm_pdf", "norm_ppf",
+    "ZeroCurve", "df_from_zero", "zero_from_df", "forward_rate", "annuity", "par_swap_rate", "swap_pv", "bootstrap_par",
+    "bond_cashflows", "bond_price", "bond_yield", "bond_risk", "z_spread",
+    "black_scholes", "bs_greeks", "black76", "black76_greeks", "garman_kohlhagen", "gk_greeks", "bachelier",
+    "implied_vol", "fx_strike_from_delta", "smile_from_rr_bf", "svi_total_variance",
+    "close_to_close_vol", "parkinson_vol", "garman_klass_vol",
+    "hazard_from_spread", "forward_hazards", "survival", "cva_from_profile",
+}
+
+
+def test_quant_holds_pricing_functions_only_no_risk_maths_in_the_browser():
+    """The server computes every risk number (VaR, ES, Kupiec, drawdown, Sharpe, HHI, FRTB aggregation); this module is the
+    snippets' pricing maths until the QLRisk engine replaces it. A new public name needs a decision, not a drive-by."""
+    public = {n for n in dir(q) if not n.startswith("_") and getattr(getattr(q, n), "__module__", None) == q.__name__}
+    assert public == PRICING, f"added {sorted(public - PRICING)}, missing {sorted(PRICING - public)}"
+    assert set(q.__all__) == PRICING
+
+
+def test_the_risk_functions_are_gone_and_snippets_ask_the_server():
+    for gone in ("historical_var", "expected_shortfall", "parametric_var", "kupiec_pof", "max_drawdown", "sharpe", "hhi",
+                 "frtb_bucket_charge", "frtb_across_buckets"):
+        assert not hasattr(q, gone), gone
+    for folder in ("tools/packgen/banking/snippets", "modules", "config/packs", "examples/packs"):
+        for f in (ROOT / folder).rglob("*.py"):
+            text = f.read_text(encoding="utf-8")
+            assert not re.search(r"\bq\.(historical_var|expected_shortfall|parametric_var|kupiec_pof|max_drawdown|sharpe|hhi|frtb_\w+)\(", text), f

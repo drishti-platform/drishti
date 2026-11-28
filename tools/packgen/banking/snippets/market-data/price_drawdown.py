@@ -31,7 +31,7 @@ else:                                                     # history: close (equi
 px = px.sort_index().astype(float)
 rets = np.log(px).diff().dropna()
 
-dd = q.max_drawdown(px.to_numpy())
+dd = await drishti.stats_async("max-drawdown", values=px.to_numpy())      # the server computes it
 peak, trough = px.index[dd["peak"]], px.index[dd["trough"]]
 recovered = bool((px.iloc[dd["trough"]:] >= px.iloc[dd["peak"]]).any())
 show(pd.DataFrame({

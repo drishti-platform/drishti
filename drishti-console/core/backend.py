@@ -354,6 +354,10 @@ class BackendClient:
         # the first read of a business day loads its columns (the server waits up to drishti.calc.columns-budget, 20 s)
         return await self._send("GET", f"/search/columns/{quote(kind, safe='')}", ident, params=params, timeout=45.0)
 
+    async def calc_stats(self, fn: str, body: dict, ident=None) -> dict:
+        """One risk statistic the server computes for Calc (kupiec-pof, max-drawdown, sharpe, hhi, frtb-*)."""
+        return await self._send("POST", f"/calc/stats/{quote(fn, safe='')}", ident, json=body)
+
     async def raw(self, kind: str, id_: str, ident=None) -> dict:
         where, q = entity_path(kind, id_)
         return await self._get(f"/entities/{where}/raw", ident, **q)

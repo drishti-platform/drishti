@@ -18,7 +18,6 @@
 # example: LIM LIM-SUMMIT
 
 import pandas as pd
-from drishti import quant as q
 
 cps = await drishti.search_async("CPTY where RATING != '' and SECTOR != '' and COUNTRY != '' limit 1000")
 pds, pfe = {}, {}
@@ -35,7 +34,7 @@ total = cps["PEAK_PFE"].sum()
 rows = []
 for by in ["ID", "SECTOR", "RATING", "COUNTRY"]:
     g = cps.groupby(by)["PEAK_PFE"].sum()
-    h = q.hhi(g)
+    h = await drishti.stats_async("hhi", amounts=g)      # the server computes it
     rows.append({"BY": "COUNTERPARTY" if by == "ID" else by, "groups": len(g), "HHI": h, "equivalent equal groups": 1 / h,
                  "largest": g.idxmax(), "largest share": g.max() / total})
 show(pd.DataFrame(rows), title=f"Concentration of peak PFE, {len(cps)} counterparties, {total:,.0f} in all")

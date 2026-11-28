@@ -165,6 +165,7 @@
     else if (op === 'search') { path = drishti_url('/api/calc/search'); add('q', a.q); }
     else if (op === 'columns') { path = drishti_url('/api/calc/columns/') + encodeURIComponent(a.kind); add('paths', a.paths); add('limit', a.limit); }
     else if (op === 'history') { path = drishti_url('/api/series/') + encodeURIComponent(a.kind) + '/' + encodeURIComponent(a.id); add('path', a.path); add('days', a.days); }
+    else if (op === 'stats') { return drishti_url('/api/calc/stats/') + encodeURIComponent(a.fn); }          // a risk statistic: the server computes it (POST)
     else if (op === 'bi.datasets') { return drishti_url('/bi/api/datasets'); }                       // drishti_bi: the BI engine, as this person (the console passes the session on)
     else if (op === 'bi.model') { return drishti_url('/bi/api/datasets/') + encodeURIComponent(a.dataset).replace(/%3A/g, ':'); }
     else if (op === 'bi.query') { return drishti_url('/bi/api/mq'); }                                   // one model query (drishti_bi builds it, with its model)
@@ -180,6 +181,7 @@
     if (!url) { reply({ ok: false, code: 'DRS-5001', detail: 'unknown read ' + m.op }); return; }
     if (running) { running.reads++; status('Reading ' + m.op + '…'); }
     var init = { credentials: 'same-origin' };
+    if (m.op === 'stats') { init = { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(a.body || {}) }; }
     if (m.op === 'bi.query') { init = { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(a.body || {}) }; }
     fetch(drishti_url(url), init).then(function (r) {
       return r.text().then(function (t) {

@@ -39,18 +39,18 @@ s = s.groupby(["CURRENCY", "vertex"], as_index=False)["DV01"].sum()
 s["WS"] = [RW[v] * 1e4 * d for v, d in zip(s["vertex"], s["DV01"])]                 # s_k = DV01 / 1 bp; WS = RW x s_k
 
 
-def charge(scale):                                       # scale the correlations: 1 medium, 1.25 high, low as Basel
+async def charge(scale):                                       # scale the correlations: 1 medium, 1.25 high, low as Basel
     adj = lambda r: min(1.0, r * 1.25) if scale == "HIGH" else max(2 * r - 1, 0.75 * r) if scale == "LOW" else r   # noqa: E731
     kb, sb = [], []
     for ccy, g in s.groupby("CURRENCY"):
         T = g["vertex"].to_numpy(dtype=float)
         rho = np.array([[adj(max(np.exp(-0.03 * abs(a - b) / min(a, b)), 0.4)) for b in T] for a in T])
-        kb.append(q.frtb_bucket_charge(g["WS"].to_numpy(), rho))
+        kb.append(await drishti.stats_async("frtb-bucket-charge", ws=g["WS"].to_numpy(), rho=rho))
         sb.append(g["WS"].sum())
-    return q.frtb_across_buckets(kb, sb, adj(0.5)), dict(zip(s["CURRENCY"].unique(), kb))
+    return await drishti.stats_async("frtb-across-buckets", kb=kb, sb=sb, gamma=adj(0.5)), dict(zip(s["CURRENCY"].unique(), kb))
 
 
-results = {sc: charge(sc) for sc in ("LOW", "medium", "HIGH")}
+results = {sc: await charge(sc) for sc in ("LOW", "medium", "HIGH")}
 show(s.pivot_table(index="vertex", columns="CURRENCY", values="WS", aggfunc="sum", fill_value=0),
      title=f"{book}: weighted sensitivities (WS) by vertex and currency, from {len(trades)} trades")
 show(pd.DataFrame({sc: r[1] for sc, r in results.items()}).rename_axis("CURRENCY"), title="Bucket charge K_b by currency and correlation scenario")

@@ -35,6 +35,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -151,6 +152,16 @@ public class CalcController {
         out.put("masked", c.masked());
         out.put("incomplete", c.incomplete());              // null, or why some entities of the day are missing
         return out;
+    }
+
+    /**
+     * One risk statistic over the numbers in the body ({@code POST /calc/stats/hhi} with {@code {"amounts": [...]}}): Kupiec,
+     * maximum drawdown, Sharpe, HHI and the two FRTB aggregation formulas. The server computes every risk number; Calc only asks.
+     */
+    @PostMapping("/calc/stats/{fn}")
+    public Map<String, Object> stats(@PathVariable String fn, @RequestBody JsonNode body, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        require(p);
+        return RiskStats.run(fn, body);
     }
 
     private void require(Principal p) {

@@ -18,7 +18,6 @@
 # example: COLL COLL-HALCYON-NY
 
 import pandas as pd
-from drishti import quant as q
 
 doc = view.doc
 pos = pd.DataFrame(doc["POSITIONS"])
@@ -26,7 +25,8 @@ pos["value (recomputed)"] = pos["MARKET_VALUE"] * (1 - pos["HAIRCUT"])
 pos["difference"] = pos["value (recomputed)"] - pos["VALUE"]
 pos["share of value"] = pos["VALUE"] / pos["VALUE"].sum()
 show(pos, title=f"{view.id}: held {doc.get('HELD', 0):,.0f}, posted {doc.get('POSTED', 0):,.0f}, net {doc.get('NET', 0):,.0f}")
-print(f"Concentration by asset: HHI {q.hhi(pos['VALUE']):.2f} ({len(pos)} assets); largest "
+hhi = await drishti.stats_async("hhi", amounts=pos["VALUE"])      # the server computes it
+print(f"Concentration by asset: HHI {hhi:.2f} ({len(pos)} assets); largest "
       f"{pos.loc[pos['VALUE'].idxmax(), 'ASSET']} at {pos['share of value'].max():.0%}")
 
 ns = await drishti.get_async("netting-set", doc["NETTING_SET"])

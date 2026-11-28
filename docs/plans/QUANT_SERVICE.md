@@ -19,7 +19,7 @@
 
 
 **Status: proposed; not in a planned release, a later candidate in [the release notes](../../RELEASE_NOTES.md); the decision is
-[ADR-019](../architecture/DECISIONS.md).** Nothing here is built yet (there is no `drishti-quant-gateway` module, no `drishti.quant.*` server setting and no `quant` power; `drishti.quant` below is the small browser library of Calc).
+[ADR-019](../architecture/DECISIONS.md).** Nothing here is built yet (there is no `drishti-quant-gateway` module, no `drishti.quant.*` server setting and no `quant` power; `drishti.quant` below is the small browser library of Calc: pricing maths only; every risk number, including Calc's statistics, is computed by the server).
 
 **Read [README.md](../guides/bi/README.md) first.** The product owner decided that computations,
 pricing included, run in **compute workers supervised by the Drishti server** (out-of-process Python workers with QLRisk as the

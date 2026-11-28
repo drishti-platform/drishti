@@ -101,6 +101,12 @@
         <includes><include>*/README.md</include></includes>
         <targetPath>drishti/readme/built-in</targetPath>
       </resource>
+      <!-- the one list of profile names (config/profiles/profile-names.json), read by the server, the console and the upgrade check -->
+      <resource>
+        <directory>${project.basedir}/../../config/profiles</directory>
+        <includes><include>profile-names.json</include></includes>
+        <targetPath>drishti</targetPath>
+      </resource>
     </resources>
     <plugins>
       <plugin>

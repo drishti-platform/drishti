@@ -1,0 +1,8 @@
+{
+  "about": "The one list of profile names (drishti.profile, DRISHTI_PROFILE; docs/admin/PRODUCTION_STANDARD.md section 1). The server (built into its jar), the console and the upgrade check all read this file; any other name refuses the start, so a mistyped production name never starts an open server. Each name lists the other spellings that mean it; blank means development.",
+  "names": {
+    "development": [""],
+    "demo": [],
+    "production": ["prod"]
+  }
+}

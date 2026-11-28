@@ -122,6 +122,23 @@ class ProductionProfileTest {
         assertTrue(ProductionProfile.refusals(e).size() >= 5);
     }
 
+    /** Pre-gate B2: a name outside the one list (config/profiles/profile-names.json) refuses the start, never an open server. */
+    @Test
+    void anUnknownProfileNameRefusesTheStart() {
+        for (String typo : new String[] {"prodution", "live", "Production2"}) {
+            Map<String, Object> m = new java.util.LinkedHashMap<>(Map.of("drishti.profile", typo, "drishti.security.enabled", "false"));
+            IllegalStateException e = assertThrows(IllegalStateException.class,
+                    () -> new ProductionProfileProcessor().postProcessEnvironment(env(m), new SpringApplication()), typo);
+            assertTrue(e.getMessage().contains("not a profile name") && e.getMessage().contains("production (or prod)")
+                    && e.getMessage().contains("development (or blank)") && e.getMessage().contains("demo"), e.getMessage());
+        }
+        for (String known : new String[] {"production", "PROD", " Production ", "demo", "development", ""}) {
+            ProductionProfile.name(env(Map.of("drishti.profile", known)));          // known spellings never refuse
+        }
+        assertEquals("production", ProductionProfile.name(env(Map.of("drishti.profile", "prod"))));
+        assertEquals("development", ProductionProfile.name(env(Map.of("drishti.profile", ""))));
+    }
+
     @Test
     void signInOffIsRefused() {
         assertOne(refusals(m -> m.put("drishti.security.enabled", "false")), "drishti.security.enabled");

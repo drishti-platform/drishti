@@ -94,10 +94,25 @@ def test_enforce_stops_with_every_line():
     assert len(lines) == 3 and "2 settings are unsafe" in lines[0]
 
 
-@pytest.mark.parametrize("profile", ["", "demo", "development", "qa"])
+@pytest.mark.parametrize("profile", ["", "demo", "development"])
 def test_nothing_is_refused_outside_production(profile):
     s = Settings({"profile": profile, "auth": {"enabled": False}, "server": {"host": "0.0.0.0"}})
     assert production.refusals(s) == []
+
+
+@pytest.mark.parametrize("profile", ["prodution", "live", "qa"])
+def test_an_unknown_profile_name_refuses_the_start(profile):
+    """Pre-gate B2: a name outside config/profiles/profile-names.json (the one list the server and the upgrade check read) never starts open."""
+    s = Settings({"profile": profile, "auth": {"enabled": False}, "server": {"host": "0.0.0.0"}})
+    one(s, "not a profile name")
+    assert "production (or prod)" in production.refusals(s)[0] and "development (or blank)" in production.refusals(s)[0]
+    with pytest.raises(SystemExit):
+        production.enforce(s)
+
+
+@pytest.mark.parametrize("profile", ["prod", "PRODUCTION", " production "])
+def test_every_spelling_of_production_is_production(profile):
+    assert production.is_production(Settings({"profile": profile}))
 
 
 def test_the_shipped_defaults_are_development_not_production():

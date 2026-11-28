@@ -40,6 +40,10 @@ One setting names the profile of a server and of its console: `drishti.profile` 
 | `demo` | a demonstration or a developer's machine, never a shared server | today's open defaults, the development administrator and three demo users (below) |
 | none (blank) | development | the open defaults, no demo users |
 
+The names are one list, `config/profiles/profile-names.json` (`development` or blank, `demo`, `production` or `prod`), which the server,
+the console and `drishti.py upgrade check` all read. **Any other name refuses the start** and lists the known ones, so a mistyped
+`prodution` never starts an open server.
+
 Under `production` a setting you leave out takes the safe value, and a setting you set to an unsafe value is **refused, never
 overridden**. The server collects every broken rule and stops with one line each, so one start shows all of them:
 

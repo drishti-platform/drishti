@@ -417,20 +417,20 @@ files:
   - {path: 'modules/reference-data/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
   - {path: 'modules/reference-data/packs/core/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
   - {path: 'modules/reference-data/packs/gleif/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
-  - {path: 'modules/trading-systems/packs/calypso/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/packs/calypso/docs/guide.md', class: merge, lane: A}
-  - {path: 'modules/trading-systems/packs/endur/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/packs/endur/docs/guide.md', class: merge, lane: A}
-  - {path: 'modules/trading-systems/packs/ici/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/packs/ici/docs/guide.md', class: merge, lane: A}
-  - {path: 'modules/trading-systems/packs/murex/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/packs/murex/docs/guide.md', class: merge, lane: A}
-  - {path: 'modules/trading-systems/packs/swapone/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/packs/swapone/docs/guide.md', class: merge, lane: A}
-  - {path: 'modules/trading-systems/packs/wss/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/packs/wss/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading-systems/packs/calypso/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
+  - {path: 'modules/source-calypso/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading-systems/packs/endur/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
+  - {path: 'modules/source-endur/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading-systems/packs/ici/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
+  - {path: 'modules/source-ici/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading-systems/packs/murex/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
+  - {path: 'modules/source-murex/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading-systems/packs/swapone/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
+  - {path: 'modules/source-swapone/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading-systems/packs/wss/README.md', class: generate, lane: C, tool: 'tools/packgen/readme.py'}
+  - {path: 'modules/source-wss/docs/guide.md', class: merge, lane: A}
   - {path: 'modules/trading-systems/docs/README.md', class: generate, lane: C, tool: 'tools/packgen (module manifest)'}
-  - {path: 'modules/trading-systems/docs/guide.md', class: merge, lane: A}
+  - {path: 'modules/trading/docs/guide.md', class: merge, lane: A}
   - {path: 'plugins/drishti-connectors/src/test/resources/RECORDED.md', class: notdoc, lane: C}
   - {path: 'plugins/drishti-plugin-activemq/README.md', class: connector, lane: C}
   - {path: 'plugins/drishti-plugin-aerospike/README.md', class: connector, lane: C}

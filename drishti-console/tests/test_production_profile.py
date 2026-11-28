@@ -33,6 +33,10 @@ def _site_folder(monkeypatch):
 def test_the_site_folder_is_named(monkeypatch):
     monkeypatch.delenv("DRISHTI_SITE_DIR")
     one(safe(), "drishti.site.dir is not set")
+    monkeypatch.setenv("DRISHTI_SITE_DIR", "etc/drishti")
+    one(safe(), "relative path")
+    monkeypatch.setenv("DRISHTI_SITE_DIR", str(Path(production.__file__).resolve().parents[2] / "config"))
+    one(safe(), "inside the console's release folder")
     monkeypatch.setenv("DRISHTI_SITE_DIR", "/etc/drishti")
     assert production.refusals(safe()) == []
 

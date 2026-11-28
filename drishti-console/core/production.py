@@ -101,9 +101,15 @@ def refusals(settings) -> list[str]:
         shown = host or "(every interface)"
         out.append(f"server.host is {shown}: the console would be reached over plain HTTP from the network. Fix: bind 127.0.0.1 "
                    "(DRISHTI_CONSOLE_HOST) behind a proxy that ends TLS, or state that proxy with production.tls=proxy (DRISHTI_PRODUCTION_TLS=proxy)")
-    if not (os.environ.get("DRISHTI_SITE_DIR") or "").strip():
+    site = (os.environ.get("DRISHTI_SITE_DIR") or "").strip()
+    install = Path(__file__).resolve().parents[2]
+    if not site:
         out.append("drishti.site.dir is not set: the console's approved settings would be written into the release folder. Fix: name the site folder outside the release "
                    "(DRISHTI_SITE_DIR, /etc/drishti), in the settings file the server reads too (the server refuses a site folder inside the release)")
+    elif not Path(site).is_absolute():
+        out.append(f"drishti.site.dir ({site}) is a relative path. Fix: name the site folder by its absolute path outside the release (/etc/drishti)")
+    elif Path(site).resolve() == install or install in Path(site).resolve().parents:
+        out.append(f"drishti.site.dir ({site}) is inside the console's release folder ({install}), which is never written. Fix: name a site folder outside the release (/etc/drishti)")
     return out
 
 

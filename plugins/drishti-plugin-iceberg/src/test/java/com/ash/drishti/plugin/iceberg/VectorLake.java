@@ -117,7 +117,20 @@ final class VectorLake {
 
     /** The lines loaded into {@code <root>/risk/pnl-vector} by Drishti Lake's one loader ({@code source.format: loader-rows}), each date replaced. */
     static void loadLines(Path tmp, Path root, String engine, List<String> lines) throws Exception {
+        loadLinesAt(tmp, root + "/risk/" + KIND, engine, lines);
+    }
+
+    /** The positions loaded into the Iceberg table at exactly {@code table} (any folder, any depth: a bank's own location). */
+    static void loadIcebergAt(Path tmp, Path table, String engine, Map<LocalDate, List<Pos>> days) throws Exception {
+        List<String> lines = new ArrayList<>();
+        days.forEach((day, ps) -> ps.forEach(p -> lines.add(line(p, day, null))));
+        loadLinesAt(tmp, table.toString(), engine, lines);
+    }
+
+    static void loadLinesAt(Path tmp, String table, String engine, List<String> lines) throws Exception {
         Path in = Files.createTempDirectory(tmp, "rows");
+        String domainName = Path.of(table).getParent().getFileName().toString();     // the loader takes only rows of its own domain and kind
+        lines = lines.stream().map(x -> x.replace("\"domain\":\"risk\"", "\"domain\":\"" + domainName + "\"")).toList();
         Map<String, List<String>> byDate = new java.util.TreeMap<>();
         for (String l : lines) {
             String d;
@@ -143,7 +156,7 @@ final class VectorLake {
         }
         Path config = tmp.resolve("load-" + System.nanoTime() + ".yaml");
         Files.writeString(config, "source:\n  files: '" + in + "/*'\n  format: loader-rows\n  promote: [DESK, TT_BOOK, QUANTITY]\n"
-                + "  vectors: [PNL]\ntarget:\n  format: iceberg\n  path: '" + root + "/risk/" + KIND + "'\n  domain: risk\n  kind: " + KIND + "\n  mode: replace-date\n");
+                + "  vectors: [PNL]\ntarget:\n  format: iceberg\n  path: '" + table + "'\n  domain: " + Path.of(table).getParent().getFileName() + "\n  kind: " + KIND + "\n  mode: replace-date\n");
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         int code = com.ash.lake.load.LakeLoad.run(com.ash.drishti.lakehost.DrishtiLake.runtime(), new String[] {"--config", config.toString()},
                 new PrintStream(out, true, StandardCharsets.UTF_8));

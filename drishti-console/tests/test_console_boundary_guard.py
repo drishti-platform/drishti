@@ -30,6 +30,7 @@ A finding is fine when ``ALLOWED`` names its file and rule with a reason. The re
 that fixes it; the list only shrinks (a fixed file must come off it). A new finding fails the test.
 """
 import ast
+import collections
 import re
 from pathlib import Path
 
@@ -42,23 +43,25 @@ CONSOLE = Path(__file__).resolve().parents[1]
 SERVER_PATH = re.compile(r"_delta_log|config/distributions|config/lenses|under-construction\.yaml|identity\.db|\.sqlite|\bjournal/|kernel\.yaml|module\.yaml|/lake/|_drishti-lake")
 ENV_ROOT = {"DRISHTI_DATA_DIR", "DRISHTI_MODULES_HOME", "DRISHTI_HOME", "DRISHTI_LIB_PATH", "DRISHTI_EXTERNAL_LIB"}
 
-#: (file, rule) -> why this reach is not a server file. Everything here is the console's own, the docs it renders, or a tool it runs.
-ALLOWED: dict[tuple[str, str], str] = {
-    ("core/config.py", "outside"): "the install root (drishti.home) the console's own settings file and profiles are found under; its own configuration",
-    ("core/config.py", "env-root"): "SHARED: the one settings file's drishti.home / drishti.data.dir, read as the console's own setting values (never to open a server file)",
-    ("core/settings_ini.py", "outside"): "names the tools/drishti.py command the setup line prints (text), reads nothing of the server",
-    ("core/settings_ini.py", "env-root"): "the list of variables the trust rule drops when they name a folder outside the install; reads no folder",
-    ("core/tmpdir.py", "outside"): "the console's temp base under <data>/tmp/console when unset: its own scratch folder, never a server one",
-    ("core/tmpdir.py", "env-root"): "the data folder only anchors the console's own <data>/tmp/console folder",
-    ("core/app.py", "env-root"): "the same: <data>/console, the console's own subfolder",
-    ("core/app.py", "up-default"): "studio.examples_dir default (and help.docs_dir): the docs the console renders for Help (allowed), not server files",
-    ("core/external_lib.py", "outside"): "optional shared read-only Python libraries (external_lib/python), imported by the console's sandboxed workers; never written, absent is fine",
-    ("core/external_lib.py", "env-root"): "DRISHTI_EXTERNAL_LIB names that same optional read-only library folder",
-    ("run_drishti_web.py", "env-root"): "start-up only: the console's temp folder under <data>/tmp/console",
-    ("run_drishti_web.py", "up-default"): "text of the pip command the console prints (the lock file's path), not a read",
-    ("core/module_parts.py", "server-path"): "module.yaml of the console's OWN cache folder: the module's console part arrives from the server as a zip (GET /public/modules/console/<id>/<version>) and is unpacked there",
-    ("routes/pack_routes.py", "up-default"): "builder.tools_dir: the Drishti Tools the Pack designer runs on the console host (a job in the console's own workspace; the result goes to the server by API)",
-    ("routes/help_routes.py", "outside"): "ROOT is the folder the Help pages' docs and the generated copies are read from (docs/ and the root READMEs the Help renders)",
+#: (file, rule) -> (how many such reaches the file has, why they are not a server file). The count is pinned (pre-gate S7): a new reach in
+#: an allowed file fails like one anywhere else. Everything here is the console's own, the docs it renders, or a tool it runs.
+ALLOWED: dict[tuple[str, str], tuple[int, str]] = {
+    ("core/config.py", "outside"): (1, "the install root (drishti.home) the console's own settings file and profiles are found under; its own configuration"),
+    ("core/config.py", "env-root"): (2, "SHARED: the one settings file's drishti.home / drishti.data.dir, read as the console's own setting values (never to open a server file)"),
+    ("core/production.py", "outside"): (2, "the install root: the one list of profile names (config/profiles/profile-names.json, shared with the server and the upgrade check, beside the profiles config.py reads) and the release folder the site folder must lie outside; reads no server file"),
+    ("core/settings_ini.py", "outside"): (1, "names the tools/drishti.py command the setup line prints (text), reads nothing of the server"),
+    ("core/settings_ini.py", "env-root"): (1, "the list of variables the trust rule drops when they name a folder outside the install; reads no folder"),
+    ("core/tmpdir.py", "outside"): (2, "the console's temp base under <data>/tmp/console when unset: its own scratch folder, never a server one"),
+    ("core/tmpdir.py", "env-root"): (1, "the data folder only anchors the console's own <data>/tmp/console folder"),
+    ("core/app.py", "env-root"): (1, "the same: <data>/console, the console's own subfolder"),
+    ("core/app.py", "up-default"): (2, "studio.examples_dir default (and help.docs_dir): the docs the console renders for Help (allowed), not server files"),
+    ("core/external_lib.py", "outside"): (1, "optional shared read-only Python libraries (external_lib/python), imported by the console's sandboxed workers; never written, absent is fine"),
+    ("core/external_lib.py", "env-root"): (1, "DRISHTI_EXTERNAL_LIB names that same optional read-only library folder"),
+    ("run_drishti_web.py", "env-root"): (1, "start-up only: the console's temp folder under <data>/tmp/console"),
+    ("run_drishti_web.py", "up-default"): (1, "text of the pip command the console prints (the lock file's path), not a read"),
+    ("core/module_parts.py", "server-path"): (4, "module.yaml of the console's OWN cache folder: the module's console part arrives from the server as a zip (GET /public/modules/console/<id>/<version>) and is unpacked there"),
+    ("routes/pack_routes.py", "up-default"): (1, "builder.tools_dir: the Drishti Tools the Pack designer runs on the console host (a job in the console's own workspace; the result goes to the server by API)"),
+    ("routes/help_routes.py", "outside"): (1, "ROOT is the folder the Help pages' docs and the generated copies are read from (docs/ and the root READMEs the Help renders)"),
 }
 
 #: known violations: file -> what it reads and who fixes it. The list only shrinks; the lead schedules each (the lanes in flight own the files).
@@ -153,6 +156,9 @@ def yaml_up_defaults() -> list[tuple[str, str]]:
 def test_no_new_reach_outside_the_console():
     new = [f"{f}:{n}: {rule} {text!r}" for f, n, rule, text in findings()
            if (f, rule) not in ALLOWED and f not in PENDING]
+    counts = collections.Counter((f, rule) for f, _n, rule, _t in findings() if (f, rule) in ALLOWED)
+    new += [f"{f}: {rule}: {counts[(f, rule)]} reaches, ALLOWED names {n} (a new one is not allowed by the file's old reason; fewer: lower the count)"
+            for (f, rule), (n, _why) in ALLOWED.items() if counts[(f, rule)] != n]
     assert not new, ("the console reads the server's files again; ask the server's published API instead (add a small endpoint, documented in "
                      "API_REFERENCE, when none exists), or, for the console's own file, add it to ALLOWED with the reason:\n  " + "\n  ".join(new))
 
@@ -174,7 +180,7 @@ def test_the_settings_defaults_beside_the_console_are_the_docs_and_the_tools_onl
 
 
 def test_every_whitelist_entry_has_a_reason():
-    for table in (ALLOWED, PENDING, YAML_UP_PENDING):
+    for table in ({k: v[1] for k, v in ALLOWED.items()}, PENDING, YAML_UP_PENDING):
         for k, why in table.items():
             assert len(why.split()) >= 4, f"{k}: say why"
 

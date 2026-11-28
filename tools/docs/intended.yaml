@@ -84,7 +84,7 @@ intended:
             "compute/drishti-rachana/src/main/java/com/ash/drishti/rachana/*",
             "config/engines/*",
             "config/homes/banking/*",
-            "config/homes/economy/*",
+            "config/homes/external-data/*",
             "examples/packs/compute-demo/sutras/*",
             "modules/reference-data/packs/core/sutras/collateral-and-margin/*",
             "modules/reference-data/packs/core/sutras/counterparty-and-legal/*",

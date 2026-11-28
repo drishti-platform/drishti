@@ -31,13 +31,15 @@ data:
   mnem:      { table: home_mnemonics }
   cal:       { table: home_calendar }
   news:      { table: home_news }
+  digest:    { table: home_digest }
 layout:
   user-can-arrange: true                     # "arrange my Home": the person's own order and sizes, kept per person (ROLE_HOME_SUTRAS 3)
   areas:
     - "exc chg rail"
     - "loads held rail"
+    - "visit visit visit"
   columns: [4, 5, 3]
-  phone: [exc, chg, loads, held, rail]
+  phone: [exc, chg, loads, held, rail, visit]
 panels:
   - use: core/exceptions-list@1
     as: exc
@@ -85,3 +87,9 @@ panels:
     area: rail
     with:
       rows: { from: $.news, columns: { date: AT, headline: HEADLINE, source: SOURCE, link: LINK } }
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

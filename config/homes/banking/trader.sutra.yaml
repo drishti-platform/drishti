@@ -31,6 +31,8 @@ data:
   mnem:      { table: home_mnemonics }
   cal:       { table: home_calendar }
   news:      { table: home_news }
+  digest:    { table: home_digest }
+  loads:     { table: home_loads }
 layout:
   user-can-arrange: true
   areas:
@@ -38,8 +40,10 @@ layout:
     - "exc chg rail"
     - "pos pre rail"
     - "pnl mkt rail"
+    - "loads loads loads"
+    - "visit visit visit"
   columns: [4, 5, 3]
-  phone: [kpis, exc, chg, pos, pre, pnl, mkt, rail]
+  phone: [kpis, exc, chg, pos, pre, pnl, mkt, rail, loads, visit]
 panels:
   - use: core/kpi-strip@1
     as: kpi
@@ -115,3 +119,18 @@ panels:
     area: rail
     with:
       rows: { from: $.news, columns: { date: AT, headline: HEADLINE, source: SOURCE, link: LINK } }
+  - use: core/data-table@1
+    as: loads
+    area: loads
+    with:
+      title: Data loads
+      search: false
+      limit: 12
+      rows: $.loads
+      columns: [ { label: Pack, bind: "@.PACK" }, { label: Kind, bind: "@.KIND" }, { label: Business date, bind: "@.BUSINESS_DATE" }, { label: State, bind: "@.STATE" } ]
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

@@ -54,7 +54,12 @@ class RoleHomesTest {
 
     static final Map<String, List<String>> ROLES = Map.ofEntries(Map.entry("risk-manager", List.of("risk-manager")), Map.entry("trader", List.of("trader")),
             Map.entry("risk-officer", List.of("risk-officer")), Map.entry("credit-officer", List.of("credit-officer")),
-            Map.entry("operations", List.of("operations")), Map.entry("quant", List.of("quant")), Map.entry("economist", List.of("economist")), Map.entry("genomicist", List.of("genomicist")));
+            Map.entry("operations", List.of("operations")), Map.entry("quant", List.of("quant")), Map.entry("economist", List.of("economist")), Map.entry("genomicist", List.of("genomicist")),
+            Map.entry("market-data-reader", List.of("market-data")));
+
+    /** The tables the modules serve to their own Homes (genomics: GenomicsHome.tables; market-data: MarketHome). */
+    static final Set<String> MODULE_TABLES = Set.of("genomics_gwas_top", "genomics_manhattan", "genomics_clinvar", "genomics_loads", "genomics_needs",
+            "market_tiles", "market_curve", "market_moves", "market_freshness");
 
     @TempDir Path data;
 
@@ -70,13 +75,13 @@ class RoleHomesTest {
     void everyHomeFileLoads() {
         HomeCatalogue c = catalogue();
         assertEquals(Map.of(), c.faults());
-        assertEquals(Set.of("risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist"),
+        assertEquals(Set.of("risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist", "market-data"),
                 c.all().stream().map(HomeDefinition::name).collect(java.util.stream.Collectors.toSet()));
     }
 
     @ParameterizedTest
     @CsvSource({"risk-manager,risk-manager", "trader,trader", "risk-officer,risk-officer", "credit-officer,credit-officer", "operations,operations",
-            "quant,quant", "economist,economist", "genomicist,genomicist"})
+            "quant,quant", "economist,economist", "genomicist,genomicist", "market-data-reader,market-data"})
     void aRoleOpensItsHomeAndOnlyItsHome(String role, String home) {
         HomeCatalogue c = catalogue();
         List<HomeDefinition> offered = c.offered(new Principal("u", List.of(role)), false, m -> true, m -> true);
@@ -88,7 +93,7 @@ class RoleHomesTest {
     @Test
     void anAdministratorOpensEveryHomeAndAnUnknownRoleNone() {
         HomeCatalogue c = catalogue();
-        assertEquals(8, c.offered(new Principal("a", List.of("admin")), true, m -> true, m -> true).size());
+        assertEquals(9, c.offered(new Principal("a", List.of("admin")), true, m -> true, m -> true).size());
         assertTrue(c.offered(new Principal("x", List.of("viewer")), false, m -> true, m -> true).isEmpty());
     }
 
@@ -96,11 +101,11 @@ class RoleHomesTest {
     void aHomeNeedsItsModules() {
         HomeCatalogue c = catalogue();
         assertTrue(c.offered(new Principal("r", List.of("risk-manager")), false, m -> !m.equals("banking"), m -> true).isEmpty());
-        assertEquals(1, c.offered(new Principal("e", List.of("economist")), false, m -> m.equals("economy"), m -> true).size());
+        assertEquals(1, c.offered(new Principal("e", List.of("economist")), false, m -> m.equals("external-data"), m -> true).size());
     }
 
     @ParameterizedTest
-    @CsvSource({"risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist"})
+    @CsvSource({"risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist", "market-data"})
     void theSutraIsFragmentsOnlyAndReadsServedTables(String home) {
         HomeDefinition d = catalogue().find(home).orElseThrow();
         String text = d.sutraText();
@@ -112,9 +117,14 @@ class RoleHomesTest {
             assertTrue(Set.of("core", "finance", "economy").contains(use.group(1)), "library " + use.group(1));
         }
         assertTrue(n >= 3, "a Home is built of fragments");
-        Matcher table = Pattern.compile("table:\\s*(home_[a-z_]+)").matcher(text);
+        Matcher table = Pattern.compile("table:\\s*(home_[a-z_]+)").matcher(text);   // the server's tables; a module's own (genomics_*, market_*) are checked below
         while (table.find()) {
-            assertTrue(HomeTables.BUILT_IN.contains(table.group(1)), home + " reads " + table.group(1) + ", which no server table serves");
+            String name = table.group(1);
+            assertTrue(HomeTables.BUILT_IN.contains(name), home + " reads " + name + ", which no server table serves");
+        }
+        Matcher own = Pattern.compile("table:\\s*((?:genomics|market)_[a-z_]+)").matcher(text);
+        while (own.find()) {
+            assertTrue(MODULE_TABLES.contains(own.group(1)), home + " reads " + own.group(1) + ", which no module serves");
         }
         assertTrue(text.contains("user-can-arrange: true"));
         assertEquals("home-" + home, d.sutraName());
@@ -447,5 +457,41 @@ class RoleHomesTest {
         assertTrue(t.rows("module_table", p, one, null).isPresent());
         assertTrue(t.rows("module_table", p, two, null).isEmpty(), "a module's table is served to its own Homes only");
         assertTrue(t.names().contains("module_table") && t.names().contains("home_digest"));
+    }
+
+    /** The module a Home names exists: a typo or a module that was renamed (economy became external-data) fails here, not in a person's Home. */
+    @Test
+    void everyModuleAHomeNamesExists() throws IOException {
+        Path modules = homes().getParent().getParent().resolve("modules");
+        Set<String> ids = new java.util.TreeSet<>();
+        try (var s = Files.list(modules)) {
+            for (Path m : s.filter(Files::isDirectory).toList()) {
+                Path manifest = m.resolve("module.yaml");
+                if (Files.isRegularFile(manifest)) {
+                    Matcher id = Pattern.compile("(?m)^id:\\s*(\\S+)").matcher(Files.readString(manifest));
+                    if (id.find()) {
+                        ids.add(id.group(1));
+                    }
+                }
+            }
+        }
+        assertFalse(ids.isEmpty(), "no module manifest was found under " + modules);
+        for (HomeDefinition d : catalogue().all()) {
+            for (String m : d.modules()) {
+                assertTrue(ids.contains(m), "the Home " + d.name() + " names the module " + m + ", which does not exist (modules: " + ids + ")");
+            }
+        }
+    }
+
+    /** One way: every Home shows "Since you were here" and its data loads as panels of its own Sutra, and no Home is drawn any other way. */
+    @ParameterizedTest
+    @CsvSource({"risk-manager", "trader", "risk-officer", "credit-officer", "operations", "quant", "economist", "genomicist", "market-data"})
+    void everyHomeCarriesTheVisitAndLoadsPanels(String home) {
+        String text = catalogue().find(home).orElseThrow().sutraText();
+        assertTrue(text.contains("table: home_digest") && text.contains("as: visit"), home + " has no \"Since you were here\" panel");
+        assertTrue(text.contains("table: home_loads"), home + " has no data-loads panel");
+        Map<String, String> aliases = HomeComposer.aliases(text);
+        assertTrue(aliases.containsKey("digest") && aliases.containsKey("loads"), aliases.toString());
+        assertFalse(HomeComposer.stripData(text).contains("table:"), "the data: block is read by the server and left out of the Sutra it binds");
     }
 }

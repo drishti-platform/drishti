@@ -16,7 +16,7 @@
 home: economist
 title: Economist
 description: "Indicators and what moved, the release calendar, headlines"
-modules: [ economy ]                       # offered only while these modules are on
+modules: [ external-data ]               # offered only while these modules are on (the module that replaced economy)
 sutra: economist.sutra.yaml
 arrange: allow
 measures: economist.measures.yaml

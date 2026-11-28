@@ -27,13 +27,25 @@ data:
   exc:       { table: home_exceptions }
   chg:       { table: home_changes }
   mnem:      { table: home_mnemonics }
+  digest:    { table: home_digest }
+  gwas:      { table: genomics_gwas_top }
+  manh:      { table: genomics_manhattan }
+  clin:      { table: genomics_clinvar }
+  gld:       { table: genomics_loads }
+  needs:     { table: genomics_needs }
+  loads:     { table: home_loads }
 layout:
   user-can-arrange: true
   areas:
     - "kpis kpis kpis"
     - "exc chg rail"
+    - "gwas manh manh"
+    - "clin clin gld"
+    - "needs needs needs"
+    - "loads loads loads"
+    - "visit visit visit"
   columns: [4, 5, 3]
-  phone: [kpis, exc, chg, rail]
+  phone: [kpis, exc, chg, rail, gwas, manh, clin, gld, needs, loads, visit]
 panels:
   - use: core/kpi-strip@1
     as: kpi
@@ -64,3 +76,62 @@ panels:
       limit: 12
       rows: $.mnem
       columns: [ { label: Mnemonic, bind: "@.MNEMONIC" }, { label: About, bind: "@.ABOUT" } ]
+  - use: core/data-table@1
+    as: gwas
+    area: gwas
+    with:
+      title: Top associations
+      search: false
+      limit: 6
+      rows: $.gwas
+      columns: [ { label: Gene, bind: "@.GENE" }, { label: Variant, bind: "@.VARIANT_ID" }, { label: Trait, bind: "@.TRAIT" }, { label: "-log10 p", bind: "@.NEG_LOG10_P", fmt: compact } ]
+  - use: core/scatter-plot@1
+    as: manh
+    area: manh
+    with:
+      title: Association map
+      x-label: Position along the genome (Mb, chromosomes end to end)
+      y-label: -log10 p
+      rows: { from: $.manh, columns: { x: X, y: Y, label: GENE, group: CHROM } }
+  - use: core/data-table@1
+    as: clin
+    area: clin
+    with:
+      title: ClinVar updates for your genes
+      search: false
+      limit: 6
+      rows: $.clin
+      columns: [ { label: Gene, bind: "@.GENE" }, { label: Variant, bind: "@.VARIANT_ID" }, { label: Significance, bind: "@.SIGNIFICANCE" }, { label: Updated, bind: "@.UPDATED" } ]
+  - use: core/data-table@1
+    as: gld
+    area: gld
+    with:
+      title: Genomics data loads
+      search: false
+      limit: 6
+      rows: $.gld
+      columns: [ { label: Source, bind: "@.SOURCE" }, { label: What, bind: "@.WHAT" }, { label: Date, bind: "@.DATE" }, { label: State, bind: "@.STATE" } ]
+  - use: core/data-table@1
+    as: needs
+    area: needs
+    with:
+      title: Needs you
+      search: false
+      limit: 8
+      rows: $.needs
+      columns: [ { label: What, bind: "@.WHAT" }, { label: Detail, bind: "@.DETAIL" } ]
+  - use: core/data-table@1
+    as: loads
+    area: loads
+    with:
+      title: Data loads
+      search: false
+      limit: 12
+      rows: $.loads
+      columns: [ { label: Pack, bind: "@.PACK" }, { label: Kind, bind: "@.KIND" }, { label: Business date, bind: "@.BUSINESS_DATE" }, { label: State, bind: "@.STATE" } ]
+  - use: core/event-timeline@1
+    as: visit
+    area: visit
+    with:
+      title: Since you were here
+      rows: { from: $.digest, columns: { date: AT, label: TEXT } }

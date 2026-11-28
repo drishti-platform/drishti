@@ -12,7 +12,7 @@
 #
 # See the LICENSE file in the root of this repository for the full terms.
 
-# What the economist's Home follows. The indicators are answered by the economy module's own home table (home_indicators): no KPI of the
+# What the economist's Home follows. The indicators are answered by the external-data module's own home table (home_indicators): no KPI of the
 # risk engines applies, so kpis and follow are empty; the change detection has no measures here until the module names some.
 home: economist
 reference: { cut-off: "17:00", zone: site, day: previous-business-day }

@@ -63,11 +63,12 @@ public class HomeController {
     private final PreferenceStore prefs;
     private final ModuleNode modules;
     private final CommandCatalog commands;
+    private final HomeComposer composer;
     private final ObjectMapper json = new ObjectMapper();
 
     @SuppressWarnings("java:S107")
     public HomeController(HomeProperties props, HomeCatalogue catalogue, HomeTables tables, HomeStore store, HomeClock clock, ChangeEngineHost changes,
-            MeasureSnapshotJob snapshots, Entitlements entitlements, PreferenceStore prefs, ModuleNode modules, CommandCatalog commands) {
+            MeasureSnapshotJob snapshots, Entitlements entitlements, PreferenceStore prefs, ModuleNode modules, CommandCatalog commands, HomeComposer composer) {
         this.props = props;
         this.catalogue = catalogue;
         this.tables = tables;
@@ -79,6 +80,7 @@ public class HomeController {
         this.prefs = prefs;
         this.modules = modules;
         this.commands = commands;
+        this.composer = composer;
     }
 
     private List<HomeDefinition> offered(Principal p) {
@@ -92,6 +94,72 @@ public class HomeController {
     private HomeDefinition mine(String name, Principal p) {
         return offered(p).stream().filter(d -> d.name().equals(name)).findFirst()
                 .orElseThrow(() -> new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "no Home " + name + " is offered to you"));
+    }
+
+    // ---- the one Home page --------------------------------------------------------------------------------------------------------
+
+    static final String STATE_KEY = "state";
+
+    private HomeState stateOf(Principal p) {
+        return HomeState.of(prefs.get(p.user(), NS, STATE_KEY).orElse(null));
+    }
+
+    private Map<String, Object> page(Principal p, HomeState state, java.time.Instant now) {
+        List<HomeDefinition> o = offered(p);
+        boolean admin = entitlements.isAdmin(p);
+        List<String> names = o.stream().map(HomeDefinition::name).toList();
+        String chosen = prefs.get(p.user(), NS, "start").map(n -> n.path("home").asText("")).orElse("");
+        String start = catalogue.start(o, chosen).map(HomeDefinition::name).orElseThrow(() -> new DrishtiException(ErrorCode.ENTITY_NOT_FOUND, "no Home is offered to you"));
+        HomeDefinition d = mine(state.homeToShow(start, admin, names), p);
+        HomeComposer.Composed c = composer.compose(p, d, state, now);
+        List<Map<String, Object>> homes = new ArrayList<>();
+        for (HomeDefinition h : o) {
+            homes.add(Map.of("home", h.name(), "title", h.title()));
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("home", d.name());
+        out.put("title", d.title());
+        out.put("start", start);
+        out.put("homes", homes);
+        out.put("picker", o.size() > 1);
+        out.put("viewAs", Map.of("allowed", admin, "value", admin && names.contains(state.viewAs()) ? state.viewAs() : ""));
+        out.put("arrange", d.arrange());
+        out.put("sutraName", d.sutraName());
+        out.put("hidden", c.hidden());
+        out.put("panels", c.panelIds());
+        out.put("lastVisit", state.lastVisit() == null ? "" : state.lastVisit().toString());
+        out.put("view", c.view());
+        return out;
+    }
+
+    /** The caller's Home as one document: the Home's Sutra bound over the home tables as the caller, with the caller's own state applied. */
+    @GetMapping("/view")
+    public Map<String, Object> view(@RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        return page(p, stateOf(p), java.time.Instant.now());
+    }
+
+    /**
+     * One change to the caller's own Home: {@code {action, panel, keys}} with the action one of {@link HomeState#ACTIONS}. Answers the Home as it
+     * now is. {@code viewas} is an administrator's and names a Home that is offered; one visit counts per half hour.
+     */
+    @PostMapping("/state")
+    public Map<String, Object> act(@RequestBody JsonNode body, @RequestAttribute(Principal.ATTRIBUTE) Principal p) {
+        java.time.Instant now = java.time.Instant.now();
+        HomeState before = stateOf(p);
+        String action = body.path("action").asText("");
+        List<String> keys = new ArrayList<>();
+        body.path("keys").forEach(k -> keys.add(k.asText("")));
+        List<String> visible = List.of();
+        if ("up".equals(action) || "down".equals(action)) {
+            visible = page(p, before, now).get("panels") instanceof List<?> l ? l.stream().map(String::valueOf).toList() : List.of();
+        }
+        if ("visited".equals(action) && before.lastVisit() != null && java.time.Duration.between(before.lastVisit(), now).toMinutes() < HomeState.VISIT_MINUTES) {
+            return page(p, before, now);                      // one visit counts per half hour: a refresh does not erase "since you were here"
+        }
+        List<String> names = offered(p).stream().map(HomeDefinition::name).toList();
+        HomeState after = before.apply(action, body.path("panel").asText(""), now, keys, visible, entitlements.isAdmin(p), names);
+        prefs.put(p.user(), NS, STATE_KEY, after.toJson());
+        return page(p, after, now);
     }
 
     /** The Homes offered to the caller, the one to open first marked. One role, one Home: the console shows no picker. */

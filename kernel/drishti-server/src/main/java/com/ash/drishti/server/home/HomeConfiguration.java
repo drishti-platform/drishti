@@ -90,4 +90,11 @@ public class HomeConfiguration {
         return new HomeTables(props, store, clock, sources.orderedStream().toList(), tables.orderedStream().toList(), host,
                 () -> List.<ExpectationService.State>copyOf(expectations.attention(Clock.systemUTC().instant())), entitlements::mayOpen);
     }
+
+    @Bean
+    public HomeComposer homeComposer(HomeTables tables, HomeCatalogue catalogue, com.ash.drishti.rachana.SutraRegistry sutras,
+            com.ash.drishti.engine.ViewPipeline pipeline, com.ash.drishti.server.security.Entitlements entitlements, com.ash.drishti.common.JsonCodec codec,
+            com.fasterxml.jackson.databind.ObjectMapper json) {
+        return new HomeComposer(tables, catalogue, sutras, pipeline, entitlements, codec, json);
+    }
 }

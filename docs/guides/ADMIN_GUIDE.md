@@ -1570,6 +1570,18 @@ offers none of its lenses, functions, packs or engines (its engines show *not in
 `DRISHTI_MODULES_<MODULE>_ENABLED`, and a change takes effect at the next start. The how-to, the licence file and what each module brings
 to the console are in [OPERATIONS_GUIDE.md, Modules on or off](OPERATIONS_GUIDE.md#65-engines-modules-and-editions).
 
+<!-- i8/modules -->
+<!-- Replace the first paragraph of this section by this one if the branch i8/modules is in the release; drop the block otherwise. -->
+**The modules, as shipped.** **banking** (titled Risk: VaR and ES, exposure, FRTB-SA, SIMM, sensitivities, the MR cube, the official results and the
+trading, market-risk and counterparty-risk packs), **market-data**, **reference-data** (the counterparties, books, desks and traders every domain
+reads, and the GLEIF legal entities), **external-data** (the world-economy, world-development, national-statistics, oecd, central-banks, funds and us-equities
+packs, and the World and Markets lenses), **news-and-events** (the news-and-markets, official-news and gdelt-events packs), the source-system modules
+(`source-murex`, `source-calypso`, `source-endur`, `source-ici`, `source-swapone`, `source-wss`) and **genomics**. A pack is the switch, a module the unit
+you license and install ([KERNEL_AND_MODULES.md section 21.9](../architecture/KERNEL_AND_MODULES.md#219-the-content-modules-reference-data-external-data-and-news-and-events)).
+A switch file or a setting that names a retired module id (`economy`, `capitalmarkets`, `capital-markets`) **stops the server from starting**, with one
+line naming the file or key and the modules that replace it (`external-data`, `news-and-events`); rename it and the start succeeds. Nothing is translated for you.
+<!-- /i8/modules -->
+
 ### 22.1 Module packages and the shared lib folder
 
 Besides the modules built into the server, the kernel loads **module packages** (`.dmod`), each in its own class loader. Two folders,

@@ -44,9 +44,19 @@ class GenomicsHomeTest {
         return m;
     }
 
+    /** The module's sample data, found from this class's own location (target/test-classes), never from the working folder. */
+    private static Path samples() {
+        try {
+            Path classes = Path.of(GenomicsHomeTest.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            return classes.resolve("../../../../data/samples").normalize();
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     static GenomicsHome home(Path folder, boolean feeds) {
         GenomicsData data = new GenomicsData();
-        data.load(List.of(Path.of("../../data/samples"), folder));
+        data.load(List.of(samples(), folder));
         ShowcaseData showcase = new ShowcaseData();
         List<Map<String, Object>> assoc = List.of(
                 row("TRAIT", "RESPONSE", "VARIANT_ID", "HX-1", "CHROM", "7", "POS", 92_703_082L, "GENE", "HLXK7", "NEG_LOG10_P", 28.04),

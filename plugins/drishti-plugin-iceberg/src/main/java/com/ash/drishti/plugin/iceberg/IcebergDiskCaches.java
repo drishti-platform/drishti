@@ -15,6 +15,7 @@
  */
 package com.ash.drishti.plugin.iceberg;
 
+import com.ash.drishti.lakehost.MappedIdMap;
 import com.ash.drishti.api.DataDir;
 import com.ash.drishti.api.SourceContext;
 import com.ash.drishti.diskcache.DiskCache;

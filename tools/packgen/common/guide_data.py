@@ -365,7 +365,8 @@ def story(pack_dir: Path) -> tuple[str, str] | None:
         return None
     old = f"{pack_dir.resolve().relative_to(ROOT).as_posix()}/guides/{pack_dir.name}.md"
     rows = (yaml.safe_load(MOVED.read_text(encoding="utf-8")) or {}).get("moved") or []
-    to = next((r.get("to") for r in rows if isinstance(r, dict) and r.get("from") == old and r.get("to")), None)
+    tail = f"/{pack_dir.name}/guides/{pack_dir.name}.md"      # the row is under the pack's folder when the guide was merged (its module's or the kernel's then)
+    to = next((r.get("to") for r in rows if isinstance(r, dict) and r.get("to") and (r.get("from") == old or str(r.get("from")).endswith(tail))), None)
     if not to or not (ROOT / to).is_file():
         return None
     title = str((yaml.safe_load((pack_dir / "pack.yaml").read_text(encoding="utf-8")) or {}).get("title") or "").lower() \

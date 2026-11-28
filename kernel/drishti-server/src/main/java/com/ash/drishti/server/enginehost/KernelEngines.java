@@ -55,6 +55,11 @@ public class KernelEngines implements Engines {
     }
 
     @Override
+    public int inputsChanged(String kind) {
+        return host.inputsChanged(kind);
+    }
+
+    @Override
     public Map<String, Object> ask(Person p, String engine, List<String> outputs, Map<String, Object> params, Map<String, String> snapshot) {
         return ask(com.ash.drishti.server.kernelapi.RequestPerson.of(p).principal(), engine, outputs, params, snapshot);
     }

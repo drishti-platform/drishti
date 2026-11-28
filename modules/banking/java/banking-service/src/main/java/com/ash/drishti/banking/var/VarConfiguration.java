@@ -250,7 +250,8 @@ public class VarConfiguration {
 
     @Bean(destroyMethod = "close")
     VarOfficial varOfficial(VarService svc, VarViews views, VarProperties props, ObjectProvider<LoadService> loads,
-            ObjectProvider<com.ash.drishti.engine.source.SourceRegistry> sources) {
+            ObjectProvider<com.ash.drishti.engine.source.SourceRegistry> sources,
+            ObjectProvider<com.ash.drishti.kernel.api.services.Engines> engines) {
         var off = props.official();                                      // a folder or s3://, Delta (the default) or Iceberg (2.9.5)
         VarOfficial o = new VarOfficial(svc, views, new VarPublisher(com.ash.drishti.banking.official.OfficialSink.of(off.format(), off.root(),
                 off.storage(), off.retentionYears()), off.jsonl()));
@@ -259,7 +260,12 @@ public class VarConfiguration {
             l.onReady(r -> o.onLoad(r.kind(), r.businessDate()));          // the data-load signal reloads the date, then captures it
             l.onDeleted(r -> o.onDeleted(r.kind(), r.businessDate()));     // a date deleted from the lake: dropped, never captured
         }
-        o.onPublished(() -> sources.ifAvailable(r -> r.retryFailingFor("var-official")));   // the var-results connector
+        o.onPublished(() -> {
+            sources.ifAvailable(r -> r.retryFailingFor("var-official"));   // the var-results connector
+            // R2: an engine session opened before this capture (a role Home's snapshot at start) keeps the published records it read: the
+            // engines that read var-official (market-risk's var-history) open fresh sessions, so backtests, statistics and reports see it
+            engines.ifAvailable(e -> e.inputsChanged("var-official"));
+        });
         return o;
     }
 

@@ -328,6 +328,22 @@ public final class HostedEngine implements AutoCloseable {
         }
     }
 
+    /**
+     * Data of {@code kind} was written by this server: when this engine binds the kind, its open sessions are stale (the next ask opens a
+     * fresh one, which reads its inputs again) and the kept answers are dropped. True when it binds the kind.
+     */
+    public boolean inputsChanged(String kind) {
+        if (binding.inputs().values().stream().noneMatch(b -> b.kinds().contains(kind))) {
+            return false;
+        }
+        Sessions s = sessions;
+        if (s != null) {
+            s.keys().stream().map(Sessions.Key::snapshot).distinct().toList().forEach(s::stale);
+        }
+        purgeAnswers();
+        return true;
+    }
+
     public int sessionsOpen() {
         Sessions s = sessions;
         return s == null ? 0 : s.keys().size();

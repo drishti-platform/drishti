@@ -606,6 +606,7 @@
   services.Engines public abstract boolean com.ash.drishti.kernel.api.services.Engines.running(java.lang.String)
   services.Engines public abstract java.util.Map<java.lang.String, java.lang.Object> com.ash.drishti.kernel.api.services.Engines.ask(com.ash.drishti.kernel.api.security.Principal,java.lang.String,java.util.List<java.lang.String>,java.util.Map<java.lang.String, java.lang.Object>,java.util.Map<java.lang.String, java.lang.String>)
   services.Engines public abstract java.util.Map<java.lang.String, java.lang.Object> com.ash.drishti.kernel.api.services.Engines.ask(com.ash.drishti.kernel.api.services.Person,java.lang.String,java.util.List<java.lang.String>,java.util.Map<java.lang.String, java.lang.Object>,java.util.Map<java.lang.String, java.lang.String>)
+  services.Engines public default int com.ash.drishti.kernel.api.services.Engines.inputsChanged(java.lang.String)
   services.History public abstract com.ash.drishti.kernel.api.services.Series com.ash.drishti.kernel.api.services.History.series(com.ash.drishti.kernel.api.services.Person,com.ash.drishti.api.EntityRef,java.lang.String,int,java.time.LocalDate)
   services.InlineRequest public final boolean com.ash.drishti.kernel.api.services.InlineRequest.equals(java.lang.Object)
   services.InlineRequest public final int com.ash.drishti.kernel.api.services.InlineRequest.hashCode()

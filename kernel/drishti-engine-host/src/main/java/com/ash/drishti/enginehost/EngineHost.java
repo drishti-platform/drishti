@@ -215,6 +215,15 @@ public final class EngineHost implements AutoCloseable {
         }
     }
 
+    /** Data of {@code kind} was written by this server: the engines that read it open fresh sessions (HostedEngine#inputsChanged). */
+    public int inputsChanged(String kind) {
+        int n = 0;
+        for (HostedEngine h : engines.values()) {
+            n += h.inputsChanged(kind) ? 1 : 0;
+        }
+        return n;
+    }
+
     private void lookAtDataVersions() {
         for (HostedEngine h : engines.values()) {
             try {

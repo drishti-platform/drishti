@@ -396,6 +396,28 @@ Under `modules/banking/java/banking-service/src/main/java/com/ash/drishti/bankin
 - **Infrastructure**: from 05:4x this lane builds into its own Maven repository (`~/drishti-bench-scratch/i8-m2-r2b`, the lead's
   instruction after this lane's kernel SNAPSHOTs replaced lane A's in the shared `i8-m2`).
 
+### Status, R2 lane B2: engine speed (2026-11-28 09:4x, branch `r2/consumers-speed`; drishti-risk `r2/consumers-speed`)
+
+- **Built**: the host's answer cache (engine specification 13 rule 6) in the kernel's engine host: a final answer kept by its stamp (the
+  asking session's own input stamps, options, the request with its visibility signature); a start or an options change empties it; Admin,
+  Caches `engines.answers`; `drishti.engine-lib.answers` (256, 0 off). The engine keeps no cache. An engine's own log lines reach the
+  server log. Zero copy logs why a view is not served (host) and whether the rows were read in place (engine).
+- **Zero copy reached end to end**: the host served the hot file's float32 rows of the date and the engine read them in place; figures the
+  same bits as with it off. (The earlier runs never reached it because the test server ran the 06:13 exec jar and `.dmod`: a partial
+  build does not repackage them.)
+- **Speed (BENCHMARK.md section 23)**: every figure equal on both tiers; the engine path is still outside the bound: inner node p50 141 ms
+  against 22 in-tree, a leaf's first ask 405 against 18, the tree 4,677 against 550 (mapped; heap: 150/23, 528/20, 1,479/144). The cache
+  answered 2,295 of 2,605 asks.
+- **Profile** (JFR, mapped, zero copy off; detail for the design in `~/drishti-bench-scratch/r2b/PROFILE_SUMMARY.md`): engine headline
+  samples: 47 % the date's first open in the engine (index tables 18 %, input reads 17 %, book 13 %), 27 % summing each part's rows (a
+  leaf's positions), 7 % shaping cached answers; host side of warm asks: 38 % one bean lookup per tree row (`VarEnginePath.tree`,
+  `limits.getIfAvailable()`), 26 % shaping whole cached tables to read one node (`AnswerShapes.plain`), 7 % the index per ask, 6 %
+  row maps; the stamp and parameters under 1 %; GC 5.9 s in 229 s. The fixes are designed in `R2_ENGINE_SPEED_DESIGN.md` (Fable) and
+  built by another lane; nothing of them is built here.
+- **Regression**: `EngineHostTest` 9/9 (a new case: hits, viewers apart, purge); `RiskSpeedCheckTest` three runs, 0 differences. Not
+  rerun after the cache: the side by sides and `PackagedVarGoldenTest` (the next lane's, with its changes). No default flipped, nothing
+  removed, no tolerance loosened.
+
 ### R2 gate brief (lane B, 2026-11-28; for the Fable R2 gate)
 
 Every switch below defaults to in-tree (or off); nothing is removed yet. "Proof" is the side by side that runs both paths over one lake

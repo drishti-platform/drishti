@@ -407,6 +407,26 @@ misses per ask of each phase, the ccr engine's card, resident memory, the figure
 at most 10,000 trades: the check reads the counterparty-risk sample day the SIMM side by side builds (523 trades, 7,540 path rows of 200
 paths, 76 netting sets), or `-Dspeed.ccr-lake`.
 
+**RUN A (2026-11-28 10:46 to 11:22, mapped tier, `r2/speed-ccr` 600c75835, drishti-risk f03837e)**: `CcrRecordedIT` green (the recorder's
+bits); `SimmSideBySideTest` 230 + 156 + the routes, 0 differences; `ExposureSideBySideTest` 12 cases (scope 204, distribution 408, tree,
+captures 296, what-if 163, pre-deal 46 + 69, groups 230, contributions 762), 0 differences; `ExposureHomesSideBySideTest` 8,377 tables and
+pages and 8,274 official scopes and trades, 0 differences. `ExposureSpeedCheckTest` twice on one build, the engine JAR before (lane A2's)
+and after this lane's engine fixes, p50/p99 in ms, figures equal in both:
+
+| Ask | In-tree | Engine before | Engine after |
+|---|---:|---:|---:|
+| Cold open (the bank's scope) | 81 to 94 | **55,611** | **5,027** |
+| First SIMM ask (SIMM's inputs read) | 172 to 274 | 399 | 4,971 (read at first need, no longer at open) |
+| Open and first SIMM together | | 56,010 | 9,998 |
+| Tree (123 nodes), first / warm p50 | 87 to 111 / 60 to 70 | 388 / 22 | 327 / 27 |
+| Netting set p50 / p99 | 9 to 13 / 28 to 33 | 27 / 110 | 24 / 69 |
+| SIMM total p50 / p99 | 9 to 12 / 47 to 59 | 52 / 148 | 26 / 88 |
+| Engine asks per tree / netting set / SIMM page | | 1 / 1 / 3 | 1 / 1 / 3 |
+
+Still open (general capabilities): the cold open's 5 s and the first SIMM read's 5 s (the session reads every path row and every
+sensitivity element through the host; kept image and prepared date), `isolation: per-viewer` (a book per viewer), the warm asks' host cost
+(EngineAnswer: merged on `r2/speed-ccr` after RUN A, proved by RUN B), SIMM's 3 asks a page (the default version's ask).
+
 ### Status, R2 lane A2: SIMM and VaR leftovers (2026-11-28 09:2x, paused by the owner; branch `r2/exposure-routes`; drishti-risk `r2/exposure-routes` 3c508fe + the steps fix)
 
 Every switch default unchanged (`in-tree`); nothing removed; no tolerance loosened. A fresh lane continues from here.

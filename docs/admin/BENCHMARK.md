@@ -2147,27 +2147,23 @@ rows), and the heap tier (float64 rows on both paths).
   -Ddrishti.risk.jars=<folder of the two Risk JARs> -Dspeed.python=<python with the lake tools> [-Dspeed.zero-copy=on] [-Dsbs.tier=heap]
 ```
 
-**What was measured** (the scripted run, mapped tier, did not finish within the lane's time box: at 100,000 positions every engine
-headline took one to two seconds, and two warm rounds of the 1,106 nodes on both paths outlast it; the figures below were then read by
-hand from that run's server, warm, 3 asks each, while the scripted rounds still ran against it):
+**Results** (2026-11-28, the scripted run: p50 and p99 in milliseconds over 106 inner nodes asked twice warm, the first ask of 200 leaf
+nodes, the tree three times; VaR, ES and trades of every node asked and every tree row equal between the paths in all three runs):
 
-| Ask (2026-09-30, USD, 250 scenarios) | In-tree (s) | Engine (s) |
-|---|---:|---:|
-| Headline, the bank (100,000 trades) | 0.30, 0.37, 0.44 | 2.06, 2.10, 1.53 |
-| Headline, a desk (1,000 trades) | 0.74 (first), 0.028, 0.008 | 2.19, 1.38, 0.73 |
-| Headline, a book: a leaf, its parts 100 positions | 0.012, 0.011, 0.008 | 1.56, 1.18, 1.17 |
-| The tree of the management hierarchy (1,106 rows) | 0.37, 0.40 | 4.34, 5.22 |
+| Ask | Mapped, in-tree | Mapped, engine (zero copy off) | Mapped, engine (zero copy on) | Heap, in-tree | Heap, engine |
+|---|---:|---:|---:|---:|---:|
+| Headline of an inner node, p50 / p99 | 22 / 65 | 141 / 284 | 140 / 258 | 23 / 69 | 150 / 296 |
+| Headline of a leaf (a book, its parts positions), first ask, p50 / p99 | 18 / 42 | 405 / 670 | 394 / 582 | 20 / 76 | 528 / 850 |
+| The tree (1,106 rows), p50 | 550 | 4,677 | 3,218 | 144 | 1,479 |
+| The date's first open (s) | 0.28 | 46 | 46 | 0.56 | 49 |
 
-- **Figures**: VaR, ES (exact doubles) and trades of the bank, the desk and the book equal between the paths (12,644,043 /
-  12,514,952.23...; 1,371,985 / 1,320,897.85...; 493,074 / 501,739.31...).
-- **Memory**: the server's resident memory with both paths open on the date was 5.9 GB at `-Xmx6g` (heap in use 2.1 GB: the in-tree date
-  and the engine's books and session; the rest is the hot file's mapped pages, metaspace and native).
-- **Where the engine's time goes** (a thread dump during the rounds): `market-risk` answers `node-var` by computing the VaR of every
-  node of the date on each ask (`MarketTables.nodeVar` → `VarCalc.measures` → `VarMath.exactOrder`, every hierarchy's nodes), so one node's
-  headline costs the whole table; and a leaf's headline adds `scope-contributions` over its positions (lane G part 6). In-tree keeps
-  the node measures of an open date and answers a node from them. **The engine path is not yet within the plan's bound** (3a.4: p50
-  within 5 %, p99 within 10 %): the next engine change is to keep the date's `node-var` table in the session (it depends only on the
-  session's book and window) and to answer a leaf's parts block from cached standalone sums, then measure again.
-- **Not measured in this lane**: zero copy on (the first run asked for it but the host's view was not reached: the banking bean was not
-  bridged to the engine host; fixed in `528217414`, not re-measured), the heap tier, p50/p99 over the scripted rounds. Command above;
-  the test now treats books as the leaves (the tree marks them expandable: they open into positions).
+- **The host's answer cache** (`engines.answers`, ENGINES_IN_DRISHTI.md): of each run's 2,605 engine asks, 2,295 were answered from it
+  (the same question over the same data by a caller who sees the same rows) and 310 by the engine.
+- **Memory**: the server's resident memory with both paths open on the date, at the end: 5.7 GB (mapped, zero copy off), 5.9 GB (mapped, zero
+  copy on), 6.5 GB (heap), at `-Xmx6g`.
+- **Zero copy**: on, the host served the hot file's float32 rows of the date (100,000 positions) and the engine read them in place (the
+  server log names both); the figures are the same bits as with it off.
+- **Reading**: the engine path is within the plan's bound on none of the asks (3a.4: p50 within 5 %, p99 within 10 %). With the node tables
+  answered from the cache, what remains of a warm headline and of the tree is the host's own work per ask (lane B2 profile:
+  `docs/plans/R2_CUT_PLAN.md`, Status, R2 lane B2); a leaf's first ask is computed; the date's first open reads and builds every row in the
+  engine before zero copy swaps the host's rows in.

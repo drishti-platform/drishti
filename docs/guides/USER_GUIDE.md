@@ -93,58 +93,56 @@ centre → Domain packs*) has a *Finding things* section with the same commands 
 
 ## Your Home
 
-After you sign in you land on **Your Home**, the page made for your role (`/home`); the functions list stays in the menu and in the command
-line (`Ctrl+K` / `⌘K`). Your Home is a set of cards drawn from the figures the server already holds for you, so what you see follows your
-roles and, like every table, your row rules and masks.
+After you sign in you land on **Your Home**, the one Home page made for your role (`/home`); the functions list stays in the menu and in the command
+line (`Ctrl+K` / `⌘K`). Your Home is a set of panels drawn from the figures the server already holds for you, so what you see follows your
+roles and, like every table, your row rules and masks. The panels are the parts of your role's Home (a Rachana screen of library parts), so a
+panel looks and behaves like the same part anywhere else in Drishti.
 
 **What is on it**
 
-- **A greeting and one line of freshness:** the business date and whether every daily load is in. A small amber mark means a daily load is late or failed.
-- **Needs you:** alerts raised for you, approvals waiting in your inbox, late or failed data loads and the high exceptions of your Home. When
-  nothing needs you the strip is not on the page at all. **Snooze for 4 hours** puts what it lists to sleep (it comes back when the time is up).
-- **Your cards,** best first for your role. A risk manager sees firm VaR, expected shortfall, the backtest light, limit utilisation by desk and
-  the biggest movers; a credit officer starts with exposure against limits; a trader with their desk's VaR. Every role also gets **Data loads**,
-  **Pinned** (the entities you pinned) and **Recently used**. If you hold several roles you see the cards of all of them, ranked together.
-- **Since your last visit:** what the server recorded since you were last here: data loads, limit moves, measures that moved (new variants in
-  a cohort, a desk's VaR), and the alerts that fired. The panel's title says from when (**Since your last visit, 2026-11-26 18:00 UTC**), and
-  the strip carries the same time. A refresh or a click on the page does not move that time, only coming back after more than half an hour
-  does. The first time you come, there is no earlier visit and the panel reads since the Home's reference cut-off (**Since yesterday 17:00**).
+- **Figures first:** the key figures of your role with their change since the reference cut-off and a small history, each one opening its function.
+- **Needs a look (exceptions) and Since:** what needs you now (for example a failed load or a high exception), and what moved since the cut-off.
+  **Snooze for 4 hours** on a panel that needs attention puts it to sleep (it comes back when the time is up).
+- **Your role's working panels,** best first for the role. A risk manager sees firm VaR, expected shortfall, the backtest light, limit utilisation by
+  desk and exposure against limits; a trader their positions and P&L; a credit officer exposure against limits; an economist the indicators, the
+  release calendar and headlines (the external-data module supplies them). Every Home also has **Quick mnemonics**, **Data loads** and
+  **Since you were here**.
+- **Since you were here:** what the server recorded since you were last on your Home (data loads, limit moves, measures that moved, such as new
+  variants in a cohort or a desk's VaR). The first time you come there is no earlier visit and the panel reads since the Home's reference cut-off.
+  A refresh or a click on the page does not move that time; only coming back after more than half an hour does.
 - **A genomics Home** (for the genomicist roles): cohort samples, new variants since the cut-off, the strongest associations with a small
   association map (the tallest peak of each stretch of the genome, coloured by chromosome), ClinVar updates for the genes your cohorts carry,
   the genomics data loads (the ClinVar and Ensembl feeds and the files of your own that were read) and, under **Needs you**, any VCF file that failed validation.
+- **A market-data Home** (for the market-data roles): the desk tiles (USD OIS 10Y, the 2s10s slope, the EUR/USD one-month at-the-money vol, the
+  CDS median) with their day change, the USD OIS curve, the biggest moves of the last weeks, the data checks (what is stale, has gaps or is broken)
+  and the data loads.
 
-**View as.** If you hold more than one role, the top of your Home has **View as**: **All** (the cards of every role, ranked together, as
-before) and one button for each role you have (Risk manager, Credit officer, Genomicist ...). A button shows that role's Home alone, in
-place: its cards, its order and its layout, without leaving the page, and the choice is remembered for you on the server (your next visit
-opens the same way, on any browser). The buttons are the roles you really have, so nothing is offered that you could not see anyway;
-`/home/role/<name>` still opens a role's own Home page. With a single role there is nothing to switch and the buttons are not shown. They
-work from the keyboard (**Tab** to the row, **Enter** or **Space** to press one) and wrap onto a second line on a phone.
-
-**Which Home opens first.** Each role is tied to a Home (the risk manager's, the trader's, the genomicist's); you are offered the Homes of
-your roles, and only while the module that owns a Home is on. With one Home there is nothing to choose. With several, the page head has a
-**Home** picker and the one you choose becomes your start Home (your own setting, kept on the server, so it opens the same on any browser);
-`/home/role` opens it. An administrator is offered every Home of every module that is on, which is the quickest way to see what each role sees:
-pick the Home, or press its **View as** button, and read it as that role does. What a Home shows is still decided by *your* row rules and
-masks, so an administrator who may not read a desk's rows sees that Home with those rows left out. Who may see which Home, and the module
-cards behind them, are the administrator's ([ADMIN_GUIDE.md, Configuring role Homes](ADMIN_GUIDE.md#151-configuring-role-homes)).
-
-**The logo** at the top left always brings you back to Your Home.
-
-**Two layouts.** Most roles get the calm layout: two cards across, room to read. Risk-manager roles get the cockpit: the same cards, denser,
-the figures in one row first. On a phone the cards stack and Needs you comes first.
-
-**Make it yours.** Each card has its own buttons in its header:
+**Make it yours.** Each panel has its own buttons in its header:
 
 | Button | Does |
 |---|---|
-| **Explain** | opens the one Explain in a side panel: formula, inputs, why it moved |
-| **Open** | runs the card's command (for example `VAR BANK`) |
-| **Pin** / **Unpin** | keeps the card at the top, in the order you pinned (up to 8) |
-| **Up**, **Down** | moves the card in your order |
-| **Hide** | takes the card off your Home; **Show …** in the **Your Home** card at the bottom brings it back, **Reset my Home** puts your role's order back |
+| **Pin** / **Unpin** | keeps the panel at the top, in the order you pinned (up to 8) |
+| **Up**, **Down** | moves the panel in your order |
+| **Hide** | takes the panel off your Home; **Hidden: Show ...** above the page brings it back |
+| **Snooze for 4 hours** | on the panels that need attention |
 
-What you pin, hide, move or snooze, the role you view as and when you last visited are **your own setting** on the server (`homeCards`), so it follows you to every browser and is never seen
-by anyone else. Light and dark follow your theme.
+**Arrange my Home** (above the page, where your administrator allows it) lets you also drag panels and change their widths; **Reset layout** puts
+the Home's own layout back. What you pin, hide, move or snooze, when you last visited and your start Home are **your own setting** on the server,
+so they follow you to every browser and are never seen by anyone else. Light and dark follow your theme.
+
+**Which Home opens first.** Each role is tied to a Home (the risk manager's, the trader's, the genomicist's, the market-data Home); you are offered the
+Homes of your roles, and only while the module that owns a Home is on. With one Home there is nothing to choose. With several, the page head has a
+**Home** picker and the one you choose becomes your start Home (kept on the server, so it opens the same on any browser).
+
+**View as (administrators).** An administrator is offered every Home of every module that is on, and the top of their Home has **View as**:
+**My Home** and one button for each Home, which shows that Home in place. This is the quickest way to see what each role sees, with one limit that never
+moves: every figure is still read as *you*, under your row rules and masks, so an administrator who may not read a desk's rows sees that Home with those
+rows left out. The server refuses **View as** to anyone who is not an administrator; everyone else chooses a start Home with the picker.
+
+**The logo** at the top left always brings you back to Your Home.
+
+**Two layouts.** Most roles get the calm layout: panels in three columns, room to read. Risk-manager roles get the cockpit: the figures in one row
+first, denser. On a phone the panels stack, in the order of your Home.
 
 ## Home: the fact of the day
 

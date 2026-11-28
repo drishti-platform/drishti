@@ -3800,6 +3800,7 @@ Sutras' own configuration keys (the server's `drishti.rachana.*`, `drishti.gover
 | `drishti.homes.roles.genomicist` | list | `[genomicist]` |  | server | the genomicist's Home (the genomics module) | restart |  | admin |
 | `drishti.homes.roles.geneticist` | list | `[genomicist]` |  | server | a geneticist opens the genomicist's Home | restart |  | admin |
 | `drishti.homes.roles.genomics-reader` | list | `[genomicist]` |  | server | the demo user drishti-dev-genomics (demo profile): the genomicist's Home | restart |  | admin |
+| `drishti.homes.roles.market-data-reader` | list | `[market-data]` |  | server | the demo user drishti-dev-market (demo profile): the market-data Home (Calm layout, the market cards) | restart |  | admin |
 
 #### `drishti.trading`
 

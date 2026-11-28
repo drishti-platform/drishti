@@ -160,7 +160,7 @@ the `changes` engine at request time. All on the server, in Java; the browser on
 Written, unbuilt and unrun (2026-11-22): the Home loader and catalogue (`kernel/drishti-server/.../server/home`: role to Home through `drishti.homes.roles`,
 modules, mnemonics, `arrange: allow|locked`), the home tables (`HomeTables`, a module adds `HomeTable` beans), the snapshot job, the event writer,
 the attribution runner, the Homes API (`/api/v1/homes`), the VaR and exposure measure sources (banking module), Homes for the seven roles, the
-console page `/home/role`, a test per role and a browser walk of both Homes, and the `open0..open7` click events of `core/kpi-strip`.
+console page `/home`, a test per role and a browser walk of both Homes, and the `open0..open7` click events of `core/kpi-strip`.
 
 | Left | Why |
 |---|---|
@@ -171,21 +171,21 @@ console page `/home/role`, a test per role and a browser walk of both Homes, and
 | Contracts `docs/contracts/HOME.md` for the `home/*` tables | to write with the first run |
 | Build, run the tests, regenerate the fragment goldens and hashes | owner: builds later |
 
-## 6. Your Home: the cards every person lands on
+## 6. Your Home: the one Home page
 
-`/home` (drishti-console `routes/home_cards_routes.py`, `core/home_cards.py`) is where everyone lands after signing in. It does not replace the
-Home Sutras above; it reads the **same home tables** (`GET /api/v1/homes/<home>/tables/<table>`, for the person) and shows them as ranked cards.
+`/home` (drishti-console `routes/role_home_routes.py`) is where everyone lands after signing in, and it is the only Home page: the person's role Home,
+the Sutra of sections 1 to 3 drawn by the Drishti Elements painter. There is no second page of cards: what the cards were are panels (library
+fragments) of the role Home's Sutra, over the same home tables (`GET /api/v1/homes/<home>/tables/<table>`, for the person).
 
 | Piece | What |
 |---|---|
-| Cards | declared by modules (console `plugin.yaml`, `home: role-cards:`) and by the console (`drishti-console/config/home-cards.yaml`): `id`, `kind` (`metric`, `bars`, `table`, `scatter`), `table`, `pick`, `rank` per role Home, `open`, `explain` |
-| Layout | Calm; Cockpit for the Homes named in `layouts:` (risk-manager, risk-officer); phone: stacked, Needs you first |
-| Needs you | raised alerts, the approvals inbox, late/missing/failed loads (`home_loads`), the high rows of `home_exceptions`; absent from the document when empty |
-| The document | a ViewModel (contract 1.2: panels, `layout.areas` and `place`, `phone`, panel `actions`) drawn by drishti-views; button effects (`host`) come back to the page: pin, unpin, hide, show, up, down, snooze, reset, explain, open |
-| View as | `All` and one button per Home the person is offered (Drishti Elements button group, one pressed); the choice is `homeCards.viewAs`, checked against the Homes offered; it limits ranking, layout and the tables asked to that Home |
-| Since your last visit | `home_digest` (built in): change events of the Home's `events:` kinds and followed measures that moved since the snapshot of that day, from `?since=<UTC>`; the window is the visit before this one (`prevVisit`) while this visit is the one just recorded, else `lastVisit`; none: the Home's cut-off; the console adds the alerts fired since |
-| A module's Homes | a module's `MeasureSource` and `HomeTable` beans reach the Homes through the registration bridge (`Extensions`, while the module is on); a table names its Homes (`homes()`), so it is served to them only; the console plugin's `home: needs:` adds a table's rows to Needs you |
-| Per person | the person's setting `homeCards` `{pins, hidden, order, snooze, lastVisit, prevVisit, viewAs}` (`PATCH /api/v1/me/settings`), validated by the server; nothing per person is held in the console |
+| The document | `GET /api/v1/homes/view`: the Home's Sutra with its `data:` block read as the person (each alias is a home table's rows), bound by the Rachana binder as a ViewModel (contract 1.2), then the person's state applied; the console passes it on and draws nothing |
+| Panels | the Sutra's fragments: `core/kpi-strip`, `core/exceptions-list`, `core/change-feed`, `core/data-table`, `core/scatter-plot`, `core/tile-grid`, `core/event-timeline` ("Since you were here"), and the finance fragments |
+| Layout | the Sutra's (`areas`, `columns`, `phone`); twelve columns are drawn as the cockpit, anything else calm; the person's grid arrangement is `/me/arrange/home-<home>` |
+| Per person | `HomeState` (the preference namespace `home`, key `state`): `pins`, `hidden`, `order`, `snooze`, `lastVisit`, `prevVisit`, `viewAs`; the start Home is the key `start`. `POST /api/v1/homes/state` takes one action (`pin`, `unpin`, `hide`, `show`, `up`, `down`, `snooze`, `reset`, `visited`, `viewas`) and answers the Home as it now is; every name is checked, a hidden or sleeping panel is removed from the panels, the phone order, the places and the layout picture, and each panel gets its buttons |
+| View as | an administrator's only (`FORBIDDEN` for anyone else), and only a Home that is offered; a stored choice of a person who is no longer an administrator is ignored; the rows are always read as the viewer, so a Home never shows data the viewer may not see |
+| Since you were here | `home_digest` with `?since=` the visit before this one (`prevVisit`) while this visit is the one just recorded (one visit counts per half hour), else `lastVisit`; none: the Home's cut-off |
+| A module's Homes | a module's `MeasureSource` and `HomeTable` beans reach the Homes through the registration bridge (`Extensions`, while the module is on); a table names its Homes (`homes()`), so it is served to them only |
 
-The genomics module's Home (`genomicist`, `config/homes/genomics/`) is the first module Home built this way: its figures (`genomics` measure source), its tables `genomics_gwas_top`, `genomics_manhattan`, `genomics_clinvar`, `genomics_loads`, `genomics_needs`, and its cards in `modules/genomics/console/plugin.yaml`.
-
+The genomics module's Home (`genomicist`, `config/homes/genomics/`) and the market-data module's Home (`market-data`, `config/homes/market-data/`, for the role
+`market-data-reader`) are module Homes built this way; the economist Home is the external-data module's (`config/homes/external-data/`).

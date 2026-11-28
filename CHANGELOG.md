@@ -21,6 +21,20 @@ The production release: a standard layout and a profile that refuses an unsafe s
 tables, loaders and a guide page per load type, and the first engine paths of Drishti Risk. Items marked with a comment name the branch
 that carries them, so a release that leaves a branch out can drop the lines (the lead trims them before the tag).
 
+### One Home
+
+- **One Home page** (`/home`): the role Home Sutra is the only Home; the cards page and its machinery (`home_cards.py`, `home_cards_routes.py`,
+  `config/home-cards.yaml`, a module's `home: role-cards:` and `needs:`, the `homeCards` setting) are gone. The cards are panels of each Home's Sutra
+  (`core/data-table`, `core/scatter-plot`, `core/event-timeline` ...), and every Home has **Since you were here** and **Data loads**. `/home/role` and
+  `/api/home/cards*` are removed.
+- **The Home's state is the server's:** `GET /api/v1/homes/view` binds the Home's Sutra over the home tables as the person and applies their pins,
+  hidden and moved panels and snoozes; `POST /api/v1/homes/state` takes one checked action. **View as** is an administrator's only (the server
+  refuses anyone else and ignores a stored choice of a non-administrator); every row is read as the viewer.
+- **A market-data Home:** the role `market-data-reader` (the demo user `drishti-dev-market`) lands on the Calm Home `market-data`: desk tiles, the USD
+  curve, the biggest moves and the data checks (the module's `market_*` tables).
+- **The economist Home names the module that replaced economy** (`external-data`, `config/homes/external-data/`), and a test fails on a Home that
+  names a module no manifest declares.
+
 ### Production
 
 - **The production profile:** `drishti.profile=production` makes the server and the console refuse to start while a rule is broken (sign-in

@@ -85,6 +85,6 @@ def test_the_homes_feed_kinds_are_kinds_of_the_genomics_pack_routed_to_the_lake_
     lake = yaml.safe_load((ROOT / "config" / "lakes" / "genomicslake.yaml").read_text(encoding="utf-8"))
     tables = lake.get("tables") or lake
     for kind in ("clinvar-variant", "ensembl-gene"):
-        assert kind in pack["kinds"] and pack["routes"][kind] == "genomics-store" and (pack_dir / "contracts" / f"{kind}.yaml").is_file()
-        assert f"genomics.{kind}" in pack["connectors"]["genomics-store"]["settings"]["lake-tables"].split(",")
+        assert kind in pack["kinds"] and pack["routes"][kind] == "genomics-feeds" and (pack_dir / "contracts" / f"{kind}.yaml").is_file()
+        assert f"genomics.{kind}" in pack["connectors"]["genomics-feeds"]["settings"]["lake-tables"].split(",")
         assert f"genomics.{kind}" in tables

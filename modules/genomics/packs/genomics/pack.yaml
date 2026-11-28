@@ -29,16 +29,17 @@ connectors:
   genomics-store:
     plugin: delta
     enabled: ${DRISHTI_LAKE_ENABLED:true}
-    kinds: [variant, sample, gene, cohort, clinvar-variant, ensembl-gene]
+    kinds: [variant, sample, gene, cohort]
     settings:
       lake: genomicslake
-      lake-tables: genomics.variant,genomics.sample,genomics.gene,genomics.cohort,genomics.clinvar-variant,genomics.ensembl-gene
-      mode.variant: effective
-      mode.sample: effective
-      mode.gene: effective
-      mode.cohort: effective
-      mode.clinvar-variant: effective
-      mode.ensembl-gene: effective
+      lake-tables: genomics.variant,genomics.sample,genomics.gene,genomics.cohort
+  genomics-feeds:          # the feeds' own tables (kinds variant and gene in the lake file, read here by their table names so they never stand in for the tables above)
+    plugin: delta
+    enabled: ${DRISHTI_LAKE_ENABLED:true}
+    kinds: [clinvar-variant, ensembl-gene]
+    settings:
+      lake: genomicslake
+      lake-tables: genomics.clinvar-variant,genomics.ensembl-gene
 lake:                  # the recommended entries of its lake tables (the shipped lake file holds the same)
   tables:
     genomics.variant:
@@ -93,5 +94,5 @@ routes:                # the connector that answers each kind
   sample: genomics-store
   gene: genomics-store
   cohort: genomics-store
-  clinvar-variant: genomics-store
-  ensembl-gene: genomics-store
+  clinvar-variant: genomics-feeds
+  ensembl-gene: genomics-feeds

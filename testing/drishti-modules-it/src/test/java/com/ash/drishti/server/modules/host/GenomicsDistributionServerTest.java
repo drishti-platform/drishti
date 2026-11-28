@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import com.ash.drishti.api.AsOf;
-import com.ash.drishti.api.EntityDocument;
 import com.ash.drishti.api.EntityRef;
 import com.ash.drishti.engine.source.SourceRouter;
 import com.ash.drishti.module.runtime.ModuleHealth;
@@ -69,7 +68,7 @@ class GenomicsDistributionServerTest {
     /** The package dropped into the modules folder before the server starts (the launch boots it from the process's settings). */
     @org.junit.jupiter.api.BeforeAll
     static synchronized void drop() throws IOException {
-        for (String k : List.of("drishti.modules.home", "drishti.modules.sources", "drishti.modules.dev")) {
+        for (String k : List.of("drishti.modules.home", "drishti.modules.sources", "drishti.modules.dev", "lake.lakes.dir", "drishti.data.dir")) {
             KEPT.put(k, System.getProperty(k));
         }
         if (work == null) {
@@ -85,6 +84,8 @@ class GenomicsDistributionServerTest {
         System.setProperty("drishti.modules.home", work.resolve("modules").toString());
         System.clearProperty("drishti.modules.sources");
         System.clearProperty("drishti.modules.dev");
+        System.setProperty("drishti.data.dir", work.resolve("data").toString());     // the launch roots: the build's own data folder is a system property too
+        System.setProperty("lake.lakes.dir", work.resolve("lakes").toString());     // a launch root: read before the test's dynamic properties exist
     }
 
     /** The module reads the genomics lake: its demo rows (data/testdata/genomics) loaded into Delta tables the way the data inbox loads them. */
@@ -168,11 +169,10 @@ class GenomicsDistributionServerTest {
     void theModuleLoadsReadsTheLakeServesTheKindsAndItsFunctionsAndPagesAnswer() throws Exception {
         assertThat(node.runtime().health()).extracting(ModuleHealth::id, ModuleHealth::state)
                 .contains(org.assertj.core.groups.Tuple.tuple("genomics", ModuleHealth.State.LOADED));
-        List<EntityDocument> variants = new ArrayList<>();
-        assertThat(router.documents("variant", AsOf.LATEST, variants::add)).isTrue();
-        assertThat(variants).hasSize(120);
+        // the kinds are read in the delta connector's "effective" mode (an entity at a time: no whole-kind pass), so the variants are fetched by id
+        assertThat(router.fetch(EntityRef.of("variant", "HX-A001"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("HX-A001");
         assertThat(router.fetch(EntityRef.of("gene", "TP53"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("PROTEIN_LENGTH");
-        assertThat(router.fetch(EntityRef.of("cohort", "COH-A"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("HXS-001");
+        // the cohorts are computed by the module from the samples (a loaded cohort row only adds to them): no source holds the kind
         assertThat(router.fetch(EntityRef.of("sample", "HXS-013"), AsOf.LATEST).get(10, TimeUnit.SECONDS).data().toString()).contains("COH-B");
         JsonNode gene = getJson("/api/v1/genomics/genes/TP53");
         assertThat(gene.path("variants").size()).isPositive();

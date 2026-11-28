@@ -3266,7 +3266,7 @@ refused (the code and its message on standard error) or some days could not be r
 
 ### `convert`: CSV, a JSON array or a folder of `.json` files into JSON Lines
 
-JSON Lines is Drishti's data format ([DATA_GUIDE.md](DATA_GUIDE.md#2-data-formats-json-lines-is-the-standard)), and **CSV input is deprecated**. `drishti.py convert FILE` (`tools/convertcmd.py`) turns what you have into JSON Lines, one object a line, streaming (a large
+JSON Lines is Drishti's data format ([DATA_GUIDE.md](DATA_GUIDE.md#2-data-formats-json-lines-is-the-standard)), and no connector reads CSV. `drishti.py convert FILE` (`tools/convertcmd.py`) turns what you have into JSON Lines, one object a line, streaming (a large
 JSON array is never read whole):
 
 ```text

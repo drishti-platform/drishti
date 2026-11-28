@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
  * machine that kept their sizes and times) say the same identity and Drishti*net takes them for replicas; files that differ in any
  * of these make them shards, never wrongly replicas. A file written that one of them has not rescanned yet
  * makes them shards until it has (both are asked: a count is never short). A kind's files are {@code <kind>.jsonl},
- * {@code <date>/<kind>.jsonl}, {@code <kind>/<id>.json|csv} and {@code <date>/<kind>/<id>.json|csv}; anything else is not a kind's.
+ * {@code <date>/<kind>.jsonl}, {@code <kind>/<id>.json} and {@code <date>/<kind>/<id>.json}; anything else is not a kind's.
  */
 final class FileSet {
 
@@ -86,7 +86,7 @@ final class FileSet {
     }
 
     private static boolean feed(String name) {
-        return name.endsWith(".json") || name.endsWith(".csv");
+        return name.endsWith(".json");
     }
 
     /** Each kind with files: its identity. */

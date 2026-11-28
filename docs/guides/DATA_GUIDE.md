@@ -768,9 +768,7 @@ entity (`<kind>/<id>.json`); `lake build`, `build_demo_lakes.py`, `data ingest` 
 `.zip`, `.tar.gz`, `.tgz` or `.tar` archive too ([section 2.7](#27-archives-zip-and-tarballs)); the demo connector reads
 `samples/<kind>.jsonl` and the older `samples/<kind>/<id>.json`.
 
-**CSV input is deprecated** and will be removed in a later release. Today only the file connector reads CSV (a feed file
-`<kind>/<id>.csv`, served as `{"rows": [...]}`): each such file logs one warning and is named in **Admin → Health**
-(`UP (CSV input is deprecated: fixing/X.csv (convert to JSON Lines: drishti.py convert))`) until it is gone.
+**CSV is not read by any connector**; JSON Lines is the data standard.
 
 **`drishti.py convert FILE [--out X.jsonl]`** turns CSV, a JSON array (or one object) or a folder of per-entity `.json` files into
 JSON Lines ([CLI_REFERENCE.md](CLI_REFERENCE.md#convert-csv-a-json-array-or-a-folder-of-json-files-into-json-lines)):

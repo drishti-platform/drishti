@@ -225,6 +225,9 @@ final class PackagedServer implements AutoCloseable {
         env.put("DRISHTI_VAR_OFFICIAL_ROOT", work.resolve("var-official").toString());
         env.put("LAKE_VAR_OFFICIAL_ROOT", work.resolve("var-official").toString());     // its reader (var-results: BI, the engine's var-history) reads where it publishes
         env.put("DRISHTI_CCR_EXPOSURE_OFFICIAL_ROOT", work.resolve("ccr-official").toString());
+        if (!System.getProperty("sbs.blas", "").isBlank()) {            // -Dsbs.blas=java|auto: the linear algebra of both paths (one setting)
+            env.put("DRISHTI_NATIVE_BLAS_MODE", System.getProperty("sbs.blas"));
+        }
         overrides.forEach((k, v) -> {
             if (v == null || v.isEmpty()) {
                 env.remove(k);
@@ -274,31 +277,29 @@ final class PackagedServer implements AutoCloseable {
         return auth == null ? b : b.header("Authorization", auth);
     }
 
-    /** One answer as JSON asked as another person ({@code authorization}: their bearer token); not 200 is an error naming the request. */
+    /**
+     * One answer as JSON asked as another person ({@code auth}: their bearer token); a date that cannot be opened just yet or an engine
+     * preparing it is asked again as a page does; not 200 is an error naming the request.
+     */
     JsonNode get(String pathAndQuery, String auth) throws IOException, InterruptedException {
         HttpResponse<String> r = http.send(request(pathAndQuery, auth).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
+        for (int i = 0; i < 6 && r.statusCode() == 503 && r.body().contains("DRS-9502"); i++) {   // a date that cannot be opened just yet: as asked, again
+            Thread.sleep(15_000);
+            r = http.send(request(pathAndQuery, auth).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
+        }
+        for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: as a page does, after Retry-After
+            Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
+            r = http.send(request(pathAndQuery, auth).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
+        }
         if (r.statusCode() != 200) {
             throw new IllegalStateException(r.statusCode() + " for " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
         }
         return JSON.readTree(r.body());
     }
 
-    /** One answer as JSON; an answer that is not 200 is an error naming the request. */
+    /** One answer as JSON (as the server's own caller); an answer that is not 200 is an error naming the request. */
     JsonNode get(String pathAndQuery) throws IOException, InterruptedException {
-        HttpResponse<String> r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5)).build(),
-                HttpResponse.BodyHandlers.ofString());
-        for (int i = 0; i < 6 && r.statusCode() == 503 && r.body().contains("DRS-9502"); i++) {   // a date that cannot be opened just yet: as asked, again
-            Thread.sleep(15_000);
-            r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
-        }
-        for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: as a page does, after Retry-After
-            Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
-            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5)).build(), HttpResponse.BodyHandlers.ofString());
-        }
-        if (r.statusCode() != 200) {
-            throw new IllegalStateException(r.statusCode() + " for " + pathAndQuery + ": " + r.body().substring(0, Math.min(300, r.body().length())));
-        }
-        return JSON.readTree(r.body());
+        return get(pathAndQuery, authorization);
     }
 
     /** One POST of a JSON body; an answer that is not 200 is an error naming the request. */
@@ -307,7 +308,7 @@ final class PackagedServer implements AutoCloseable {
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: after Retry-After
             Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
-            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+            r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                     .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         }
         if (r.statusCode() != 200) {
@@ -322,7 +323,7 @@ final class PackagedServer implements AutoCloseable {
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         for (int i = 0; i < 600 && r.statusCode() == 503 && r.body().contains("DRS-1024"); i++) {   // an engine preparing the date: after Retry-After
             Thread.sleep(1_000L * r.headers().firstValue("Retry-After").map(Long::parseLong).orElse(2L));
-            r = http.send(HttpRequest.newBuilder(URI.create(base + pathAndQuery)).timeout(Duration.ofMinutes(5))
+            r = http.send(request(pathAndQuery).timeout(Duration.ofMinutes(5))
                     .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         }
         if (r.statusCode() != 201) {

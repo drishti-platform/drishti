@@ -701,10 +701,11 @@ public final class HostedEngine implements AutoCloseable {
             new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-     * The answer of a stamp another caller is computing now, waited for within this ask's own deadline; null when none is in flight, it
-     * failed or was interim, or the deadline passed (this caller then asks itself).
+     * The answer of a stamp another caller is computing now, waited for within this ask's own deadline; null when none is in flight or it
+     * ended without a final answer (failed, interim: this caller then asks itself). A waiter whose deadline passes is refused as any ask
+     * past its deadline ({@code ENG-5011}), never starting the computation again late; an interrupted one {@code ENG-5010}.
      */
-    private Flight joinFlight(String stamp, HostControl control) {
+    private Flight joinFlight(String stamp, HostControl control) throws EngineException {
         java.util.concurrent.CompletableFuture<Flight> f = inFlight.get(stamp);
         if (f == null) {
             return null;
@@ -717,9 +718,12 @@ public final class HostedEngine implements AutoCloseable {
             return f.get(left, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new EngineException("ENG-5010", Kind.CANCELLED, "interrupted while waiting for the same question asked by another caller");
+        } catch (java.util.concurrent.ExecutionException e) {
             return null;
-        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
-            return null;
+        } catch (java.util.concurrent.TimeoutException e) {
+            control.check();                                            // past the deadline: ENG-5011, as any ask
+            throw new EngineException("ENG-5011", Kind.TIMED_OUT, "the deadline passed while the same question was computed for another caller");
         }
     }
 

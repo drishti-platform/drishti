@@ -205,6 +205,59 @@ class EngineHostTest {
         }
     }
 
+    /**
+     * Single flight within the waiter's deadline: a caller who waits for another's computation of the same stamp past its own deadline is
+     * refused as any late ask (ENG-5011) and never starts the computation again; the engine was asked once.
+     */
+    @Test
+    void aWaiterPastItsDeadlineIsRefusedAndNeverComputesAgain(@TempDir Path root) throws Exception {
+        String oneSecond = Fixtures.GROUP_TOTALS.replace("      access:", "      limits: { request-seconds: 1 }\n      access:");
+        EngineHostSettings s = Fixtures.home(root, Fixtures.sampleJar(), Map.of("group-totals", oneSecond), null);
+        java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        Fixtures.Kinds data = new Fixtures.Kinds() {
+            @Override
+            public java.util.Optional<com.ash.drishti.api.ColumnSet> columns(String kind, java.util.Collection<String> paths,
+                    java.time.LocalDate date) {
+                entered.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return super.columns(kind, paths, date);
+            }
+        };
+        data.sets.putAll(Fixtures.items().sets);
+        data.stamps.putAll(Fixtures.items().stamps);
+        try (EngineHost host = Fixtures.host(s, data)) {
+            host.start();
+            HostedEngine gt = host.require("group-totals");
+            java.util.concurrent.ExecutorService two = java.util.concurrent.Executors.newFixedThreadPool(2);
+            try {
+                assertThat(gt.state()).as(gt.words()).isEqualTo("running");
+                java.util.concurrent.Future<?> first = two.submit(() -> gt.answer(TOTALS, ANN));
+                if (!entered.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    first.get(1, java.util.concurrent.TimeUnit.SECONDS);        // says why the first caller never reached the rows
+                }
+                java.util.concurrent.Future<HostedEngine.Answered> second = two.submit(() -> gt.answer(TOTALS, ANN));
+                assertThatThrownBy(() -> second.get(30, java.util.concurrent.TimeUnit.SECONDS)).hasCauseInstanceOf(EngineException.class)
+                        .satisfies(e -> assertThat(((EngineException) e.getCause()).code()).isEqualTo("ENG-5011"));
+                release.countDown();
+                try {
+                    first.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (java.util.concurrent.ExecutionException late) {
+                    // the first caller's own deadline passed too while it was held: either way it computed once
+                }
+                host.poll();
+                assertThat(gt.stats().sinceStart().asked()).as("the engine asked once").isEqualTo(1);
+            } finally {
+                release.countDown();
+                two.shutdownNow();
+            }
+        }
+    }
+
     @Test
     void anAuditLineNamesALongListByItsCountNeverItsValues() {
         java.util.SortedMap<String, Object> params = new java.util.TreeMap<>();

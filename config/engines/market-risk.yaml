@@ -47,6 +47,7 @@ drishti:
           - { name: otc }
         # the rows as the VaR tier keeps them (drishti.var.tier.mode): mapped = float32 position rows as the hot file, so the two paths agree to the bit
         vector-tier: ${drishti.var.tier.mode:${DRISHTI_VAR_TIER:mapped}}
+        linear-algebra: ${drishti.native.blas.mode:auto}   # auto: the engine's bundled OpenBLAS, Java when it does not load (the card says which); java: Java always
       # prepared dates (ENGINE_SPEC 9.3 rules 4 and 5): the newest date opened and its headline answers cached at start and whenever a load
       # commits a new date or a new version of one (the lake's data version), so no user waits for an open; an ask during the open waits at
       # most limits.open-wait-seconds, then is told "preparing" (ENG-5025); a stale date answers, noted, until its successor is ready.
